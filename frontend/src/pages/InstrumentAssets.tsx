@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useInstrumentAssets,
@@ -61,6 +61,10 @@ const conditionLabels: Record<AssetCondition, string> = {
 export default function InstrumentAssets() {
   const { t } = useTranslation();
   useDocumentTitle('Instrumentenbeheer');
+  // Basis voor de veld-ids. De labels stonden los naast hun veld: een
+  // schermlezer kondigde dan "bewerkbaar veld" aan zonder te zeggen wat erin
+  // moest, en klikken op het label zette de aanwijzer nergens.
+  const veldId = useId();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'assets' | 'maintenance' | 'insurance'>('assets');
@@ -103,7 +107,12 @@ export default function InstrumentAssets() {
   });
 
   // Data fetching
-  const { data: assetsData, isLoading } = useInstrumentAssets({
+  const {
+    data: assetsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useInstrumentAssets({
     search: search || undefined,
     status: statusFilter || undefined,
     category: categoryFilter || undefined,
@@ -151,40 +160,13 @@ export default function InstrumentAssets() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createMutation.mutateAsync({
-      name: formData.name,
-      instrumentType: formData.instrumentType,
-      category: formData.category,
-      brand: formData.brand || undefined,
-      model: formData.model || undefined,
-      serialNumber: formData.serialNumber || undefined,
-      barcode: formData.barcode || undefined,
-      yearManufactured: formData.yearManufactured ? parseInt(formData.yearManufactured) : undefined,
-      countryOfOrigin: formData.countryOfOrigin || undefined,
-      color: formData.color || undefined,
-      material: formData.material || undefined,
-      purchaseDate: formData.purchaseDate || undefined,
-      purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined,
-      purchaseVendor: formData.purchaseVendor || undefined,
-      currentValue: formData.currentValue ? parseFloat(formData.currentValue) : undefined,
-      replacementValue: formData.replacementValue ? parseFloat(formData.replacementValue) : undefined,
-      status: formData.status,
-      condition: formData.condition,
-      location: formData.location || undefined,
-      storageLocation: formData.storageLocation || undefined,
-      maintenanceIntervalMonths: parseInt(formData.maintenanceIntervalMonths) || 12,
-      notes: formData.notes || undefined,
-    });
-    setShowAddModal(false);
-    resetForm();
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingAsset) return;
-    await updateMutation.mutateAsync({
-      id: editingAsset.id,
-      data: {
+    // `mutateAsync` werpt als de aanroep mislukt. Zonder deze `try` bleef die
+    // afwijzing onafgevangen liggen (in de browser een `unhandledrejection`),
+    // en dat is geen nette manier om een mislukking af te handelen. De melding
+    // aan de gebruiker komt uit de mutatiehook; hier hoeven we alleen het
+    // venster open te laten staan met wat er ingevuld was.
+    try {
+      await createMutation.mutateAsync({
         name: formData.name,
         instrumentType: formData.instrumentType,
         category: formData.category,
@@ -193,8 +175,12 @@ export default function InstrumentAssets() {
         serialNumber: formData.serialNumber || undefined,
         barcode: formData.barcode || undefined,
         yearManufactured: formData.yearManufactured ? parseInt(formData.yearManufactured) : undefined,
+        countryOfOrigin: formData.countryOfOrigin || undefined,
+        color: formData.color || undefined,
+        material: formData.material || undefined,
         purchaseDate: formData.purchaseDate || undefined,
         purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined,
+        purchaseVendor: formData.purchaseVendor || undefined,
         currentValue: formData.currentValue ? parseFloat(formData.currentValue) : undefined,
         replacementValue: formData.replacementValue ? parseFloat(formData.replacementValue) : undefined,
         status: formData.status,
@@ -203,15 +189,58 @@ export default function InstrumentAssets() {
         storageLocation: formData.storageLocation || undefined,
         maintenanceIntervalMonths: parseInt(formData.maintenanceIntervalMonths) || 12,
         notes: formData.notes || undefined,
-      },
-    });
+      });
+    } catch {
+      return;
+    }
+    setShowAddModal(false);
+    resetForm();
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAsset) return;
+    // Zie handleCreate: de afwijzing hoort hier afgevangen te worden.
+    try {
+      await updateMutation.mutateAsync({
+        id: editingAsset.id,
+        data: {
+          name: formData.name,
+          instrumentType: formData.instrumentType,
+          category: formData.category,
+          brand: formData.brand || undefined,
+          model: formData.model || undefined,
+          serialNumber: formData.serialNumber || undefined,
+          barcode: formData.barcode || undefined,
+          yearManufactured: formData.yearManufactured ? parseInt(formData.yearManufactured) : undefined,
+          purchaseDate: formData.purchaseDate || undefined,
+          purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined,
+          currentValue: formData.currentValue ? parseFloat(formData.currentValue) : undefined,
+          replacementValue: formData.replacementValue ? parseFloat(formData.replacementValue) : undefined,
+          status: formData.status,
+          condition: formData.condition,
+          location: formData.location || undefined,
+          storageLocation: formData.storageLocation || undefined,
+          maintenanceIntervalMonths: parseInt(formData.maintenanceIntervalMonths) || 12,
+          notes: formData.notes || undefined,
+        },
+      });
+    } catch {
+      return;
+    }
     setEditingAsset(null);
     resetForm();
   };
 
   const handleDelete = async () => {
     if (!deletingAsset) return;
-    await deleteMutation.mutateAsync(deletingAsset.id);
+    // Zie handleCreate. Mislukt het verwijderen, dan blijft de vraag staan;
+    // de melding komt uit de mutatiehook.
+    try {
+      await deleteMutation.mutateAsync(deletingAsset.id);
+    } catch {
+      return;
+    }
     setDeletingAsset(null);
   };
 
@@ -403,6 +432,32 @@ export default function InstrumentAssets() {
       return <SkeletonTable rows={5} columns={6} />;
     }
 
+    // `assetsData?.data || []` maakt van een mislukte aanroep een lege lijst.
+    // Zonder deze tak stond er dan "geen instrumenten", terwijl de inventaris
+    // alleen niet opgehaald kon worden - een heel andere mededeling.
+    if (isError) {
+      return (
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>
+          <Icon name="warning" size={48} style={{ color: 'var(--danger)', marginBottom: '1rem' }} />
+          <p>{t('errors.generic')}</p>
+          <button
+            onClick={() => refetch()}
+            style={{
+              marginTop: '1rem',
+              padding: '0.5rem 1rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+              background: 'none',
+              cursor: 'pointer',
+              color: 'var(--text)',
+            }}
+          >
+            {t('common.retry')}
+          </button>
+        </div>
+      );
+    }
+
     if (assets.length === 0) {
       return (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>
@@ -557,8 +612,11 @@ export default function InstrumentAssets() {
     <>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Naam *</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }} htmlFor={`${veldId}-name`}>
+            Naam *
+          </label>
           <input
+            id={`${veldId}-name`}
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -572,8 +630,14 @@ export default function InstrumentAssets() {
           />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Instrumenttype *</label>
+          <label
+            style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}
+            htmlFor={`${veldId}-instrumentType`}
+          >
+            Instrumenttype *
+          </label>
           <input
+            id={`${veldId}-instrumentType`}
             type="text"
             value={formData.instrumentType}
             onChange={(e) => setFormData({ ...formData, instrumentType: e.target.value })}
@@ -591,8 +655,11 @@ export default function InstrumentAssets() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Categorie *</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }} htmlFor={`${veldId}-category`}>
+            Categorie *
+          </label>
           <select
+            id={`${veldId}-category`}
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value as AssetCategory })}
             style={{
@@ -610,8 +677,11 @@ export default function InstrumentAssets() {
           </select>
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Status</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }} htmlFor={`${veldId}-status`}>
+            Status
+          </label>
           <select
+            id={`${veldId}-status`}
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value as AssetStatus })}
             style={{
@@ -632,8 +702,11 @@ export default function InstrumentAssets() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Merk</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }} htmlFor={`${veldId}-brand`}>
+            Merk
+          </label>
           <input
+            id={`${veldId}-brand`}
             type="text"
             value={formData.brand}
             onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
@@ -646,8 +719,11 @@ export default function InstrumentAssets() {
           />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Model</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }} htmlFor={`${veldId}-model`}>
+            Model
+          </label>
           <input
+            id={`${veldId}-model`}
             type="text"
             value={formData.model}
             onChange={(e) => setFormData({ ...formData, model: e.target.value })}
@@ -663,8 +739,14 @@ export default function InstrumentAssets() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Serienummer</label>
+          <label
+            style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}
+            htmlFor={`${veldId}-serialNumber`}
+          >
+            Serienummer
+          </label>
           <input
+            id={`${veldId}-serialNumber`}
             type="text"
             value={formData.serialNumber}
             onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
@@ -677,8 +759,14 @@ export default function InstrumentAssets() {
           />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Bouwjaar</label>
+          <label
+            style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}
+            htmlFor={`${veldId}-yearManufactured`}
+          >
+            Bouwjaar
+          </label>
           <input
+            id={`${veldId}-yearManufactured`}
             type="number"
             value={formData.yearManufactured}
             onChange={(e) => setFormData({ ...formData, yearManufactured: e.target.value })}
@@ -696,8 +784,11 @@ export default function InstrumentAssets() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Conditie</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }} htmlFor={`${veldId}-condition`}>
+            Conditie
+          </label>
           <select
+            id={`${veldId}-condition`}
             value={formData.condition}
             onChange={(e) => setFormData({ ...formData, condition: e.target.value as AssetCondition })}
             style={{
@@ -715,10 +806,14 @@ export default function InstrumentAssets() {
           </select>
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
+          <label
+            style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}
+            htmlFor={`${veldId}-maintenanceIntervalMonths`}
+          >
             Onderhoudsinterval (maanden)
           </label>
           <input
+            id={`${veldId}-maintenanceIntervalMonths`}
             type="number"
             value={formData.maintenanceIntervalMonths}
             onChange={(e) => setFormData({ ...formData, maintenanceIntervalMonths: e.target.value })}
@@ -736,8 +831,14 @@ export default function InstrumentAssets() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Aankoopprijs</label>
+          <label
+            style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}
+            htmlFor={`${veldId}-purchasePrice`}
+          >
+            Aankoopprijs
+          </label>
           <input
+            id={`${veldId}-purchasePrice`}
             type="number"
             value={formData.purchasePrice}
             onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
@@ -752,8 +853,14 @@ export default function InstrumentAssets() {
           />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Huidige waarde</label>
+          <label
+            style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}
+            htmlFor={`${veldId}-currentValue`}
+          >
+            Huidige waarde
+          </label>
           <input
+            id={`${veldId}-currentValue`}
             type="number"
             value={formData.currentValue}
             onChange={(e) => setFormData({ ...formData, currentValue: e.target.value })}
@@ -768,8 +875,14 @@ export default function InstrumentAssets() {
           />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Vervangingswaarde</label>
+          <label
+            style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}
+            htmlFor={`${veldId}-replacementValue`}
+          >
+            Vervangingswaarde
+          </label>
           <input
+            id={`${veldId}-replacementValue`}
             type="number"
             value={formData.replacementValue}
             onChange={(e) => setFormData({ ...formData, replacementValue: e.target.value })}
@@ -787,8 +900,11 @@ export default function InstrumentAssets() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Locatie</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }} htmlFor={`${veldId}-location`}>
+            Locatie
+          </label>
           <input
+            id={`${veldId}-location`}
             type="text"
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -802,8 +918,14 @@ export default function InstrumentAssets() {
           />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Opslaglocatie</label>
+          <label
+            style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}
+            htmlFor={`${veldId}-storageLocation`}
+          >
+            Opslaglocatie
+          </label>
           <input
+            id={`${veldId}-storageLocation`}
             type="text"
             value={formData.storageLocation}
             onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })}
@@ -819,8 +941,11 @@ export default function InstrumentAssets() {
       </div>
 
       <div>
-        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Notities</label>
+        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }} htmlFor={`${veldId}-notes`}>
+          Notities
+        </label>
         <textarea
+          id={`${veldId}-notes`}
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           rows={3}

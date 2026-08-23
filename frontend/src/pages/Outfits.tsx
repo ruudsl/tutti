@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,9 @@ export default function Outfits() {
   useDocumentTitle('pageTitle.outfits');
   const queryClient = useQueryClient();
   const confirmDialog = useConfirm();
+  // Eén basis voor de veld-ids; de twee formulieren krijgen elk hun eigen
+  // voorvoegsel zodat de ids uniek blijven.
+  const veldId = useId();
 
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -44,7 +47,12 @@ export default function Outfits() {
 
   const canManage = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
-  const { data: outfits = [], isLoading } = useQuery({
+  const {
+    data: outfits = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['outfits'],
     queryFn: getOutfits,
   });
@@ -172,7 +180,22 @@ export default function Outfits() {
         )}
       </div>
 
-      {outfits.length === 0 ? (
+      {/*
+        Een mislukte aanroep is geen lege kast. `useQuery` geeft hier `[]` als
+        standaardwaarde, dus zonder deze tak stond er na een netwerkfout "nog
+        geen tenues" met de uitnodiging om het eerste tenue aan te maken -
+        terwijl de tenues die er zijn gewoon niet opgehaald konden worden. Wie
+        dat gelooft, maakt aan wat er al is.
+      */}
+      {isError ? (
+        <div className="card p-8 text-center">
+          <Icon name="warning" className="w-12 h-12 mx-auto mb-4 text-error" />
+          <p className="text-base-content/60 mb-4">{t('errors.generic')}</p>
+          <button className="btn btn-outline btn-sm mx-auto" onClick={() => refetch()}>
+            {t('common.retry')}
+          </button>
+        </div>
+      ) : outfits.length === 0 ? (
         <div className="card p-8 text-center">
           <Icon name="package" className="w-12 h-12 mx-auto mb-4 text-base-content/30" />
           <p className="text-base-content/60">{t('outfits.empty')}</p>
@@ -327,10 +350,11 @@ export default function Outfits() {
             className="space-y-4"
           >
             <div className="form-control">
-              <label className="label">
+              <label htmlFor={`${veldId}-aanmaak-name`} className="label">
                 <span className="label-text">{t('outfits.name')} *</span>
               </label>
               <input
+                id={`${veldId}-aanmaak-name`}
                 type="text"
                 className="input input-bordered"
                 value={formData.name}
@@ -340,10 +364,11 @@ export default function Outfits() {
             </div>
 
             <div className="form-control">
-              <label className="label">
+              <label htmlFor={`${veldId}-aanmaak-description`} className="label">
                 <span className="label-text">{t('outfits.description')}</span>
               </label>
               <textarea
+                id={`${veldId}-aanmaak-description`}
                 className="textarea textarea-bordered"
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
@@ -352,10 +377,11 @@ export default function Outfits() {
             </div>
 
             <div className="form-control">
-              <label className="label">
+              <label htmlFor={`${veldId}-aanmaak-color`} className="label">
                 <span className="label-text">{t('outfits.color')}</span>
               </label>
               <input
+                id={`${veldId}-aanmaak-color`}
                 type="color"
                 className="w-20 h-10"
                 value={formData.colorCode || '#000000'}
@@ -364,11 +390,12 @@ export default function Outfits() {
             </div>
 
             <div className="form-control">
-              <label className="label">
+              <label htmlFor={`${veldId}-aanmaak-item`} className="label">
                 <span className="label-text">{t('outfits.items')}</span>
               </label>
               <div className="flex gap-2">
                 <input
+                  id={`${veldId}-aanmaak-item`}
                   type="text"
                   className="input input-bordered flex-1"
                   value={itemInput}
@@ -450,10 +477,11 @@ export default function Outfits() {
             className="space-y-4"
           >
             <div className="form-control">
-              <label className="label">
+              <label htmlFor={`${veldId}-wijzig-name`} className="label">
                 <span className="label-text">{t('outfits.name')} *</span>
               </label>
               <input
+                id={`${veldId}-wijzig-name`}
                 type="text"
                 className="input input-bordered"
                 value={formData.name}
@@ -463,10 +491,11 @@ export default function Outfits() {
             </div>
 
             <div className="form-control">
-              <label className="label">
+              <label htmlFor={`${veldId}-wijzig-description`} className="label">
                 <span className="label-text">{t('outfits.description')}</span>
               </label>
               <textarea
+                id={`${veldId}-wijzig-description`}
                 className="textarea textarea-bordered"
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
@@ -475,10 +504,11 @@ export default function Outfits() {
             </div>
 
             <div className="form-control">
-              <label className="label">
+              <label htmlFor={`${veldId}-wijzig-color`} className="label">
                 <span className="label-text">{t('outfits.color')}</span>
               </label>
               <input
+                id={`${veldId}-wijzig-color`}
                 type="color"
                 className="w-20 h-10"
                 value={formData.colorCode || '#000000'}
@@ -487,11 +517,12 @@ export default function Outfits() {
             </div>
 
             <div className="form-control">
-              <label className="label">
+              <label htmlFor={`${veldId}-wijzig-item`} className="label">
                 <span className="label-text">{t('outfits.items')}</span>
               </label>
               <div className="flex gap-2">
                 <input
+                  id={`${veldId}-wijzig-item`}
                   type="text"
                   className="input input-bordered flex-1"
                   value={itemInput}
