@@ -11,6 +11,7 @@ import { Router, Response } from 'express';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import db from '../database/connection';
+import { bijlageKopregel } from '../utils/contentDisposition';
 
 const router = Router();
 
@@ -499,10 +500,18 @@ router.get(
 
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 
-    const filename = `repertoire-${orchestra.name.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
+    // De orkestnaam werd hier kaalgeslagen met `[^a-zA-Z0-9]` omdat een
+    // niet-ASCII teken de met de hand samengestelde kopregel onbruikbaar
+    // maakte: tot U+00FF kwam er een vervangingsteken bij de browser aan,
+    // daarboven weigerde Node de kopregel met ERR_INVALID_CHAR en werd de
+    // download een foutmelding 500. Het strippen loste dat op door de
+    // informatie weg te gooien - "Fanfare Sint-Cécile" werd
+    // "Fanfare_Sint_C_cile". bijlageKopregel codeert de naam, dus die kan nu
+    // heel blijven.
+    const filename = `repertoire-${orchestra.name}.csv`;
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', bijlageKopregel(filename, 'repertoire.csv'));
     res.send('﻿' + csv); // BOM for Excel compatibility
   }),
 );

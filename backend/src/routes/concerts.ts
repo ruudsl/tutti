@@ -9,6 +9,7 @@ import { createConcertSchema, updateConcertSchema } from '../validation/schemas'
 import logger from '../utils/logger';
 import { z } from 'zod';
 import { wijzigingsschema } from '../utils/schema';
+import { bijlageKopregel } from '../utils/contentDisposition';
 
 const router = Router();
 
@@ -770,10 +771,15 @@ router.get(
     csv += `Totaal stukken,${totalPieces}\n`;
     csv += `Totale speelduur,${formatDuration(totalDuration)}\n`;
 
-    // Set headers for CSV download
+    // startDate en endDate komen ongefilterd uit de queryreeks - er zit geen
+    // datumcontrole tussen - dus wat de client stuurt belandt zo in de
+    // bestandsnaam. Met de hand samengesteld kwam een teken tot U+00FF daarin
+    // bij de browser aan als vervangingsteken, en weigerde Node bij een teken
+    // daarboven de hele kopregel met ERR_INVALID_CHAR: dan kreeg de gebruiker
+    // een foutmelding 500 in plaats van zijn export.
     const filename = `buma_stemra_${startDate}_${endDate}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', bijlageKopregel(filename, 'buma-stemra.csv'));
 
     // Add BOM for Excel UTF-8 compatibility
     res.send('\ufeff' + csv);
@@ -1442,10 +1448,15 @@ router.get(
     });
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${concert.name.replace(/[^a-zA-Z0-9]/g, '_')}_programma.txt"`,
-    );
+    // De concertnaam ging hier eerst door `[^a-zA-Z0-9]` heen, omdat een
+    // niet-ASCII teken de met de hand samengestelde kopregel sloopte: tot
+    // U+00FF kwam er een vervangingsteken aan, daarboven weigerde Node de
+    // kopregel met ERR_INVALID_CHAR en werd de download een foutmelding 500.
+    // Dat hield de kopregel heel, maar gooide de naam weg - "Café Chantant"
+    // werd "Caf__Chantant". bijlageKopregel codeert het teken, dus het
+    // strippen kan eruit en de gebruiker krijgt de naam terug zoals hij hem
+    // heeft ingevoerd.
+    res.setHeader('Content-Disposition', bijlageKopregel(`${concert.name}_programma.txt`, 'programma.txt'));
     res.send(text);
   }),
 );

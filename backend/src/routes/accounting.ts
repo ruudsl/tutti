@@ -1824,6 +1824,9 @@ router.get(
     if (!batch.xml_file_path) throw new ApiError(400, 'SEPA-bestand niet beschikbaar.');
 
     res.setHeader('Content-Type', 'application/xml');
+    // Bewust niet via bijlageKopregel: batch_reference wordt bij het aanmaken
+    // gezet als `SEPA-${batchType}-${Date.now()}`, dus een vast voorvoegsel met
+    // cijfers. Daar valt niets aan te verminken.
     res.setHeader('Content-Disposition', `attachment; filename="sepa-${batch.batch_reference}.xml"`);
     res.send(batch.xml_file_path);
   }),
@@ -3640,6 +3643,8 @@ router.get(
       ]);
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
+      // geen gebruikersinvoer die de kopregel kan verminken.
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="grootboek_${new Date().toISOString().split('T')[0]}.csv"`,
@@ -3716,6 +3721,8 @@ router.get(
       ]);
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
+      // geen gebruikersinvoer die de kopregel kan verminken.
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="rekeningschema_${new Date().toISOString().split('T')[0]}.csv"`,
@@ -3784,6 +3791,8 @@ router.get(
       ]);
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
+      // geen gebruikersinvoer die de kopregel kan verminken.
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="facturen_${new Date().toISOString().split('T')[0]}.csv"`,
@@ -3868,6 +3877,8 @@ router.get(
       ]);
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
+      // geen gebruikersinvoer die de kopregel kan verminken.
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="balans_${new Date().toISOString().split('T')[0]}.csv"`,
@@ -3994,6 +4005,8 @@ router.get(
       ]);
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
+      // geen gebruikersinvoer die de kopregel kan verminken.
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="winst_verlies_${new Date().toISOString().split('T')[0]}.csv"`,
@@ -4062,6 +4075,8 @@ router.get(
       ]);
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
+      // geen gebruikersinvoer die de kopregel kan verminken.
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="relaties_${new Date().toISOString().split('T')[0]}.csv"`,

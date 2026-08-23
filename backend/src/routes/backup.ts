@@ -98,6 +98,9 @@ router.get(
 
     // Set response headers
     res.setHeader('Content-Type', 'application/zip');
+    // Bewust niet via bijlageKopregel: filename is hierboven opgebouwd uit een
+    // vast voorvoegsel en een tijdstempel, dus er zit geen gebruikersinvoer in
+    // die de kopregel kan verminken.
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
     // Create archive

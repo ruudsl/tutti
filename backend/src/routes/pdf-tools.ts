@@ -412,6 +412,9 @@ router.post(
     }
 
     res.setHeader('Content-Type', 'application/zip');
+    // Bewust niet via bijlageKopregel: een letterlijk vaste naam. De namen van
+    // de losse pdf's erin gaan wel door archiver heen, die zijn eigen kodering
+    // in het zip-bestand regelt.
     res.setHeader('Content-Disposition', 'attachment; filename="split_parts.zip"');
 
     const archive = archiver('zip', { zlib: { level: 5 } });

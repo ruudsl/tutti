@@ -271,6 +271,8 @@ router.get(
     if (format === 'zip') {
       // Create ZIP archive
       res.setHeader('Content-Type', 'application/zip');
+      // Bewust niet via bijlageKopregel: een gebruikers-uuid plus een
+      // tijdstempel, geen vrije tekst die de kopregel kan verminken.
       res.setHeader('Content-Disposition', `attachment; filename="gdpr-export-${userId}-${Date.now()}.zip"`);
 
       const archive = archiver('zip', { zlib: { level: 9 } });
@@ -314,6 +316,8 @@ For questions about your data, contact your association administrator.
     } else {
       // Return JSON directly
       res.setHeader('Content-Type', 'application/json');
+      // Bewust niet via bijlageKopregel: een gebruikers-uuid plus een
+      // tijdstempel, geen vrije tekst die de kopregel kan verminken.
       res.setHeader('Content-Disposition', `attachment; filename="gdpr-export-${userId}-${Date.now()}.json"`);
       res.json(userData);
     }

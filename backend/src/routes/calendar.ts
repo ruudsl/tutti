@@ -92,6 +92,10 @@ router.get(
     const icsContent = generateEventIcs(event);
 
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    // Bewust niet via bijlageKopregel: `type` komt uit een vaste keuze
+    // (rehearsal of concert) en `id` is de sleutel van een record dat hierboven
+    // is opgezocht - vindt de zoekopdracht niets, dan is het al een 404. Geen
+    // vrije tekst dus.
     res.setHeader('Content-Disposition', `attachment; filename="${type}-${id}.ics"`);
     res.send(icsContent);
   }),
