@@ -62,6 +62,35 @@ function generateSlug(title: string): string {
     .slice(0, 100);
 }
 
+/**
+ * Controleert dat elke opgegeven categorie bij de eigen vereniging hoort.
+ *
+ * categoryIds ging ongecontroleerd de koppeltabel in. De enige rem was de
+ * externe sleutel naar post_categories: de categorie moest bestaan, maar niet
+ * bij de vereniging van de schrijver horen. Vereniging A kon dus een bericht
+ * aan een categorie van vereniging B hangen.
+ *
+ * Dat lekt twee kanten op. Het bericht van A geeft bij het ophalen de naam,
+ * slug en kleur van B's categorie terug, en de teller postCount in het
+ * categorieenoverzicht van B telt het bericht van A mee - B ziet een aantal dat
+ * niet bij zijn eigen berichten hoort.
+ */
+function controleerCategorieen(categoryIds: string[], associationId: string): void {
+  const uniek = [...new Set(categoryIds)];
+  if (uniek.length === 0) {
+    return;
+  }
+
+  const placeholders = uniek.map(() => '?').join(',');
+  const gevonden = db
+    .prepare(`SELECT id FROM post_categories WHERE association_id = ? AND id IN (${placeholders})`)
+    .all(associationId, ...uniek) as { id: string }[];
+
+  if (gevonden.length !== uniek.length) {
+    throw new ApiError(400, 'Een of meer categorieen bestaan niet binnen deze vereniging.');
+  }
+}
+
 function canUserSeePost(post: any, user: any): boolean {
   if (!post.target_orchestras && !post.target_roles) {
     return true;
@@ -287,7 +316,22 @@ router.get(
     const params: any[] = [associationId];
 
     if (!isAdmin) {
-      query += " AND p.status = 'published' AND (p.published_at IS NULL OR p.published_at <= datetime('now'))";
+      // De publicatiedatum wordt vergeleken met een ISO-tijdstip, niet met
+      // datetime('now').
+      //
+      // Hier stond `p.published_at <= datetime('now')`. published_at gaat er
+      // als ISO 8601 in - `2026-08-23T14:20:53.571Z` - en datetime('now')
+      // levert `2026-08-23 14:20:53`. SQLite heeft geen datumtype, dus dat is
+      // een tekstvergelijking, en op plek tien staat een 'T' tegenover een
+      // spatie. 'T' is 0x54 en de spatie 0x20, dus het opgeslagen tijdstip is
+      // altijd de grotere tekst zodra de datum gelijk is.
+      //
+      // Gevolg: een bericht dat vandaag gepubliceerd werd viel voor elk gewoon
+      // lid buiten het overzicht, en kwam pas na middernacht UTC tevoorschijn -
+      // dan verschilt de datum en gaat de vergelijking wel over het jaartal.
+      // Juist het nieuwste bericht was dus het bericht dat niemand zag.
+      query += " AND p.status = 'published' AND (p.published_at IS NULL OR p.published_at <= ?)";
+      params.push(new Date().toISOString());
     } else if (status) {
       query += ' AND p.status = ?';
       params.push(status);
@@ -504,6 +548,10 @@ router.post(
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
     }
 
+    // Vooraf, niet pas bij het koppelen: anders blijft er bij een afgekeurde
+    // categorie een bericht zonder categorieen achter.
+    controleerCategorieen(data.categoryIds ?? [], associationId);
+
     const slug = data.slug || generateSlug(data.title);
 
     // Check slug uniqueness
@@ -592,6 +640,12 @@ router.put(
     if (!post) {
       throw new ApiError(404, 'Bericht niet gevonden.');
     }
+
+    // Vooraf, zodat een afgekeurde categorie de rest van de wijziging niet half
+    // doorgevoerd achterlaat. De vereniging komt uit het bericht zelf; dat is
+    // dezelfde als die van de verzoeker, want anders was de zoekopdracht
+    // hierboven al op 404 uitgekomen.
+    controleerCategorieen(data.categoryIds ?? [], post.association_id);
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -736,6 +790,23 @@ router.post(
       throw new ApiError(404, 'Bericht niet gevonden.');
     }
 
+    // Reageren kan alleen op wat je ook mag lezen.
+    //
+    // Deze controle ontbrak: de route keek naar het bestaan van het bericht,
+    // naar allow_comments en naar de doelgroep, maar niet naar de toestand. Een
+    // lid dat het id had kon dus reageren op een concept of een gearchiveerd
+    // bericht, terwijl GET op datzelfde bericht netjes 404 gaf. De 201
+    // verklapte dat het bericht bestond, en de reactie stond er al onder zodra
+    // de beheerder publiceerde.
+    //
+    // Dezelfde voorwaarde als bij het lezen: beheerders en de schrijver komen
+    // er wel bij, zodat een bericht voorbereiden gewoon blijft werken.
+    const isAdmin = ['admin', 'music_committee'].includes(req.user!.role);
+    const isAuthor = post.created_by === req.user!.id;
+    if (!isAdmin && !isAuthor && post.status !== 'published') {
+      throw new ApiError(404, 'Bericht niet gevonden.');
+    }
+
     if (!post.allow_comments) {
       throw new ApiError(400, 'Reacties zijn niet toegestaan op dit bericht.');
     }
@@ -782,9 +853,23 @@ router.delete(
   '/:postId/comments/:commentId',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // De reactie wordt via het bericht aan de eigen vereniging vastgeknoopt.
+    //
+    // Dit was de enige route in dit bestand die de verenigingsgrens helemaal
+    // niet aanraakte: de reactie werd opgezocht op id en bericht-id, en daarna
+    // gold alleen nog "ben je de schrijver, of heb je een beheerdersrol". De
+    // rol van de verzoeker zegt echter niets over de vereniging waar de reactie
+    // bij hoort. Elke beheerder of muziekcommissie van welke vereniging dan ook
+    // kon dus de reactie van een vreemd lid wegpoetsen, met alleen de twee
+    // id's.
     const comment = db
-      .prepare('SELECT * FROM post_comments WHERE id = ? AND post_id = ? AND deleted_at IS NULL')
-      .get(req.params.commentId, req.params.postId) as any;
+      .prepare(
+        `SELECT pc.*
+         FROM post_comments pc
+         JOIN posts p ON pc.post_id = p.id
+         WHERE pc.id = ? AND pc.post_id = ? AND p.association_id = ? AND pc.deleted_at IS NULL`,
+      )
+      .get(req.params.commentId, req.params.postId, req.user!.associationId) as any;
 
     if (!comment) {
       throw new ApiError(404, 'Reactie niet gevonden.');
