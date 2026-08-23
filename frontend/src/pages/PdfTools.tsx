@@ -63,6 +63,27 @@ export function volgendPaginabereik(
   return { start, end: Math.min(start, laatste) };
 }
 
+/**
+ * Het volgnummer van een deel binnen zijn eigen instrument: één hoger dan het
+ * aantal eerdere delen van datzelfde instrument.
+ *
+ * Stond als `getNextNumberForInstrument` binnen de component en las daar de
+ * state in plaats van de lijst waarop gerekend werd. Dat werkte alleen doordat
+ * `[...splitRanges]` zijn rijen deelde met die state, en dus doordat de code
+ * de vorige state ter plekke veranderde. Hier apart, zodat het rekenwerk over
+ * de meegegeven lijst gaat en op zichzelf te toetsen is.
+ */
+export function volgnummerBinnenInstrument(delen: Array<{ instrumentId: string }>, index: number): number {
+  const instrumentId = delen[index].instrumentId;
+  let aantal = 1;
+  for (let i = 0; i < index; i++) {
+    if (delen[i].instrumentId === instrumentId) {
+      aantal++;
+    }
+  }
+  return aantal;
+}
+
 export default function PdfTools() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.pdfTools');
@@ -383,27 +404,23 @@ export default function PdfTools() {
     ]);
   };
 
-  // Calculate the next number for an instrument based on previous selections
-  const getNextNumberForInstrument = (instrumentId: string, currentIndex: number): number => {
-    let count = 1;
-    for (let i = 0; i < currentIndex; i++) {
-      if (splitRanges[i].instrumentId === instrumentId) {
-        count++;
-      }
-    }
-    return count;
-  };
-
   // Update instrument and auto-calculate number
   const updateInstrument = (index: number, instrumentId: string) => {
-    const updated = [...splitRanges];
-    updated[index].instrumentId = instrumentId;
-    updated[index].number = getNextNumberForInstrument(instrumentId, index);
+    const vorigInstrumentId = splitRanges[index].instrumentId;
+    // Nieuwe objecten in plaats van een ondiepe kopie: `[...splitRanges]` deelt
+    // zijn rijen met de vorige state, en die daarin bijwerken is de oude state
+    // veranderen.
+    const updated = splitRanges.map((range, i) => (i === index ? { ...range, instrumentId } : { ...range }));
+    updated[index].number = volgnummerBinnenInstrument(updated, index);
 
-    // Recalculate numbers for all subsequent ranges with the same instrument
+    // De rijen ná deze opnieuw nummeren - niet alleen die van het nieuwe
+    // instrument, maar ook die van het instrument dat deze rij zojuist
+    // verlaten heeft. Bleef dat laatste achterwege, dan hield het verlaten
+    // instrument een gat in de nummering.
     for (let i = index + 1; i < updated.length; i++) {
-      if (updated[i].instrumentId === instrumentId) {
-        updated[i].number = getNextNumberForInstrument(instrumentId, i);
+      const id = updated[i].instrumentId;
+      if (id === instrumentId || (vorigInstrumentId !== '' && id === vorigInstrumentId)) {
+        updated[i].number = volgnummerBinnenInstrument(updated, i);
       }
     }
 
