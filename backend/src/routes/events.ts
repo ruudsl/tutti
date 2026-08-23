@@ -1093,6 +1093,37 @@ router.post(
       throw new ApiError(400, 'Vervoer zit vol.');
     }
 
+    // passenger_name is NOT NULL, maar een passagier wordt normaal gesproken
+    // uit de ledenlijst gekozen en dan stuurt het scherm alleen userId mee.
+    // `passengerName || null` maakte daar een NULL van en de INSERT liep stuk:
+    // een lid als passagier aanmelden gaf altijd een foutmelding 500. Dat de
+    // leesroute hierboven de naam uit de gebruikersrij haalt zodra user_id
+    // gevuld is (`p.user_id ? ... : p.passenger_name`), laat zien dat dit juist
+    // de bedoelde weg was.
+    //
+    // Meteen ook de verenigingsgrens: userId kwam ongecontroleerd uit het
+    // verzoek, terwijl GET /:eventId/transport op die rij joint en de naam van
+    // het lid toont. Een lid van een andere vereniging als passagier
+    // aanmelden lekte zo diens naam - dezelfde fout als eerder in
+    // POST /concerts/:id/attendance.
+    let naam: string | null = typeof passengerName === 'string' && passengerName.trim() !== '' ? passengerName : null;
+
+    if (userId) {
+      const passagier = db
+        .prepare('SELECT first_name, last_name FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+        .get(userId, req.user!.associationId) as { first_name: string; last_name: string } | undefined;
+
+      if (!passagier) {
+        throw new ApiError(404, 'Lid niet gevonden.');
+      }
+
+      naam = naam ?? `${passagier.first_name} ${passagier.last_name}`;
+    }
+
+    if (!naam) {
+      throw new ApiError(400, 'Naam of lid is verplicht.');
+    }
+
     const id = uuidv4();
 
     db.prepare(
@@ -1105,7 +1136,7 @@ router.post(
       id,
       req.params.transportId,
       userId ?? null,
-      passengerName || null,
+      naam,
       pickupLocation ?? null,
       pickupAddress ?? null,
       pickupTime ?? null,

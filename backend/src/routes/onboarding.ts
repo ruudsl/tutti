@@ -687,16 +687,33 @@ router.post(
     } = req.body;
 
     // Parse arrays from form data (when sent with multipart/form-data for file upload)
-    const instrumentIds = instrumentIdsStr
-      ? typeof instrumentIdsStr === 'string'
-        ? JSON.parse(instrumentIdsStr)
-        : instrumentIdsStr
-      : [];
-    const orchestraIds = orchestraIdsStr
-      ? typeof orchestraIdsStr === 'string'
-        ? JSON.parse(orchestraIdsStr)
-        : orchestraIdsStr
-      : [];
+    //
+    // De JSON.parse stond hier onbeschermd. Een stukgeslagen waarde - en die
+    // komt van buiten, uit het formulier - gooide een SyntaxError die verderop
+    // als "Interne serverfout" (500) bij de gebruiker landde. Foute invoer
+    // hoort een 400 te zijn: een 500 zegt dat de server stuk is, laat de
+    // beheerder in het ongewisse over wat hij fout deed, en verdwijnt in de
+    // foutmeldingen tussen echte storingen.
+    const leesIdLijst = (waarde: unknown, veld: string): string[] => {
+      if (!waarde) return [];
+      if (Array.isArray(waarde)) return waarde as string[];
+      if (typeof waarde !== 'string') {
+        throw new ApiError(400, `${veld} moet een lijst met id's zijn.`);
+      }
+      let ontleed: unknown;
+      try {
+        ontleed = JSON.parse(waarde);
+      } catch {
+        throw new ApiError(400, `${veld} is geen geldige lijst met id's.`);
+      }
+      if (!Array.isArray(ontleed)) {
+        throw new ApiError(400, `${veld} moet een lijst met id's zijn.`);
+      }
+      return ontleed as string[];
+    };
+
+    const instrumentIds = leesIdLijst(instrumentIdsStr, 'instrumentIds');
+    const orchestraIds = leesIdLijst(orchestraIdsStr, 'orchestraIds');
     const createM365Account = createM365AccountStr === 'true' || createM365AccountStr === true;
     const addToPercussionGroup = addToPercussionGroupStr === 'true' || addToPercussionGroupStr === true;
     const profilePhotoBuffer = req.file?.buffer;
@@ -709,6 +726,26 @@ router.post(
     const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(email.toLowerCase());
     if (existing) {
       throw new ApiError(409, 'Er bestaat al een gebruiker met dit emailadres.');
+    }
+
+    // Controleer de gekozen orkesten voordat er iets onomkeerbaars gebeurt.
+    //
+    // Deze controle stond onderin, in de database-transactie. Het M365-account
+    // werd daarvoor al aangemaakt en van een licentie voorzien. Bij een
+    // orkest-id van een andere vereniging rolde de transactie terug - het
+    // lokale lid verdween - maar het account in de tenant bleef staan, met de
+    // licentie die het opgesoupeerd had. Een transactie draait de database
+    // terug, niet de buitenwereld.
+    //
+    // Instrumenten hebben deze controle niet nodig: die tabel is gedeeld en
+    // heeft geen association_id.
+    if (orchestraIds.length > 0) {
+      const hoortErbij = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?');
+      for (const orchestraId of orchestraIds) {
+        if (!hoortErbij.get(orchestraId, req.user!.associationId)) {
+          throw new ApiError(400, 'Een van de gekozen orkesten hoort niet bij deze vereniging.');
+        }
+      }
     }
 
     const userId = uuidv4();
@@ -893,16 +930,9 @@ router.post(
       // beschikbaarheid en hun opstelling terecht - user_orchestras is op al
       // die plekken de bron.
       //
-      // Instrumenten hebben deze controle niet nodig: die tabel is gedeeld en
-      // heeft geen association_id.
-      if (orchestraIds && orchestraIds.length > 0) {
-        const hoortErbij = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?');
-        for (const orchestraId of orchestraIds) {
-          if (!hoortErbij.get(orchestraId, req.user!.associationId)) {
-            throw new ApiError(400, 'Een van de gekozen orkesten hoort niet bij deze vereniging.');
-          }
-        }
-
+      // De controle daarop staat bovenaan deze route, vóór het M365-werk: een
+      // transactie draait de database terug maar de tenant niet.
+      if (orchestraIds.length > 0) {
         const insertOrchestra = db.prepare('INSERT INTO user_orchestras (user_id, orchestra_id) VALUES (?, ?)');
         for (const orchestraId of orchestraIds) {
           insertOrchestra.run(userId, orchestraId);
@@ -1566,6 +1596,23 @@ router.post(
     // For orchestra type, orchestraId is required
     if (groupType === 'orchestra' && !orchestraId) {
       throw new ApiError(400, 'Orkest is verplicht voor orkest-groepen.');
+    }
+
+    // Het orkest-id komt rauw uit de aanvraag.
+    //
+    // Zonder deze controle kon een beheerder een mapping aanmaken die naar het
+    // orkest van een andere vereniging wijst. De dubbelcontrole hieronder zoekt
+    // op `orchestra_id = ? AND association_id = ?` en vindt zo'n orkest dus
+    // nooit, waarna de INSERT gewoon doorging. GET /m365-groups doet een LEFT
+    // JOIN op orchestras en gaf de naam van dat orkest daarna terug - hetzelfde
+    // lek als bij user_orchestras in POST /member hierboven.
+    if (orchestraId) {
+      const hoortErbij = db
+        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+        .get(orchestraId, req.user!.associationId);
+      if (!hoortErbij) {
+        throw new ApiError(400, 'Het gekozen orkest hoort niet bij deze vereniging.');
+      }
     }
 
     // Check if mapping already exists for this orchestra

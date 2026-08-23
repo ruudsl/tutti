@@ -45,7 +45,15 @@ const createProgramItemSchema = z.object({
   title: z.string().min(1, 'Titel is verplicht'),
   composer: z.string().optional(),
   arranger: z.string().optional(),
-  sortOrder: z.number().int().min(0).default(0),
+  // Geen `.default(0)`: die maakte de berekening in POST /:id/program dood.
+  // Zod vult een standaard namelijk in vóór de route hem ziet, dus
+  // `data.sortOrder ?? (maxOrder.max_order ?? -1) + 1` kwam nooit voorbij de
+  // linkerkant en elk nieuw item kreeg volgnummer 0. Zolang niemand het
+  // programma herschikte viel dat niet op - alles stond op 0 en SQLite gaf de
+  // rijen in invoervolgorde terug - maar na een keer slepen kreeg elk nieuw
+  // stuk volgnummer 0 en sprong het naar de kop van het programma in plaats
+  // van naar de staart.
+  sortOrder: z.number().int().min(0).optional(),
   notes: z.string().optional(),
   partOfSet: z.string().optional(),
 });
@@ -711,8 +719,25 @@ router.get(
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
 
-    const startDate = (req.query.startDate as string) || oneYearAgo.toISOString().split('T')[0];
-    const endDate = (req.query.endDate as string) || today.toISOString().split('T')[0];
+    // `req.query.startDate as string` liegt. Express levert een array bij twee
+    // keer dezelfde parameter (?startDate=a&startDate=b) en een object bij de
+    // haakjesvorm (?startDate[x]=1), en er zit geen datumcontrole tussen, dus
+    // die waarde ging zo de SQL-binding in. Bij een object weigerde sql.js hem
+    // en kreeg de gebruiker een foutmelding 500 in plaats van zijn aangifte;
+    // bij een array werd hij als blob gebonden, wat stilzwijgend een lege
+    // aangifte opleverde met "[object Object]"-achtige rommel in de periode en
+    // in de bestandsnaam.
+    //
+    // Alleen tekst telt daarom als opgegeven; al het andere valt terug op de
+    // standaardperiode van een jaar. Een onbruikbare datumtékst blijft wel
+    // gewoon doorgaan: die hoort in de periode-regel en in de bestandsnaam te
+    // belanden zoals hij is ingevoerd, en csvVeld en bijlageKopregel maken hem
+    // daar onschadelijk.
+    const queryTekst = (waarde: unknown): string | undefined =>
+      typeof waarde === 'string' && waarde.length > 0 ? waarde : undefined;
+
+    const startDate = queryTekst(req.query.startDate) ?? oneYearAgo.toISOString().split('T')[0];
+    const endDate = queryTekst(req.query.endDate) ?? today.toISOString().split('T')[0];
 
     // Get all concerts and their program items within the date range
     const pieces = db

@@ -43,6 +43,16 @@ const updateAssignmentSchema = z.object({
   notes: z.string().optional(),
 });
 
+/**
+ * Rijnummer en positie zijn NOT NULL in rehearsal_seating. Ze kwamen
+ * ongecontroleerd uit de body, dus een aanvraag zonder rijnummer liep stuk op
+ * de database in plaats van op een nette melding.
+ */
+const seatSchema = z.object({
+  rowNumber: z.number().int().min(0),
+  positionInRow: z.number().int().min(0),
+});
+
 const createNeighborSchema = z.object({
   orchestraId: z.string().uuid(),
   userId: z.string().uuid(),
@@ -83,6 +93,37 @@ function bewaakRijVanOrkest(sectionId: string, orchestraId: string): void {
     .get(sectionId, orchestraId);
 
   if (!rij) throw new ApiError(404, 'Sectie niet gevonden.');
+}
+
+/**
+ * Bewaakt dat een stoel maar aan een lid tegelijk vergeven wordt.
+ *
+ * seating_assignments kent UNIQUE(orchestra_id, user_id): een lid krijgt dus
+ * maar een plek. Andersom stond er niets. Twee leden op dezelfde rij en
+ * dezelfde positie kwamen er allebei in, en de opstelling tekende ze boven op
+ * elkaar - wie er dan echt zit hangt af van de volgorde waarin de rijen
+ * terugkomen.
+ *
+ * Een lid dat zacht verwijderd is houdt zijn stoel niet bezet: dat lid staat
+ * nergens meer in de overzichten, dus zijn plek is vrij.
+ */
+function bewaakVrijeStoel(
+  orchestraId: string,
+  sectionId: string,
+  positionInSection: number,
+  negeerUserId?: string,
+): void {
+  const bezet = db
+    .prepare(
+      `SELECT sa.id
+       FROM seating_assignments sa
+       JOIN users u ON sa.user_id = u.id
+       WHERE sa.orchestra_id = ? AND sa.section_id = ? AND sa.position_in_section = ?
+         AND sa.user_id != ? AND u.deleted_at IS NULL`,
+    )
+    .get(orchestraId, sectionId, positionInSection, negeerUserId ?? '');
+
+  if (bezet) throw new ApiError(400, 'Deze stoel is al bezet.');
 }
 
 // ============================================
@@ -591,6 +632,8 @@ router.post(
       throw new ApiError(400, 'Lid heeft al een zitplaats in dit orkest.');
     }
 
+    bewaakVrijeStoel(data.orchestraId, data.sectionId, data.positionInSection, data.userId);
+
     const assignmentId = uuidv4();
     db.prepare(
       `
@@ -629,7 +672,7 @@ router.put(
     const assignment = db
       .prepare(
         `
-        SELECT sa.id, sa.orchestra_id
+        SELECT sa.id, sa.orchestra_id, sa.user_id, sa.section_id, sa.position_in_section
         FROM seating_assignments sa
         JOIN orchestras o ON sa.orchestra_id = o.id
         WHERE sa.id = ? AND o.association_id = ?
@@ -643,6 +686,18 @@ router.put(
 
     if (data.sectionId !== undefined) {
       bewaakRijVanOrkest(data.sectionId, assignment.orchestra_id);
+    }
+
+    // De stoel waar dit lid na het bijwerken op zit; wat niet meegestuurd is
+    // blijft staan. Het lid zelf telt niet mee, anders zou een wijziging van
+    // alleen het label al op de eigen stoel stuklopen.
+    if (data.sectionId !== undefined || data.positionInSection !== undefined) {
+      bewaakVrijeStoel(
+        assignment.orchestra_id,
+        data.sectionId ?? assignment.section_id,
+        data.positionInSection ?? assignment.position_in_section,
+        assignment.user_id,
+      );
     }
 
     const updates: string[] = [];
@@ -738,6 +793,35 @@ router.put(
     for (const assignment of assignments) {
       bewaakLidVanVereniging(assignment.userId, req.user!.associationId);
       bewaakRijVanOrkest(assignment.sectionId, orchestraId);
+    }
+
+    // Een sleepactie mag geen twee leden op een stoel achterlaten. De
+    // eindstand telt: wie in deze aanvraag opnieuw geplaatst wordt laat zijn
+    // oude stoel los, wie er niet in staat blijft zitten waar hij zit.
+    const stoelen = new Map<string, string>();
+    const opnieuwGeplaatst = new Set(assignments.map((a) => a.userId));
+
+    const huidige = db
+      .prepare(
+        `SELECT sa.user_id, sa.section_id, sa.position_in_section
+         FROM seating_assignments sa
+         JOIN users u ON sa.user_id = u.id
+         WHERE sa.orchestra_id = ? AND u.deleted_at IS NULL`,
+      )
+      .all(orchestraId) as any[];
+
+    for (const rij of huidige) {
+      if (opnieuwGeplaatst.has(rij.user_id)) continue;
+      stoelen.set(`${rij.section_id}:${rij.position_in_section}`, rij.user_id);
+    }
+
+    for (const assignment of assignments) {
+      const sleutel = `${assignment.sectionId}:${assignment.positionInSection}`;
+      const bezetter = stoelen.get(sleutel);
+      if (bezetter && bezetter !== assignment.userId) {
+        throw new ApiError(400, 'Deze stoel is al bezet.');
+      }
+      stoelen.set(sleutel, assignment.userId);
     }
 
     const transaction = db.transaction(() => {
@@ -1275,7 +1359,7 @@ router.put(
   requireRole('admin', 'conductor', 'music_committee'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { rehearsalId, seatId } = req.params;
-    const { rowNumber, positionInRow } = req.body;
+    const { rowNumber, positionInRow } = seatSchema.parse(req.body ?? {});
 
     // Verify rehearsal exists and belongs to user's association
     const rehearsal = db
@@ -1290,13 +1374,24 @@ router.put(
       throw new ApiError(404, 'Repetitie niet gevonden.');
     }
 
-    db.prepare(
-      `
+    // Er werd niet gekeken of de UPDATE ook iets raakte. Een stoel die niet in
+    // deze opstelling voorkomt - een verzonnen id, of een stoel uit een andere
+    // repetitie - gaf 200 met "Zitplaats bijgewerkt." terwijl er niets
+    // veranderde. De frontend tekent die verplaatsing dan wel, en na een
+    // herlaadbeurt staat de stoel weer op de oude plek.
+    const resultaat = db
+      .prepare(
+        `
         UPDATE rehearsal_seating
         SET row_number = ?, position_in_row = ?
         WHERE id = ? AND rehearsal_id = ?
     `,
-    ).run(rowNumber, positionInRow, seatId, rehearsalId);
+      )
+      .run(rowNumber, positionInRow, seatId, rehearsalId);
+
+    if (resultaat.changes === 0) {
+      throw new ApiError(404, 'Zitplaats niet gevonden.');
+    }
 
     res.json({ message: 'Zitplaats bijgewerkt.' });
   }),

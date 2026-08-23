@@ -2002,8 +2002,16 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { concertId, status, startDate, endDate, page = '1', limit = '50' } = req.query;
 
-    const pageNum = Math.max(1, parseInt(page as string, 10));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10)));
+    // `parseInt('abc', 10)` is NaN, en Math.max en Math.min geven die NaN
+    // ongemoeid door: `Math.max(1, NaN)` is NaN. Zonder de terugval hieronder
+    // kwamen NaN als LIMIT en NaN als OFFSET in de query terecht en antwoordde
+    // het verkoopoverzicht met een 500. Een beheerder die op een adres met een
+    // rommelige ?page= belandt - een verlopen bladwijzer, een link uit een
+    // e-mail - kreeg dus een storing te zien in plaats van de eerste pagina.
+    // De standaardwaarden hierboven vangen alleen een ontbrekende parameter
+    // op, niet een parameter die er wel is maar geen getal bevat.
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 50));
     const offset = (pageNum - 1) * limitNum;
 
     // Build query conditions

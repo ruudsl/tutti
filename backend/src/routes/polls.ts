@@ -174,6 +174,19 @@ function canUserSeePoll(poll: any, user: any): boolean {
   return true;
 }
 
+/**
+ * Hoort dit orkest bij deze vereniging?
+ *
+ * Een doelorkest uit het verzoek belandt uiteindelijk als orchestra_id in
+ * rehearsal_instances, terwijl association_id die van de aanvrager wordt.
+ * rehearsals.ts en POST /:id/create-rehearsal hieronder controleren daar al
+ * op; deze helper is dezelfde controle op de andere plekken waar een
+ * orkest-id binnenkomt.
+ */
+function orchestraBelongsToAssociation(orchestraId: string, associationId: string): boolean {
+  return !!db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?').get(orchestraId, associationId);
+}
+
 // =====================================================
 // POLL ROUTES
 // =====================================================
@@ -474,7 +487,11 @@ router.get(
         rank: v.rank_position,
       })),
       hasVoted: userVotes.length > 0,
-      canSeeResults,
+      // show_results_before_close is in SQLite een 0/1-integer, dus zonder
+      // deze omzetting stond hier een 1 in plaats van true - terwijl elk
+      // ander veld in dit antwoord (isAnonymous, allowComments, hasVoted) wel
+      // een boolean is en de frontend het type ook zo declareert.
+      canSeeResults: !!canSeeResults,
       comments: comments.map((c: any) => ({
         id: c.id,
         content: c.content,
@@ -499,6 +516,23 @@ router.post(
     const associationId = req.user!.associationId;
     if (!associationId) {
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    // De doelorkesten komen uit het verzoek en werden ongezien opgeslagen.
+    // Bij een datumpeiling pakt het automatische pad in POST /:id/status er
+    // target_orchestra_id (of het eerste id uit target_orchestras) uit en
+    // maakt daar een rehearsal_instance mee: orchestra_id van de andere
+    // vereniging, association_id van de aanvrager. Precies de repetitie "die
+    // bij twee verenigingen tegelijk hoort en in geen enkel orkestfilter
+    // thuis is" waar POST /:id/create-rehearsal al tegen beschermt.
+    const doelOrkesten = [
+      ...(data.targetOrchestras ?? []),
+      ...(data.targetOrchestraId ? [data.targetOrchestraId] : []),
+    ];
+    for (const doelOrkestId of doelOrkesten) {
+      if (!orchestraBelongsToAssociation(doelOrkestId, associationId)) {
+        throw new ApiError(404, 'Orkest niet gevonden.');
+      }
     }
 
     const pollId = uuidv4();
@@ -711,6 +745,20 @@ router.post(
         if (!orchestraId) {
           const targetOrchestras = poll.target_orchestras ? JSON.parse(poll.target_orchestras) : [];
           orchestraId = targetOrchestras[0];
+        }
+
+        // Peilingen die al bestonden voordat het aanmaken op het doelorkest
+        // controleerde, kunnen een orkest van een andere vereniging als doel
+        // hebben. Daar hier alsnog een repetitie van maken levert een rij op
+        // die bij twee verenigingen tegelijk hoort. Het sluiten zelf is een
+        // legitieme handeling en is al doorgevoerd, dus dit blijft bij het
+        // overslaan van de automatische aanmaak.
+        if (orchestraId && !orchestraBelongsToAssociation(orchestraId, associationId!)) {
+          logger.warn('Automatische repetitie overgeslagen: doelorkest hoort bij een andere vereniging', {
+            pollId: poll.id,
+            orchestraId,
+          });
+          orchestraId = null;
         }
 
         if (orchestraId) {
@@ -1370,13 +1418,8 @@ router.post(
     // Zonder deze controle ontstaat er een repetitie die bij twee
     // verenigingen tegelijk hoort en in geen enkel orkestfilter thuis is.
     // rehearsals.ts doet deze controle op dezelfde manier.
-    if (orchestraId) {
-      const orkest = db
-        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
-        .get(orchestraId, associationId);
-      if (!orkest) {
-        throw new ApiError(404, 'Orkest niet gevonden.');
-      }
+    if (orchestraId && !orchestraBelongsToAssociation(orchestraId, associationId)) {
+      throw new ApiError(404, 'Orkest niet gevonden.');
     }
 
     const poll = db

@@ -340,12 +340,24 @@ export async function getWorkDetails(workId: string): Promise<ImslpWorkDetail | 
 
     const data = (await response.json()) as any;
 
-    if (data.error) {
+    if (!data || typeof data !== 'object' || data.error) {
       logger.warn(`IMSLP work not found: ${workId}`);
       return null;
     }
 
     const parseResult = data.parse;
+
+    // Een antwoord zonder `parse` is geen storing bij IMSLP maar een werk dat
+    // er niet is - of een onderhoudspagina die als JSON binnenkomt. Zonder
+    // deze controle las de regel hieronder meteen `parseResult.title` en gooide
+    // dat een TypeError. De route eromheen maakt van elke fout hier een 502
+    // "IMSLP is nu niet bereikbaar", terwijl IMSLP juist wél antwoordde; dit
+    // hoort net als bij `data.error` een 404 te zijn.
+    if (!parseResult || typeof parseResult !== 'object') {
+      logger.warn(`IMSLP work not found: ${workId}`);
+      return null;
+    }
+
     const title = parseResult.title || '';
 
     // Parse title for composer info

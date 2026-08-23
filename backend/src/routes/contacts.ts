@@ -64,6 +64,33 @@ const createContactPersonSchema = z.object({
 
 const updateContactPersonSchema = createContactPersonSchema.partial();
 
+/**
+ * Controleer dat elke opgegeven categorie van de eigen vereniging is.
+ *
+ * De koppeltabel contact_category_links verwijst naar contact_categories
+ * zonder vereniging, dus de database liet elke bestaande categorie toe. Het
+ * aanmaken en het bijwerken namen categoryIds ongezien over uit het verzoek:
+ * een beheerder van vereniging A kon zo een categorie van B aan zijn eigen
+ * contact hangen en las daarna via GET /:id de naam en kleur van die
+ * categorie uit. Een categorienaam is geen neutraal gegeven - "wanbetalers"
+ * of "niet meer boeken" vertelt precies wat de andere vereniging vindt.
+ */
+function controleerCategorieen(categoryIds: string[] | undefined, associationId: string): void {
+  if (!categoryIds || categoryIds.length === 0) {
+    return;
+  }
+
+  const placeholders = categoryIds.map(() => '?').join(',');
+  const gevonden = db
+    .prepare(`SELECT id FROM contact_categories WHERE association_id = ? AND id IN (${placeholders})`)
+    .all(associationId, ...categoryIds) as { id: string }[];
+
+  const eigen = new Set(gevonden.map((c) => c.id));
+  if (categoryIds.some((id) => !eigen.has(id))) {
+    throw new ApiError(404, 'Categorie niet gevonden.');
+  }
+}
+
 // =====================================================
 // CATEGORY ROUTES
 // =====================================================
@@ -442,6 +469,8 @@ router.post(
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
     }
 
+    controleerCategorieen(data.categoryIds, associationId);
+
     const id = uuidv4();
 
     withTransaction(() => {
@@ -525,6 +554,8 @@ router.patch(
     if (!contact) {
       throw new ApiError(404, 'Contact niet gevonden.');
     }
+
+    controleerCategorieen(data.categoryIds, associationId);
 
     withTransaction(() => {
       const updates: string[] = ['updated_at = CURRENT_TIMESTAMP'];
@@ -935,10 +966,16 @@ router.post(
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
     }
 
+    // promoted_to_user_id stond niet in deze SELECT terwijl de controle
+    // hieronder er wel op leunt. De kolom was daardoor altijd undefined en de
+    // controle liep nooit af: hetzelfde contact was twee keer te promoveren.
+    // Dat strandde meestal alsnog op het al bestaande e-mailadres, maar niet
+    // als het adres van het contact tussendoor was gewijzigd - dan leverde
+    // dezelfde persoon een tweede gebruikersaccount op.
     const contact = db
       .prepare(
         `
-        SELECT id, name, email, contact_type
+        SELECT id, name, email, contact_type, promoted_to_user_id
         FROM contacts
         WHERE id = ? AND association_id = ? AND deleted_at IS NULL
     `,

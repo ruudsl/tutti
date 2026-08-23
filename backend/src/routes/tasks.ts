@@ -58,6 +58,54 @@ const commentSchema = z.object({
   content: z.string().min(1, 'Reactie mag niet leeg zijn.'),
 });
 
+/**
+ * Controleer dat een takenlijst uit het verzoek van de eigen vereniging is.
+ *
+ * Deze controle stond los in POST / en PUT /:id en ontbrak op de twee plekken
+ * waar een template een takenlijst vastlegt. Een template van vereniging A
+ * kon daardoor naar een lijst van B wijzen, en het takenoverzicht haalt de
+ * naam en de kleur van die lijst op met een LEFT JOIN zonder verenigingsfilter
+ * - de lijstnaam van een andere vereniging kwam zo in beeld.
+ *
+ * null of undefined betekent losmaken of niet meegegeven; dat mag zonder
+ * controle.
+ */
+function controleerTakenlijst(taskListId: string | null | undefined, associationId: string | null): void {
+  if (!taskListId) {
+    return;
+  }
+
+  const lijst = db
+    .prepare('SELECT id FROM task_lists WHERE id = ? AND association_id = ?')
+    .get(taskListId, associationId);
+
+  if (!lijst) {
+    throw new ApiError(404, 'Takenlijst niet gevonden.');
+  }
+}
+
+/**
+ * Controleer dat een toegewezene uit het verzoek van de eigen vereniging is.
+ *
+ * Een taak toewijzen aan iemand van een andere vereniging levert een
+ * doodlopende weg op: het overzicht filtert op vereniging, dus de toegewezene
+ * ziet de taak nooit, terwijl zijn naam hier wel in het overzicht en de
+ * samenvatting verschijnt. Het werk lijkt belegd en ligt stil.
+ */
+function controleerToegewezene(assignedTo: string | null | undefined, associationId: string | null): void {
+  if (!assignedTo) {
+    return;
+  }
+
+  const toegewezene = db
+    .prepare('SELECT id FROM users WHERE id = ? AND association_id = ?')
+    .get(assignedTo, associationId);
+
+  if (!toegewezene) {
+    throw new ApiError(404, 'Gebruiker niet gevonden.');
+  }
+}
+
 // =====================================================
 // TASK LIST ROUTES
 // =====================================================
@@ -593,28 +641,14 @@ router.post(
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
     }
 
-    if (data.taskListId) {
-      const list = db
-        .prepare('SELECT id FROM task_lists WHERE id = ? AND association_id = ?')
-        .get(data.taskListId, associationId);
-      if (!list) {
-        throw new ApiError(404, 'Takenlijst niet gevonden.');
-      }
-    }
+    controleerTakenlijst(data.taskListId, associationId);
 
     // De takenlijst werd wel op vereniging gecontroleerd en de toegewezen
     // persoon niet. Daardoor kon een taak worden toegewezen aan iemand van een
     // andere vereniging. Die ziet de taak nooit - het overzicht filtert op
     // vereniging - maar zijn naam verschijnt wel in het overzicht hier, en de
     // toewijzing kan door niemand worden opgepakt.
-    if (data.assignedTo) {
-      const toegewezene = db
-        .prepare('SELECT id FROM users WHERE id = ? AND association_id = ?')
-        .get(data.assignedTo, associationId);
-      if (!toegewezene) {
-        throw new ApiError(404, 'Gebruiker niet gevonden.');
-      }
-    }
+    controleerToegewezene(data.assignedTo, associationId);
 
     const taskId = uuidv4();
     const now = new Date().toISOString();
@@ -680,23 +714,8 @@ router.put(
     // taak nooit - terwijl zijn naam hier wel in beeld komt.
     //
     // null betekent losmaken; dat mag zonder controle.
-    if (data.taskListId) {
-      const lijst = db
-        .prepare('SELECT id FROM task_lists WHERE id = ? AND association_id = ?')
-        .get(data.taskListId, associationId);
-      if (!lijst) {
-        throw new ApiError(404, 'Takenlijst niet gevonden.');
-      }
-    }
-
-    if (data.assignedTo) {
-      const toegewezene = db
-        .prepare('SELECT id FROM users WHERE id = ? AND association_id = ?')
-        .get(data.assignedTo, associationId);
-      if (!toegewezene) {
-        throw new ApiError(404, 'Gebruiker niet gevonden.');
-      }
-    }
+    controleerTakenlijst(data.taskListId, associationId);
+    controleerToegewezene(data.assignedTo, associationId);
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -1006,6 +1025,8 @@ router.post(
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
     }
 
+    controleerTakenlijst(data.taskListId, associationId);
+
     const templateId = uuidv4();
     const now = new Date().toISOString();
 
@@ -1053,6 +1074,8 @@ router.put(
     if (!template) {
       throw new ApiError(404, 'Template niet gevonden.');
     }
+
+    controleerTakenlijst(data.taskListId, associationId);
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -1135,6 +1158,11 @@ router.post(
     if (!template) {
       throw new ApiError(404, 'Template niet gevonden.');
     }
+
+    // Dit is de derde plek waar een taak ontstaat, en de enige die assignedTo
+    // ongezien uit het verzoek overnam. POST / en PUT /:id controleerden de
+    // toegewezene wel tegen de eigen vereniging.
+    controleerToegewezene(assignedTo, associationId);
 
     const taskId = uuidv4();
     const now = new Date().toISOString();

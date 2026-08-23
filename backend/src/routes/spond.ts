@@ -509,6 +509,8 @@ router.post(
 
     // Fetch events from all configured Spond groups
     const allEvents = new Map<string, any[]>(); // groupId -> events
+    let mislukteGroepen = 0;
+    let laatsteFout: unknown = null;
     for (const groupId of groupsToFetch) {
       try {
         const events = await client.getEvents(groupId, today, endDate);
@@ -523,8 +525,36 @@ router.post(
           throw asApiError(err);
         }
         logger.warn(`Failed to fetch events from Spond group ${groupId}`, { error: err });
+        mislukteGroepen++;
+        laatsteFout = err;
         allEvents.set(groupId, []);
       }
+    }
+
+    // Faalt élke groep, dan is er geen enkel event opgehaald en weten we niets
+    // over de agenda. Hier ging het mis: alleen SpondLoginError werd hierboven
+    // doorgegooid, maar een 429 (Spond begrenst het verkeer) of een 500 komt
+    // uit getEvents als een gewone Error. Die belandde in de catch, de groep
+    // kreeg een lege lijst, en een paar regels verder wist de route álle
+    // spond_event_id's in het venster van drie maanden leeg - waarna er met nul
+    // events niets werd teruggekoppeld.
+    //
+    // Die koppelingen zijn precies wat PUT /spond/attendance nodig heeft om een
+    // aan- of afmelding door te geven aan Spond. Na één synchronisatie tijdens
+    // een storing was dat voor alle repetities weg, en meldde de app nog wel
+    // "Je bent aangemeld" terwijl er in Spond niets veranderde. Bovendien werd
+    // het als succes gemeld (200, "0 repetities gesynchroniseerd"), dus niets
+    // wees erop dat er iets mis was.
+    //
+    // Faalt maar een deel van de groepen, dan is doorgaan wel zinvol: de
+    // groepen die het wel deden leveren echte events op.
+    if (mislukteGroepen === groupsToFetch.size) {
+      const melding = laatsteFout instanceof Error ? laatsteFout.message : String(laatsteFout);
+      throw new ApiError(
+        502,
+        `Spond gaf geen antwoord voor de ingestelde groepen (${melding}). ` +
+          'Er is niets gewijzigd; probeer het straks opnieuw.',
+      );
     }
 
     // Clear all existing spond_event_id links so we can re-match cleanly

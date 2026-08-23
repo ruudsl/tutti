@@ -868,29 +868,46 @@ function getCampaignRecipients(
     `;
   const params: any[] = [associationId];
 
-  if (campaign.target_type === 'orchestras' && campaign.target_orchestras) {
-    const orchestraIds = JSON.parse(campaign.target_orchestras);
-    if (orchestraIds.length > 0) {
-      const placeholders = orchestraIds.map(() => '?').join(', ');
-      query += ` AND EXISTS (
+  // Een doelgroep die niemand aanwijst is leeg, niet iedereen.
+  //
+  // Hier stond per doelgroep `if (target_type === 'custom' && target_user_ids)`
+  // met daarbinnen `if (userIds.length > 0)`. Viel een van die twee weg - geen
+  // lijst opgeslagen, of een lege lijst - dan werd er niets aan de query
+  // toegevoegd en bleef alleen `association_id = ?` over. Een campagne met een
+  // lege ontvangerslijst ging daarmee naar elk actief lid van de vereniging.
+  //
+  // Terwijl /preview-recipients nul ontvangers toonde: die route gebruikt de
+  // lengtecontrole als voorwaarde om te zoeken, niet als voorwaarde om te
+  // beperken. Je zag dus "0 ontvangers", drukte op verzenden, en de hele
+  // vereniging had post. Dat is niet terug te nemen.
+  //
+  // Vandaar: bij elke doelgroep behalve 'all' is een lege lijst het einde.
+  if (campaign.target_type === 'orchestras') {
+    const orchestraIds: string[] = campaign.target_orchestras ? JSON.parse(campaign.target_orchestras) : [];
+    if (orchestraIds.length === 0) {
+      return [];
+    }
+    const placeholders = orchestraIds.map(() => '?').join(', ');
+    query += ` AND EXISTS (
                 SELECT 1 FROM user_orchestras uo WHERE uo.user_id = u.id AND uo.orchestra_id IN (${placeholders})
             )`;
-      params.push(...orchestraIds);
+    params.push(...orchestraIds);
+  } else if (campaign.target_type === 'roles') {
+    const roles: string[] = campaign.target_roles ? JSON.parse(campaign.target_roles) : [];
+    if (roles.length === 0) {
+      return [];
     }
-  } else if (campaign.target_type === 'roles' && campaign.target_roles) {
-    const roles = JSON.parse(campaign.target_roles);
-    if (roles.length > 0) {
-      const placeholders = roles.map(() => '?').join(', ');
-      query += ` AND u.role IN (${placeholders})`;
-      params.push(...roles);
+    const placeholders = roles.map(() => '?').join(', ');
+    query += ` AND u.role IN (${placeholders})`;
+    params.push(...roles);
+  } else if (campaign.target_type === 'custom') {
+    const userIds: string[] = campaign.target_user_ids ? JSON.parse(campaign.target_user_ids) : [];
+    if (userIds.length === 0) {
+      return [];
     }
-  } else if (campaign.target_type === 'custom' && campaign.target_user_ids) {
-    const userIds = JSON.parse(campaign.target_user_ids);
-    if (userIds.length > 0) {
-      const placeholders = userIds.map(() => '?').join(', ');
-      query += ` AND u.id IN (${placeholders})`;
-      params.push(...userIds);
-    }
+    const placeholders = userIds.map(() => '?').join(', ');
+    query += ` AND u.id IN (${placeholders})`;
+    params.push(...userIds);
   }
 
   return db.prepare(query).all(...params) as any[];
