@@ -2762,7 +2762,8 @@
     "lastSync": "Last sync",
     "ticketNotFound": "Ticket not found",
     "alreadyUsed": "Already used at {{time}}",
-    "validTicket": "Valid ticket!"
+    "validTicket": "Valid ticket!",
+    "storageUnavailable": "This browser’s offline storage is unavailable. Tickets cannot be downloaded in advance and scans are not stored — use another browser or allow site data."
   },
   "ticketDashboard": {
     "title": "Ticket Dashboard",

@@ -4040,7 +4040,8 @@
     "syncFailed": "Synchronisierung der Scans fehlgeschlagen",
     "ticketNotFound": "Ticket nicht gefunden",
     "alreadyUsed": "Bereits verwendet um {{time}}",
-    "validTicket": "Gültiges Ticket!"
+    "validTicket": "Gültiges Ticket!",
+    "storageUnavailable": "Der Offline-Speicher dieses Browsers ist nicht verfügbar. Tickets können nicht im Voraus geladen werden und Scans werden nicht gespeichert – nutze einen anderen Browser oder erlaube Websitedaten."
   },
   "seatSelection": {
     "title": "Sitzplatzauswahl",

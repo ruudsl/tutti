@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError, toast } from '../utils/toast';
 import { Icon } from './Icon';
+import { isIndexedDBAvailable } from '../lib/offlineStorage';
 
 export interface OfflineScannerProps {
   concertId: string;
@@ -47,19 +48,42 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [scanInput, setScanInput] = useState('');
+  const [opslagOnbruikbaar, setOpslagOnbruikbaar] = useState(false);
   const dbRef = useRef<IDBDatabase | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Initialize IndexedDB
   useEffect(() => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    // In een browser waar de opslag geblokkeerd is - privémodus, of
+    // sitegegevens uitgezet - bestaat `indexedDB` niet. Zonder deze controle
+    // klapt de regel hieronder en verdwijnt de hele scanner van het scherm.
+    // Juist deze knop wordt aan de deur gebruikt, vaak op een geleende
+    // telefoon, dus dat is precies het verkeerde moment.
+    if (!isIndexedDBAvailable()) {
+      setOpslagOnbruikbaar(true);
+      return;
+    }
+
+    let request: IDBOpenDBRequest;
+    try {
+      request = indexedDB.open(DB_NAME, DB_VERSION);
+    } catch {
+      // Sommige browsers hebben `indexedDB` wél, maar laten `open` alsnog
+      // struikelen als de gebruiker opslag heeft geweigerd.
+      setOpslagOnbruikbaar(true);
+      return;
+    }
 
     request.onerror = () => {
-      console.error('Failed to open IndexedDB');
+      // Dit bleef eerder bij een regel in de console. Op het scherm was er dan
+      // niets aan de hand, terwijl de scanner geen enkele kaart meer kende en
+      // dus elke bezoeker aan de deur afwees.
+      setOpslagOnbruikbaar(true);
     };
 
     request.onsuccess = () => {
       dbRef.current = request.result;
+      setOpslagOnbruikbaar(false);
       loadOfflineData();
     };
 
@@ -358,6 +382,12 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
             {isOnline ? t('offlineScanner.online') : t('offlineScanner.offline')}
           </div>
         </div>
+
+        {opslagOnbruikbaar && (
+          <div className="alert alert-danger mb-4" role="alert">
+            {t('offlineScanner.storageUnavailable')}
+          </div>
+        )}
 
         <div className="scanner-stats grid grid-cols-3 gap-4 mb-4">
           <div className="stat-card">

@@ -3937,7 +3937,8 @@
     "syncFailed": "Synchronisatie mislukt",
     "ticketNotFound": "Ticket niet gevonden",
     "alreadyUsed": "Ticket al gebruikt om {{time}}",
-    "validTicket": "Ticket is geldig"
+    "validTicket": "Ticket is geldig",
+    "storageUnavailable": "De offline-opslag van deze browser is niet beschikbaar. Kaarten kunnen niet vooraf worden opgehaald en scans worden niet bewaard - gebruik een andere browser of zet sitegegevens aan."
   },
   "predictions": {
     "title": "Verkoopvoorspelling",
