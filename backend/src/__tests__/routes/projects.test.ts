@@ -22,6 +22,7 @@ import {
   createTestAssociation,
   createTestEnvironment,
   createTestOrchestra,
+  createTestRehearsal,
   createTestUser,
   generateTestToken,
   TestAssociation,
@@ -47,7 +48,7 @@ describe('projecten', () => {
     lidToken = omgeving.memberToken;
   });
 
-  type Methode = 'get' | 'post' | 'patch' | 'delete';
+  type Methode = 'get' | 'post' | 'put' | 'patch' | 'delete';
   const als = (token: string, methode: Methode, pad: string) =>
     request(app)[methode](`/api/projects${pad}`).set('Authorization', `Bearer ${token}`);
   const alsBeheerder = (methode: Methode, pad: string) => als(beheerderToken, methode, pad);
@@ -66,6 +67,16 @@ describe('projecten', () => {
       associationId,
     );
     return id;
+  }
+
+  /**
+   * Een repetitie in de tabel `rehearsals` - dat is waar het scherm zijn
+   * keuzelijst vandaan haalt (GET /rehearsals), en dus wat de gebruiker
+   * aanklikt. De koppeltabel wijst naar rehearsal_instances; dat de route dat
+   * gat dicht is precies wat hieronder getoetst wordt.
+   */
+  function maakRepetitie(associationId = vereniging.id, overrides: Record<string, unknown> = {}): string {
+    return createTestRehearsal(associationId, lid.id, { date: '2026-11-05', location: 'Zaal A', ...overrides }).id;
   }
 
   /** Een project van een andere vereniging, rechtstreeks in de database. */
@@ -391,6 +402,191 @@ describe('projecten', () => {
 
       expect(antwoord.status).toBe(404);
       expect((await alsLid('get', `/${id}`)).body.setlist).toHaveLength(1);
+    });
+  });
+
+  describe('repetities koppelen', () => {
+    it('koppelt een repetitie en toont hem bij het project', async () => {
+      const id = await maakProject();
+      const rehearsalId = maakRepetitie();
+
+      const antwoord = await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId });
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(201);
+
+      const project = await alsLid('get', `/${id}`);
+      expect(project.body.rehearsals).toHaveLength(1);
+      expect(project.body.rehearsals[0]).toMatchObject({ date: '2026-11-05', location: 'Zaal A' });
+    });
+
+    it('koppelt onder hetzelfde id als het scherm aanklikt', async () => {
+      // Het scherm ontkoppelt met het id dat GET /projects/:id teruggeeft. Zou
+      // de koppeling onder een nieuw id gebeuren, dan mikt die knop op een id
+      // dat de gebruiker nooit gezien heeft.
+      const id = await maakProject();
+      const rehearsalId = maakRepetitie();
+      await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId });
+
+      expect((await alsLid('get', `/${id}`)).body.rehearsals[0].id).toBe(rehearsalId);
+    });
+
+    it('koppelt dezelfde repetitie niet twee keer', async () => {
+      const id = await maakProject();
+      const rehearsalId = maakRepetitie();
+      await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId });
+
+      const tweede = await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId });
+      expect(tweede.status).toBe(409);
+      expect(tweede.body.error).toBe('Repetitie is al gekoppeld aan dit project');
+      expect((await alsLid('get', `/${id}`)).body.rehearsals).toHaveLength(1);
+    });
+
+    it('koppelt geen repetitie van een andere vereniging', async () => {
+      const id = await maakProject();
+      const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
+
+      const antwoord = await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId: maakRepetitie(andere.id) });
+      expect(antwoord.status).toBe(404);
+      expect((await alsLid('get', `/${id}`)).body.rehearsals).toEqual([]);
+    });
+
+    it('koppelt geen repetitie die niet bestaat', async () => {
+      const id = await maakProject();
+      expect((await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId: uuidv4() })).status).toBe(404);
+    });
+
+    it('koppelt geen repetitie aan een project van een andere vereniging', async () => {
+      const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
+      const antwoord = await alsBeheerder('post', `/${vreemdProject(andere.id)}/rehearsals`).send({
+        rehearsalId: maakRepetitie(),
+      });
+      expect(antwoord.status).toBe(404);
+    });
+
+    it('houdt een gewoon lid van het koppelen af', async () => {
+      const id = await maakProject();
+      expect((await alsLid('post', `/${id}/rehearsals`).send({ rehearsalId: maakRepetitie() })).status).toBe(403);
+    });
+
+    it('ontkoppelt een repetitie zonder de repetitie zelf weg te gooien', async () => {
+      const id = await maakProject();
+      const rehearsalId = maakRepetitie();
+      await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId });
+
+      expect((await alsBeheerder('delete', `/${id}/rehearsals/${rehearsalId}`)).status).toBe(200);
+      expect((await alsLid('get', `/${id}`)).body.rehearsals).toEqual([]);
+      expect(db.prepare('SELECT id FROM rehearsals WHERE id = ?').get(rehearsalId)).toBeDefined();
+    });
+
+    it('ontkoppelt geen repetitie via een project van een andere vereniging', async () => {
+      const id = await maakProject();
+      const rehearsalId = maakRepetitie();
+      await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId });
+      const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
+      const andereBeheerder = createTestUser(andere.id, { email: `pr-${uuidv4()}@test.nl`, role: 'admin' });
+
+      const antwoord = await request(app)
+        .delete(`/api/projects/${id}/rehearsals/${rehearsalId}`)
+        .set('Authorization', `Bearer ${generateTestToken(andereBeheerder)}`);
+
+      expect(antwoord.status).toBe(404);
+      expect((await alsLid('get', `/${id}`)).body.rehearsals).toHaveLength(1);
+    });
+
+    it('telt de repetities in het overzicht', async () => {
+      const id = await maakProject();
+      await alsBeheerder('post', `/${id}/rehearsals`).send({ rehearsalId: maakRepetitie() });
+
+      expect((await alsLid('get', '/')).body[0].rehearsalCount).toBe(1);
+    });
+  });
+
+  describe('setlist herordenen', () => {
+    /** Drie items, en de id's in de volgorde waarin ze erin staan. */
+    async function maakDrieItems(projectId: string): Promise<string[]> {
+      const ids: string[] = [];
+      for (const titel of ['Openingsmars', 'Solostuk', 'Slotstuk']) {
+        const antwoord = await alsBeheerder('post', `/${projectId}/setlist`).send({ customTitle: titel });
+        ids.push(antwoord.body.id);
+      }
+      return ids;
+    }
+
+    const titels = (body: { setlist: { customTitle: string }[] }) => body.setlist.map((s) => s.customTitle);
+
+    it('zet het programma in de opgegeven volgorde', async () => {
+      const id = await maakProject();
+      const [een, twee, drie] = await maakDrieItems(id);
+
+      const antwoord = await alsBeheerder('put', `/${id}/setlist/reorder`).send({ itemIds: [drie, een, twee] });
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+
+      expect(titels((await alsLid('get', `/${id}`)).body)).toEqual(['Slotstuk', 'Openingsmars', 'Solostuk']);
+    });
+
+    it('zet een nieuw item na het herordenen weer achteraan', async () => {
+      // POST /setlist neemt MAX + 1. Zou het herordenen vanaf 0 nummeren, dan
+      // botst het nieuwe item op het nummer van het laatste en is de volgorde
+      // van die twee willekeurig.
+      const id = await maakProject();
+      const [een, twee, drie] = await maakDrieItems(id);
+      await alsBeheerder('put', `/${id}/setlist/reorder`).send({ itemIds: [drie, twee, een] });
+
+      await alsBeheerder('post', `/${id}/setlist`).send({ customTitle: 'Toegift' });
+
+      expect(titels((await alsLid('get', `/${id}`)).body)).toEqual(['Slotstuk', 'Solostuk', 'Openingsmars', 'Toegift']);
+    });
+
+    it('weigert een lijst waarin een item ontbreekt en laat de volgorde staan', async () => {
+      const id = await maakProject();
+      const [een, twee] = await maakDrieItems(id);
+
+      const antwoord = await alsBeheerder('put', `/${id}/setlist/reorder`).send({ itemIds: [twee, een] });
+      expect(antwoord.status).toBe(400);
+      expect(titels((await alsLid('get', `/${id}`)).body)).toEqual(['Openingsmars', 'Solostuk', 'Slotstuk']);
+    });
+
+    it('weigert een lijst met een id dat niet bij dit project hoort', async () => {
+      const id = await maakProject();
+      const items = await maakDrieItems(id);
+      const ander = await maakProject({ name: 'Ander project' });
+      const [vreemdItem] = await maakDrieItems(ander);
+
+      const antwoord = await alsBeheerder('put', `/${id}/setlist/reorder`).send({
+        itemIds: [items[0], items[1], vreemdItem],
+      });
+      expect(antwoord.status).toBe(400);
+      expect(titels((await alsLid('get', `/${id}`)).body)).toEqual(['Openingsmars', 'Solostuk', 'Slotstuk']);
+      expect(titels((await alsLid('get', `/${ander}`)).body)).toEqual(['Openingsmars', 'Solostuk', 'Slotstuk']);
+    });
+
+    it('weigert een lijst met meer items dan het project heeft', async () => {
+      const id = await maakProject();
+      const items = await maakDrieItems(id);
+
+      const antwoord = await alsBeheerder('put', `/${id}/setlist/reorder`).send({ itemIds: [...items, uuidv4()] });
+      expect(antwoord.status).toBe(400);
+    });
+
+    it('weigert dezelfde id twee keer', async () => {
+      const id = await maakProject();
+      const [een, twee] = await maakDrieItems(id);
+
+      const antwoord = await alsBeheerder('put', `/${id}/setlist/reorder`).send({ itemIds: [een, twee, een] });
+      expect(antwoord.status).toBe(400);
+      expect(antwoord.body.error).toBe('De lijst bevat hetzelfde item meer dan een keer');
+      expect(titels((await alsLid('get', `/${id}`)).body)).toEqual(['Openingsmars', 'Solostuk', 'Slotstuk']);
+    });
+
+    it('herordent geen setlist van een project van een andere vereniging', async () => {
+      const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
+      const antwoord = await alsBeheerder('put', `/${vreemdProject(andere.id)}/setlist/reorder`).send({ itemIds: [] });
+      expect(antwoord.status).toBe(404);
+    });
+
+    it('houdt een gewoon lid van het herordenen af', async () => {
+      const id = await maakProject();
+      const items = await maakDrieItems(id);
+      expect((await alsLid('put', `/${id}/setlist/reorder`).send({ itemIds: items })).status).toBe(403);
     });
   });
 

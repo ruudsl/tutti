@@ -14,16 +14,18 @@
  * elk pad dat deze module verstuurt wordt vergeleken met de routes die
  * werkelijk in backend/src/routes/projects.ts staan.
  *
- * Die tweede toets legt drie functies bloot die een route aanroepen die er
- * niet is - zie het laatste blok. De koppeling project-repetitie wordt in het
- * scherm aangeboden, de tabel project_rehearsals bestaat en wordt bij het
- * ophalen van een project uitgelezen, maar er is nergens een route die er ooit
- * een rij in schrijft. Hetzelfde geldt voor het herordenen van het programma.
+ * Die tweede toets legde drie functies bloot die een route aanriepen die er
+ * niet was: een repetitie koppelen, een repetitie ontkoppelen en het programma
+ * herordenen. De tabel project_rehearsals bestond en werd bij het ophalen van
+ * een project uitgelezen, maar geen enkele route schreef er ooit een rij in -
+ * die knoppen hebben nooit gewerkt. Die routes staan er inmiddels, en het
+ * laatste blok eist nu van elke functie dat haar pad aan de serverkant bestaat.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { startNepserver, stopNepserver, antwoordMet, antwoordMetFout, laatsteVerzoek } from './nepserver';
 import { serverroutes, serverBiedtAan } from './serverroutes';
+import * as projectenApi from '../projects';
 import {
   getProjects,
   getProject,
@@ -202,17 +204,44 @@ describe('leden, concerten en programma', () => {
     expect(laatsteVerzoek().methode).toBe('delete');
     expect(laatsteVerzoek().pad).toBe('/projects/p1/concerts/c4');
   });
+
+  it('koppelt een repetitie via de body, en ontkoppelt via het pad', async () => {
+    antwoordMet({ message: 'Gekoppeld' });
+    await linkRehearsalToProject('p1', 'r4');
+    expect(laatsteVerzoek().methode).toBe('post');
+    expect(laatsteVerzoek().pad).toBe('/projects/p1/rehearsals');
+    // De server leest `rehearsalId`; een andere naam laat zijn schema afketsen
+    // op een 400 die niets zegt over wat er ontbreekt.
+    expect(laatsteVerzoek().body).toEqual({ rehearsalId: 'r4' });
+
+    antwoordMet({ message: 'Ontkoppeld' });
+    await unlinkRehearsalFromProject('p1', 'r4');
+    expect(laatsteVerzoek().methode).toBe('delete');
+    expect(laatsteVerzoek().pad).toBe('/projects/p1/rehearsals/r4');
+  });
+
+  it("herordent het programma met PUT en de volledige lijst id's", async () => {
+    antwoordMet({ message: 'Setlist herordend' });
+
+    await reorderProjectSetlist('p1', ['s3', 's1', 's2']);
+
+    // De volgorde in de lijst is de nieuwe volgorde; de server weigert een
+    // lijst die niet precies de items van het project bevat, dus hier hoort
+    // niets gefilterd of ontdubbeld te worden.
+    expect(laatsteVerzoek().methode).toBe('put');
+    expect(laatsteVerzoek().pad).toBe('/projects/p1/setlist/reorder');
+    expect(laatsteVerzoek().body).toEqual({ itemIds: ['s3', 's1', 's2'] });
+  });
+
+  it('laat een 400 op een onvolledige lijst door aan de aanroeper', async () => {
+    antwoordMetFout(400, { error: 'De lijst moet precies de items van dit project bevatten' });
+
+    await expect(reorderProjectSetlist('p1', ['s1'])).rejects.toMatchObject({ response: { status: 400 } });
+  });
 });
 
 describe('de paden komen overeen met wat de server aanbiedt', () => {
   const routes = serverroutes('projects.ts');
-
-  /** Laat elke functie één verzoek doen en geef terug wat er over de lijn gaat. */
-  async function verstuurd(aanroep: () => Promise<unknown>): Promise<{ methode: string; pad: string }> {
-    antwoordMet({});
-    await aanroep().catch(() => undefined);
-    return { methode: laatsteVerzoek().methode, pad: laatsteVerzoek().pad };
-  }
 
   const aanroepen: [string, () => Promise<unknown>][] = [
     ['getProjects', () => getProjects()],
@@ -232,44 +261,24 @@ describe('de paden komen overeen met wat de server aanbiedt', () => {
     ['reorderProjectSetlist', () => reorderProjectSetlist('p1', ['s1'])],
   ];
 
-  it('kent precies drie functies die een route aanroepen die de server niet heeft', async () => {
-    const zonderRoute: string[] = [];
-    for (const [naam, aanroep] of aanroepen) {
-      const { methode, pad } = await verstuurd(aanroep);
-      if (!serverBiedtAan(routes, '/projects', methode, pad)) {
-        zonderRoute.push(`${naam}: ${methode.toUpperCase()} ${pad}`);
-      }
-    }
+  it.each(aanroepen)('%s raakt een bestaande route in backend/src/routes/projects.ts', async (_naam, aanroep) => {
+    antwoordMet({});
+    await aanroep().catch(() => undefined);
+    const { methode, pad } = laatsteVerzoek();
 
-    // Dit is geen wens maar een meting, en de uitkomst is een echte fout die
-    // niet in de frontend te repareren valt: de routes moeten in de backend
-    // gemaakt worden. Zolang dat niet gebeurd is, staat hier zwart op wit
-    // welke drie het zijn, zodat niemand denkt dat deze knoppen werken.
-    //
-    // - POST   /projects/:id/rehearsals            (repetitie koppelen)
-    // - DELETE /projects/:id/rehearsals/:id        (repetitie ontkoppelen)
-    // - PUT    /projects/:id/setlist/reorder       (programma herordenen)
-    //
-    // De tabel project_rehearsals bestaat en wordt in GET /projects/:id
-    // uitgelezen, maar geen enkele route schrijft erin. De koppeling is dus
-    // niet stuk gegaan: ze heeft nooit gewerkt.
-    //
-    // Zodra de backend die routes krijgt, wordt deze lijst korter en gaat deze
-    // test rood. Dat is de bedoeling: dan mag hij weg.
-    expect(zonderRoute).toEqual([
-      'linkRehearsalToProject: POST /projects/p1/rehearsals',
-      'unlinkRehearsalFromProject: DELETE /projects/p1/rehearsals/r1',
-      'reorderProjectSetlist: PUT /projects/p1/setlist/reorder',
-    ]);
+    expect(serverBiedtAan(routes, '/projects', methode, pad)).toBe(true);
   });
 
-  it('vindt voor alle overige functies wél een route', async () => {
-    const gedekt: string[] = [];
-    for (const [naam, aanroep] of aanroepen) {
-      const { methode, pad } = await verstuurd(aanroep);
-      if (serverBiedtAan(routes, '/projects', methode, pad)) gedekt.push(naam);
-    }
+  it('laat geen enkele functie uit de module ongetoetst', async () => {
+    // De lijst hierboven wordt met de hand bijgehouden, en dat is precies waar
+    // dit misgaat: wie een functie met een verzonnen pad toevoegt en hem hier
+    // vergeet, ziet niets. Dan is de toets hierboven groen over veertien van de
+    // vijftien functies en zegt niemand er iets van.
+    const geexporteerd = Object.entries(projectenApi)
+      .filter(([, waarde]) => typeof waarde === 'function')
+      .map(([naam]) => naam);
+    const getoetst = aanroepen.map(([naam]) => naam);
 
-    expect(gedekt).toHaveLength(aanroepen.length - 3);
+    expect([...geexporteerd].sort()).toEqual([...getoetst].sort());
   });
 });

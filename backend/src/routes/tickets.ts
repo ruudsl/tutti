@@ -39,6 +39,7 @@ import {
 } from '../services/captcha';
 import logger from '../utils/logger';
 import { wijzigingsschema } from '../utils/schema';
+import { bijlageKopregel } from '../utils/contentDisposition';
 
 const router = Router();
 
@@ -3162,10 +3163,13 @@ router.get(
         .join('\n');
 
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="attendees-${concert.name.replace(/[^a-z0-9]/gi, '_')}.csv"`,
-      );
+      // De concertnaam werd kaalgeslagen met `[^a-z0-9]/gi` om de met de hand
+      // samengestelde kopregel heel te houden: een ř erin liet Node anders de
+      // hele kopregel weigeren met ERR_INVALID_CHAR, en dat werd een
+      // foutmelding 500 in plaats van een download. De prijs was de naam zelf -
+      // "Café Chantant" werd "Caf__Chantant". bijlageKopregel codeert het
+      // teken, dus het strippen kan eruit.
+      res.setHeader('Content-Disposition', bijlageKopregel(`attendees-${concert.name}.csv`, 'attendees.csv'));
       res.send(header + rows);
       return;
     }
@@ -3503,6 +3507,8 @@ router.get(
       .join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
+    // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
+    // geen gebruikersinvoer die de kopregel kan verminken.
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="ticket-sales-${new Date().toISOString().split('T')[0]}.csv"`,

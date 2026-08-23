@@ -575,6 +575,8 @@ router.get(
 
     // Set response headers for JSON download
     res.setHeader('Content-Type', 'application/json');
+    // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
+    // geen gebruikersinvoer die de kopregel kan verminken.
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="mijn-data-${new Date().toISOString().split('T')[0]}.json"`,

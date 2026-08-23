@@ -35,6 +35,17 @@ const setlistItemSchema = z.object({
   notes: z.string().optional(),
 });
 
+/** Het scherm stuurt alleen rehearsalId; sortOrder blijft mogelijk, net als bij concerten. */
+const koppelRepetitieSchema = z.object({
+  rehearsalId: z.string().uuid(),
+  sortOrder: z.number().optional(),
+});
+
+/** De volledige nieuwe volgorde van de setlist, van voor naar achter. */
+const herordenSetlistSchema = z.object({
+  itemIds: z.array(z.string().uuid()),
+});
+
 // GET /projects - List all projects
 router.get(
   '/',
@@ -519,6 +530,168 @@ router.delete(
   }),
 );
 
+/**
+ * Zoekt de repetitie-instantie die aan een project gekoppeld mag worden, en
+ * maakt hem aan als hij er nog niet is.
+ *
+ * project_rehearsals heeft een foreign key naar `rehearsal_instances`, maar de
+ * keuzelijst in het scherm komt uit GET /rehearsals, en dat is de tabel
+ * `rehearsals`: de geplande repetitie zelf. In rehearsal_instances schrijft
+ * alleen routes/polls.ts ooit een rij. Het id dat de gebruiker aanklikt staat
+ * daar dus niet, en omdat connection.ts PRAGMA foreign_keys = ON zet loopt een
+ * rechtstreekse INSERT stuk op die foreign key - een 500 op elke klik in
+ * plaats van een gekoppelde repetitie.
+ *
+ * Daarom wordt de repetitie hier gespiegeld naar rehearsal_instances, met
+ * hetzelfde id. Hetzelfde id is geen toeval: GET /projects/:id geeft de
+ * instantie-id's terug en het scherm ontkoppelt daar weer mee, dus een nieuw
+ * id zou het ontkoppelen laten mikken op een id dat de gebruiker nooit gezien
+ * heeft. rehearsal_id verwijst met ON DELETE CASCADE terug naar de repetitie:
+ * verdwijnt die, dan verdwijnen spiegel en koppeling mee.
+ *
+ * @returns het id waarmee in project_rehearsals geschreven moet worden.
+ */
+function zorgVoorRepetitieInstantie(rehearsalId: string, associationId: string | null): string {
+  // Is deze repetitie eerder al gespiegeld, dan hergebruiken we die spiegel.
+  // Dat maakt herhaald koppelen onschadelijk: er komt geen tweede instantie
+  // bij, en het id blijft hetzelfde als waar het scherm mee ontkoppelt.
+  //
+  // Let op wat dit NIET vindt: een instantie die routes/polls.ts heeft
+  // aangemaakt. Die krijgt daar een eigen uuid en zet `rehearsal_id` helemaal
+  // niet - er staat geen kolom voor in die INSERT - dus er is geen weg terug
+  // van zo'n instantie naar een rij in `rehearsals`. Dat is hier geen gemis:
+  // de keuzelijst in het scherm komt uit GET /rehearsals, dus een
+  // peiling-instantie belandt nooit in deze functie. Zou dat ooit veranderen,
+  // dan moet polls.ts eerst `rehearsal_id` gaan vullen.
+  //
+  // association_id is in deze tabel nullable; een rij zonder vereniging matcht
+  // hier niet en valt door naar de controle hieronder - liever onvindbaar dan
+  // koppelbaar voor iedereen.
+  const bestaandeInstantie = db
+    .prepare('SELECT id FROM rehearsal_instances WHERE id = ? AND association_id = ?')
+    .get(rehearsalId, associationId) as { id: string } | undefined;
+
+  if (bestaandeInstantie) {
+    return bestaandeInstantie.id;
+  }
+
+  // Dezelfde grens als bij concerten: zonder deze controle kon een repetitie
+  // van een andere vereniging aan het project worden gehangen, en verscheen
+  // die met datum, tijd en locatie in het projectoverzicht.
+  const repetitie = db
+    .prepare('SELECT * FROM rehearsals WHERE id = ? AND association_id = ?')
+    .get(rehearsalId, associationId) as any;
+
+  if (!repetitie) {
+    throw new ApiError(404, 'Repetitie niet gevonden');
+  }
+
+  // `type` in rehearsals en `status` in rehearsal_instances overlappen alleen
+  // in 'cancelled'; 'regular' en 'extra' staan allebei gewoon gepland.
+  db.prepare(
+    `
+    INSERT INTO rehearsal_instances (id, rehearsal_id, association_id, orchestra_id, date,
+      start_time, end_time, location, status, notes, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    repetitie.id,
+    repetitie.id,
+    repetitie.association_id,
+    repetitie.orchestra_id || null,
+    repetitie.date,
+    repetitie.start_time,
+    repetitie.end_time,
+    repetitie.location || null,
+    repetitie.type === 'cancelled' ? 'cancelled' : 'scheduled',
+    repetitie.notes || null,
+    repetitie.created_by || null,
+  );
+
+  return repetitie.id;
+}
+
+// POST /projects/:id/rehearsals - Link rehearsal to project
+//
+// Een dirigent mag hier wel bij, anders dan bij de concertroutes hierboven:
+// routes/rehearsals.ts laat hem repetities aanmaken, wijzigen en verwijderen,
+// dus hem de veel kleinere handeling van het koppelen ontzeggen zou vreemd zijn.
+router.post(
+  '/:id/rehearsals',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const data = koppelRepetitieSchema.parse(req.body);
+    const associationId = req.user!.associationId;
+
+    const project = db
+      .prepare('SELECT id FROM projects WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
+
+    if (!project) {
+      throw new ApiError(404, 'Project niet gevonden');
+    }
+
+    try {
+      // Spiegel en koppeling in een transactie: struikelt de koppeling over de
+      // primaire sleutel (dezelfde repetitie twee keer), dan hoort de zojuist
+      // aangemaakte spiegelrij niet achter te blijven.
+      db.transaction(() => {
+        const instantieId = zorgVoorRepetitieInstantie(data.rehearsalId, associationId);
+
+        db.prepare(
+          `
+          INSERT INTO project_rehearsals (project_id, rehearsal_instance_id, sort_order)
+          VALUES (?, ?, ?)
+        `,
+        ).run(id, instantieId, data.sortOrder || 0);
+      })();
+    } catch (err: any) {
+      if (isUniekheidsfout(err)) {
+        throw new ApiError(409, 'Repetitie is al gekoppeld aan dit project');
+      }
+      throw err;
+    }
+
+    res.status(201).json({ message: 'Repetitie gekoppeld' });
+  }),
+);
+
+// DELETE /projects/:id/rehearsals/:rehearsalId - Unlink rehearsal
+router.delete(
+  '/:id/rehearsals/:rehearsalId',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id, rehearsalId } = req.params;
+    const associationId = req.user!.associationId;
+
+    const project = db
+      .prepare('SELECT id FROM projects WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
+
+    if (!project) {
+      throw new ApiError(404, 'Project niet gevonden');
+    }
+
+    // Alleen de koppeling gaat weg, de rij in rehearsal_instances blijft: daar
+    // hangen ook resource_bookings, equipment_loans en vervangingsverzoeken
+    // aan, en die horen niet te sneuvelen omdat iemand een projectkoppeling
+    // ongedaan maakt.
+    //
+    // Een koppeling die er niet is levert net als bij concerten geen 404 op:
+    // het scherm haalt het project daarna toch opnieuw op, en tweemaal
+    // ontkoppelen hoort hetzelfde te betekenen als eenmaal.
+    db.prepare('DELETE FROM project_rehearsals WHERE project_id = ? AND rehearsal_instance_id = ?').run(
+      id,
+      rehearsalId,
+    );
+
+    res.json({ message: 'Repetitie ontkoppeld' });
+  }),
+);
+
 // POST /projects/:id/setlist - Add setlist item
 router.post(
   '/:id/setlist',
@@ -585,6 +758,72 @@ router.delete(
     }
 
     res.json({ message: 'Item verwijderd uit setlist' });
+  }),
+);
+
+// PUT /projects/:id/setlist/reorder - Reorder setlist
+//
+// Staat na DELETE /:id/setlist/:itemId maar botst daar niet mee: dat is een
+// ander werkwoord. Zou hier ooit een PUT /:id/setlist/:itemId bij komen, dan
+// moet die na deze route, anders slikt hij 'reorder' als item-id.
+router.put(
+  '/:id/setlist/reorder',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const data = herordenSetlistSchema.parse(req.body);
+    const associationId = req.user!.associationId;
+
+    const project = db
+      .prepare('SELECT id FROM projects WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
+
+    if (!project) {
+      throw new ApiError(404, 'Project niet gevonden');
+    }
+
+    // Hetzelfde item twee keer zou betekenen dat het zijn laatste plek krijgt
+    // en dat er ergens anders een nummer overgeslagen wordt. De lijst klopt
+    // dan niet, dus hij gaat in zijn geheel terug.
+    if (new Set(data.itemIds).size !== data.itemIds.length) {
+      throw new ApiError(400, 'De lijst bevat hetzelfde item meer dan een keer');
+    }
+
+    const bestaandeItems = db.prepare('SELECT id FROM project_setlist WHERE project_id = ?').all(id) as {
+      id: string;
+    }[];
+    const bekend = new Set(bestaandeItems.map((item) => item.id));
+
+    // De lijst moet precies de items van dit project zijn - niet meer, niet
+    // minder. ProjectSetlistSection.tsx stuurt altijd het hele programma, dus
+    // elke afwijking is een vergissing: een id van een ander project, een item
+    // dat inmiddels verwijderd is, of een halve lijst.
+    //
+    // Alleen de meegestuurde id's doornummeren zou het ergst zijn wat hier kan
+    // gebeuren: de items die ontbreken houden hun oude sort_order en belanden
+    // willekeurig tussen de herordende. Het programma ziet er dan compleet uit
+    // en staat in de verkeerde volgorde, zonder dat iets dat meldt.
+    const compleet =
+      bestaandeItems.length === data.itemIds.length && data.itemIds.every((itemId) => bekend.has(itemId));
+
+    if (!compleet) {
+      throw new ApiError(400, 'De lijst moet precies de items van dit project bevatten');
+    }
+
+    // Nummeren vanaf 1, in dezelfde reeks die POST /:id/setlist gebruikt (die
+    // neemt MAX + 1). Een item dat na het herordenen wordt toegevoegd komt zo
+    // weer achteraan in plaats van naast het eerste.
+    const bijwerken = db.prepare('UPDATE project_setlist SET sort_order = ? WHERE id = ? AND project_id = ?');
+
+    // In een transactie, want een halve nieuwe volgorde is erger dan geen.
+    db.transaction(() => {
+      data.itemIds.forEach((itemId, index) => {
+        bijwerken.run(index + 1, itemId, id);
+      });
+    })();
+
+    res.json({ message: 'Setlist herordend' });
   }),
 );
 

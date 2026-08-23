@@ -5,6 +5,7 @@ import { cacheMiddleware } from '../middleware/cache';
 import repertoireStats from '../services/repertoireStats';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { bijlageKopregel } from '../utils/contentDisposition';
 
 const router = Router();
 
@@ -808,6 +809,11 @@ router.get(
         })();
 
     let csvContent = '';
+    // reportType komt uit een vaste lijst, maar startDate en endDate zijn
+    // ongefilterde queryparameters (String(dateFrom), geen datumcontrole).
+    // Met de hand samengesteld liet een teken boven U+00FF daarin Node de hele
+    // kopregel weigeren met ERR_INVALID_CHAR: een foutmelding 500 in plaats
+    // van de export.
     const filename = `activity-report-${reportType}-${startDate}-to-${endDate}.csv`;
 
     switch (reportType) {
@@ -949,7 +955,7 @@ router.get(
     logger.info(`Activity report exported by user ${req.user!.id}: ${reportTypeForLog}`);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', bijlageKopregel(filename, 'activity-report.csv'));
     res.send('\uFEFF' + csvContent); // Add BOM for Excel compatibility
   }),
 );
