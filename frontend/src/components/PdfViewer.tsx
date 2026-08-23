@@ -255,9 +255,21 @@ export function PdfViewer({
 
         if (cancelled) return;
 
+        // Een pdf zonder pagina's is geen document om in te bladeren. Zonder
+        // deze controle kwam `Math.min(initialPage, 0)` op paginanummer 0 uit:
+        // de gebruiker kreeg "0 / 0" in beeld, de lezer vroeg vervolgens pagina
+        // 0 op bij pdf.js (die weigert dat) en het canvas bleef leeg zonder
+        // enige melding. De foutmelding hieronder is wat er wél te zeggen valt.
+        if (pdf.numPages < 1) {
+          throw new Error('PDF has no pages');
+        }
+
         setPdfDoc(pdf);
         setTotalPages(pdf.numPages);
-        setCurrentPage(Math.min(initialPage, pdf.numPages));
+        // Ook naar beneden begrenzen: `initialPage` komt van de aanroeper en
+        // een nul of een negatief getal leverde eerder net zo goed een
+        // paginanummer op dat niet bestaat.
+        setCurrentPage(Math.min(Math.max(initialPage, 1), pdf.numPages));
         setLoading(false);
       } catch (err) {
         if (cancelled) return;

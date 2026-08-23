@@ -337,7 +337,19 @@ export default function ConcertStageSetup() {
                   tool="select"
                   gridSnap={false}
                   zoom={0.8}
-                  readOnly
+                  // Geen `readOnly`. Dat stond hier om te voorkomen dat iemand
+                  // op deze pagina de indeling zelf zou verbouwen, maar in
+                  // StageCanvas zet die vlag óók het selecteren uit:
+                  // `handleElementClick` keert er meteen op terug en de
+                  // elementen krijgen `tabindex="-1"`. Daarmee kon
+                  // `selectedPositionId` nooit iets anders worden dan null,
+                  // bleef de rechterkolom "Selecteer positie" zeggen en was
+                  // een lid op een stoel zetten - de hele reden van deze
+                  // pagina - onbereikbaar, met muis noch met toetsenbord.
+                  //
+                  // Wijzigen aan de indeling komt nog steeds nergens terecht:
+                  // `onLayoutChange` doet niets en de indeling wordt bij elke
+                  // hertekening opnieuw uit de query gehaald.
                   onLayoutChange={() => {}}
                   onSelectionChange={handleSelectionChange}
                 />

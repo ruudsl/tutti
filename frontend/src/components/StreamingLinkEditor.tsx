@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { searchStreamingTracks, updateStreamingLinks, getStreamingStatus } from '../api';
 import type { StreamingLinks } from '../types';
 import { showSuccess, showError } from '../utils/toast';
+import { isVeiligeLink } from '../utils/videoInsluiten';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface StreamingLinkEditorProps {
@@ -116,7 +117,21 @@ export function StreamingLinkEditor({
     }
   };
 
+  // Een adres dat gevuld is maar niet met http of https begint, is geen
+  // streaminglink. Het invoerveld draagt wel `type="url"`, maar dat doet hier
+  // niets: er staat geen formulier omheen en er wordt niets ingediend, dus de
+  // browser controleert nooit iets. Alles wat iemand intypte ging zo naar de
+  // server en kwam er als `href` weer uit - `javascript:alert(1)` incluis.
+  const onveiligeAdressen = [links.spotify_url, links.apple_music_url, links.youtube_music_url].filter(
+    (adres): adres is string => !!adres && !isVeiligeLink(adres),
+  );
+
   const handleSave = async () => {
+    if (onveiligeAdressen.length > 0) {
+      showError(t('errors.invalidUrl'));
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -189,14 +204,7 @@ export function StreamingLinkEditor({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ color: '#1DB954', fontWeight: 500 }}>Spotify</span>
-                  <a
-                    href={links.spotify_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}
-                  >
-                    {t('streaming.openLink')}
-                  </a>
+                  <OpenLink href={links.spotify_url} label={t('streaming.openLink')} />
                 </div>
                 <button
                   type="button"
@@ -223,14 +231,7 @@ export function StreamingLinkEditor({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ color: '#FA243C', fontWeight: 500 }}>Apple Music</span>
-                  <a
-                    href={links.apple_music_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}
-                  >
-                    {t('streaming.openLink')}
-                  </a>
+                  <OpenLink href={links.apple_music_url} label={t('streaming.openLink')} />
                 </div>
                 <button
                   type="button"
@@ -257,14 +258,7 @@ export function StreamingLinkEditor({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ color: '#FF0000', fontWeight: 500 }}>YouTube Music</span>
-                  <a
-                    href={links.youtube_music_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}
-                  >
-                    {t('streaming.openLink')}
-                  </a>
+                  <OpenLink href={links.youtube_music_url} label={t('streaming.openLink')} />
                 </div>
                 <button
                   type="button"
@@ -290,6 +284,7 @@ export function StreamingLinkEditor({
             placeholder={t('streaming.youtubeMusicUrlPlaceholder')}
             value={links.youtube_music_url || ''}
             onChange={(e) => setLinks((prev) => ({ ...prev, youtube_music_url: e.target.value || undefined }))}
+            aria-invalid={!!links.youtube_music_url && !isVeiligeLink(links.youtube_music_url)}
             style={{ fontSize: '0.875rem' }}
           />
         </div>
@@ -454,6 +449,29 @@ export function StreamingLinkEditor({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Een verwijzing naar de dienst, en alleen als het adres veilig is.
+ *
+ * Een onveilig adres kan al in de gegevens staan van voor de controle
+ * hierboven; het als `href` neerzetten voert die code uit zodra iemand erop
+ * klikt. Dan liever geen verwijzing: het kopje van de dienst en de
+ * verwijderknop blijven staan, dus de gebruiker kan hem opruimen.
+ */
+function OpenLink({ href, label }: { href: string; label: string }) {
+  if (!isVeiligeLink(href)) return null;
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}
+    >
+      {label}
+    </a>
   );
 }
 

@@ -76,6 +76,28 @@ export function ContactPicker({
     setSearch('');
   };
 
+  // Het aanklikvlak is een div en geen knop, omdat er een knop in zit (het
+  // kruisje) en een knop in een knop niet mag. Een div doet uit zichzelf niets
+  // met het toetsenbord, dus dat gebeurt hier met de hand: Enter en spatie
+  // klappen open en dicht, net als een muisklik.
+  const handleTriggerKeyDown = (event: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      // Zonder dit rolt de bladzijde bij een spatie.
+      event.preventDefault();
+      setIsOpen((open) => !open);
+    }
+  };
+
+  // Escape klapt dicht vanaf elke plek in de kiezer, dus ook vanuit het
+  // zoekveld dat de aandacht krijgt zodra de lijst opengaat.
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Escape' && isOpen) {
+      event.stopPropagation();
+      setIsOpen(false);
+    }
+  };
+
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange(null, null);
@@ -102,7 +124,7 @@ export function ContactPicker({
   };
 
   return (
-    <div className={`form-control ${className}`} ref={dropdownRef}>
+    <div className={`form-control ${className}`} ref={dropdownRef} onKeyDown={handleKeyDown}>
       {label && (
         <label className="label">
           <span className="label-text">
@@ -115,6 +137,14 @@ export function ContactPicker({
       <div className="relative">
         <div
           className={`input input-bordered w-full flex items-center gap-2 cursor-pointer ${disabled ? 'input-disabled' : ''}`}
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          aria-disabled={disabled}
+          aria-required={required}
+          aria-label={label}
+          tabIndex={disabled ? -1 : 0}
+          onKeyDown={handleTriggerKeyDown}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
           {selectedContact ? (
@@ -271,6 +301,15 @@ export function MultiContactPicker({
     onChange(value.filter((id) => id !== contactId));
   };
 
+  // Escape klapt de lijst dicht vanaf elke plek in de kiezer, ook vanuit het
+  // zoekveld.
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Escape' && isOpen) {
+      event.stopPropagation();
+      setIsOpen(false);
+    }
+  };
+
   const getContactTypeIcon = (type: ContactType) => {
     switch (type) {
       case 'organization':
@@ -289,7 +328,7 @@ export function MultiContactPicker({
   const canAddMore = !max || value.length < max;
 
   return (
-    <div className={`form-control ${className}`} ref={dropdownRef}>
+    <div className={`form-control ${className}`} ref={dropdownRef} onKeyDown={handleKeyDown}>
       {label && (
         <label className="label">
           <span className="label-text">
@@ -326,13 +365,20 @@ export function MultiContactPicker({
         )}
 
         {canAddMore && (
-          <div
-            className={`input input-bordered w-full flex items-center gap-2 cursor-pointer ${disabled ? 'input-disabled' : ''}`}
+          // Een echte knop, geen div met een onClick: hier zit niets in dat zelf
+          // een knop is, dus dan hoort de browser de tabvolgorde, Enter en de
+          // spatiebalk te regelen in plaats van wij.
+          <button
+            type="button"
+            className={`input input-bordered w-full flex items-center gap-2 cursor-pointer text-left ${disabled ? 'input-disabled' : ''}`}
+            aria-haspopup="listbox"
+            aria-expanded={isOpen}
+            disabled={disabled}
             onClick={() => !disabled && setIsOpen(!isOpen)}
           >
             <Icon name="plus" size={16} className="text-base-content/60" />
             <span className="text-base-content/40 flex-1">{placeholder || t('contacts.addContact')}</span>
-          </div>
+          </button>
         )}
 
         {isOpen && canAddMore && (

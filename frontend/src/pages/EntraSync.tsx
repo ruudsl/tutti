@@ -113,12 +113,15 @@ export default function EntraSync() {
     // Apply search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      users = users.filter(
-        (u) =>
-          u.displayName.toLowerCase().includes(query) ||
-          u.email.toLowerCase().includes(query) ||
-          (u.jobTitle && u.jobTitle.toLowerCase().includes(query)) ||
-          (u.department && u.department.toLowerCase().includes(query)),
+      // `displayName` is bij Microsoft Graph een optioneel veld: een gedeelde
+      // postbus of een dienstaccount heeft er geen. Hier stond
+      // `u.displayName.toLowerCase()` zonder meer, en dan nam één naamloos
+      // account bij de eerste toetsaanslag in het zoekveld de hele pagina mee -
+      // niet alleen die ene rij. Dezelfde valstrik als aan de serverkant, waar
+      // één zo'n account de hele ledensynchronisatie terugdraaide. Alle vier de
+      // velden mogen ontbreken en worden daarom gelijk behandeld.
+      users = users.filter((u) =>
+        [u.displayName, u.email, u.jobTitle, u.department].some((veld) => veld?.toLowerCase().includes(query)),
       );
     }
 

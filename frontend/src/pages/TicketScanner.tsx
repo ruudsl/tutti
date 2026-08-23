@@ -60,6 +60,13 @@ export default function TicketScanner() {
       }
     },
     onError: (error) => {
+      // De uitslag van de vórige kaart bleef hier staan. Wie aan de deur een
+      // tweede kaart scant terwijl de server onbereikbaar is, ziet dan nog
+      // steeds het groene vinkje met de naam van de vorige bezoeker, terwijl de
+      // foutmelding als toast voorbijschiet. Die tweede bezoeker wordt dan
+      // binnengelaten op andermans kaart. Er is niets bekend over deze scan,
+      // dus staat er ook niets.
+      setLastResult(null);
       showError(getErrorMessage(error));
       playSound('error');
     },

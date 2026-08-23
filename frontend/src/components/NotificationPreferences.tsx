@@ -62,7 +62,14 @@ export default function NotificationPreferences({ onClose }: Props) {
   };
 
   const handleSave = async () => {
-    if (!preferences) return;
+    // Mislukte het ophalen, dan is er geen stand om te bewaren. Het formulier
+    // staat dan wel op het scherm - met overal het standaardvinkje - en de
+    // knop viel hier stilletjes uit: geen verzoek, geen melding. De gebruiker
+    // dacht dat zijn instellingen bewaard waren terwijl er niets gebeurde.
+    if (!preferences) {
+      showError(t('notificationPrefs.saveError'));
+      return;
+    }
 
     setIsSaving(true);
     try {

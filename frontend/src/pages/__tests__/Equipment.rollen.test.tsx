@@ -102,8 +102,11 @@ function wikkel({ children }: { children: ReactNode }) {
 beforeEach(() => {
   vi.clearAllMocks();
   huidigeRol = 'member';
-  vi.mocked(api.getEquipmentTypes).mockResolvedValue(['Trompet', 'Klarinet']);
-  vi.mocked(api.getEquipment).mockResolvedValue({ equipment: [apparaat()] } as never);
+  // Bewust andere namen dan de apparaten hieronder: staat dezelfde tekst in
+  // het typefilter, dan slaagt een assertie op die naam ook als de lijst leeg
+  // blijft.
+  vi.mocked(api.getEquipmentTypes).mockResolvedValue(['Blaasinstrument', 'Slagwerk']);
+  vi.mocked(api.getEquipment).mockResolvedValue({ data: [apparaat()], total: 1, page: 1, limit: 20 });
 });
 
 describe('apparatuur - de beheerknoppen volgen de rol', () => {
@@ -134,7 +137,7 @@ describe('apparatuur - de beheerknoppen volgen de rol', () => {
 
   it('biedt een gewoon lid in de lege staat geen knop aan die toch niet mag', async () => {
     huidigeRol = 'member';
-    vi.mocked(api.getEquipment).mockResolvedValue({ equipment: [] } as never);
+    vi.mocked(api.getEquipment).mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
     render(<Equipment />, { wrapper: wikkel });
 
     expect(await screen.findByText('equipment.noEquipment')).toBeInTheDocument();
@@ -143,7 +146,7 @@ describe('apparatuur - de beheerknoppen volgen de rol', () => {
 
   it('biedt een beheerder in de lege staat wel die knop', async () => {
     huidigeRol = 'admin';
-    vi.mocked(api.getEquipment).mockResolvedValue({ equipment: [] } as never);
+    vi.mocked(api.getEquipment).mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
     render(<Equipment />, { wrapper: wikkel });
 
     expect(await screen.findByText('equipment.noEquipment')).toBeInTheDocument();
@@ -163,7 +166,7 @@ describe('apparatuur - een storing is geen leeg magazijn', () => {
   });
 
   it('toont de lege staat wel als het magazijn echt leeg is', async () => {
-    vi.mocked(api.getEquipment).mockResolvedValue({ equipment: [] } as never);
+    vi.mocked(api.getEquipment).mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
     render(<Equipment />, { wrapper: wikkel });
 
     expect(await screen.findByText('equipment.noEquipment')).toBeInTheDocument();
@@ -174,8 +177,11 @@ describe('apparatuur - een storing is geen leeg magazijn', () => {
 describe('apparatuur - de hoofdweg', () => {
   it('toont wat de server stuurt', async () => {
     vi.mocked(api.getEquipment).mockResolvedValue({
-      equipment: [apparaat(), apparaat({ id: 'apparaat-2', instrumentType: 'Klarinet', status: 'on_loan' })],
-    } as never);
+      data: [apparaat(), apparaat({ id: 'apparaat-2', instrumentType: 'Klarinet', status: 'on_loan' })],
+      total: 2,
+      page: 1,
+      limit: 20,
+    });
     render(<Equipment />, { wrapper: wikkel });
 
     expect(await screen.findByText('Trompet')).toBeInTheDocument();

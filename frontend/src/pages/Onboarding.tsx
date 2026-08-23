@@ -60,6 +60,12 @@ export default function Onboarding() {
   const [onboardingResult, setOnboardingResult] = useState<OnboardingResponse | null>(null);
   const [confirmReactivate, setConfirmReactivate] = useState<InactiveMember | null>(null);
   const [passwordCopied, setPasswordCopied] = useState(false);
+  // Of er bij deze aanmelding een privé-adres is opgegeven. De server stuurt
+  // e-mail alleen door als dat er is, en meldt anders `emailForwardingSet:
+  // false` - hetzelfde antwoord als bij een mislukte poging. Zonder dit
+  // onderscheid staat er na elke aanmelding een waarschuwing over doorsturen
+  // dat "nog niet is ingesteld", terwijl er niets door te sturen viel.
+  const [priveEmailOpgegeven, setPriveEmailOpgegeven] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -210,6 +216,7 @@ export default function Onboarding() {
   });
 
   const handleSubmit = (data: OnboardingFormData) => {
+    setPriveEmailOpgegeven(!!data.privateEmail?.trim());
     onboardMutation.mutate({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -256,6 +263,7 @@ export default function Onboarding() {
     setOnboardingResult(null);
     setWizardStep('form');
     setPasswordCopied(false);
+    setPriveEmailOpgegeven(false);
     setProfilePhoto(null);
     setPhotoPreview(null);
     if (fileInputRef.current) {
@@ -669,8 +677,14 @@ export default function Onboarding() {
                     </div>
 
                     {/* Retry email forwarding button when it wasn't set up */}
+                    {/* Alleen als er een privé-adres was: het herstelpunt op de
+                        server weigert zonder zo'n adres met "Gebruiker heeft geen
+                        privé emailadres geconfigureerd", dus zonder deze
+                        voorwaarde stond hier een rode vlag bij een aanmelding die
+                        vlekkeloos ging, met een knop die niet kón slagen. */}
                     {onboardingResult.m365Created &&
                       onboardingResult.licenseAssigned &&
+                      priveEmailOpgegeven &&
                       !onboardingResult.emailForwardingSet && (
                         <div
                           style={{

@@ -81,6 +81,16 @@ function autoCorrelate(buffer: Float32Array, sampleRate: number): number {
   return -1;
 }
 
+/**
+ * Zet een microfoonstroom uit.
+ *
+ * Zolang de sporen van een stroom lopen, brandt het opnamelampje van de
+ * browser - ook als er niets meer met het geluid gebeurt.
+ */
+function stopStream(stream: MediaStream | null) {
+  stream?.getTracks().forEach((track) => track.stop());
+}
+
 export function Tuner({ compact = false }: TunerProps) {
   const { t } = useTranslation();
   const [isListening, setIsListening] = useState(false);
@@ -95,6 +105,7 @@ export function Tuner({ compact = false }: TunerProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const animationRef = useRef<number | null>(null);
   const bufferRef = useRef<Float32Array<ArrayBuffer> | null>(null);
+  const mountedRef = useRef(true);
 
   const analyze = useCallback(() => {
     if (!analyserRef.current || !bufferRef.current || !audioContextRef.current) return;
@@ -130,6 +141,14 @@ export function Tuner({ compact = false }: TunerProps) {
           autoGainControl: false,
         },
       });
+      // De bezoeker kan tijdens het toestemmingsvenster allang weggeklikt
+      // zijn. De belofte komt dan alsnog terug, maar de opruiming bij het
+      // verdwijnen is al geweest en heeft deze stroom nooit gezien.
+      if (!mountedRef.current) {
+        stopStream(stream);
+        return;
+      }
+
       streamRef.current = stream;
 
       // Create audio context
@@ -149,8 +168,24 @@ export function Tuner({ compact = false }: TunerProps) {
       setIsListening(true);
       analyze();
     } catch (err: any) {
-      setError(t('tools.tuner.micError'));
+      // De toestemming kan al gegeven zijn voordat het verderop misging - een
+      // AudioContext die niet gemaakt kan worden is het gewone geval. Zonder
+      // deze opruiming toont het stemapparaat een foutmelding terwijl de
+      // microfoon gewoon blijft opnemen.
+      stopStream(streamRef.current);
+      streamRef.current = null;
+
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      analyserRef.current = null;
+
       console.error('Microphone error:', err);
+
+      if (mountedRef.current) {
+        setError(t('tools.tuner.micError'));
+      }
     }
   }, [analyze, t]);
 
@@ -160,10 +195,8 @@ export function Tuner({ compact = false }: TunerProps) {
       animationRef.current = null;
     }
 
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
+    stopStream(streamRef.current);
+    streamRef.current = null;
 
     if (audioContextRef.current) {
       audioContextRef.current.close();
@@ -187,7 +220,9 @@ export function Tuner({ compact = false }: TunerProps) {
 
   // Cleanup on unmount
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       stopListening();
     };
   }, [stopListening]);

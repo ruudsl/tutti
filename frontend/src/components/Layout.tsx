@@ -543,6 +543,16 @@ export default function Layout() {
           <SectionErrorBoundary sectionName="Breadcrumbs" compact>
             <Breadcrumbs />
           </SectionErrorBoundary>
+          {/*
+            Deze grens vergeet zijn fout bij een paginawissel. Dat zit sinds
+            #177 in SectionErrorBoundary zelf, die het huidige pad als resetKey
+            oppikt - een sleutel hier zou hetzelfde doen, maar dan alleen voor
+            deze ene plek en met een volledige hermontage in plaats van een
+            reset. Zonder dat vergeten kreeg wie op een kapotte pagina belandde
+            en daarna in het menu iets anders aanklikte, opnieuw "kon niet
+            worden geladen" voor een pagina die niets mankeerde - terwijl dat
+            menu juist de ontsnapping is die de grens hoort te bieden.
+          */}
           <SectionErrorBoundary sectionName="Page Content">
             <Outlet />
           </SectionErrorBoundary>

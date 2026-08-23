@@ -6,6 +6,12 @@ interface BreadcrumbItem {
   label: string;
   path?: string;
   isDynamic?: boolean;
+  /**
+   * De pagina waar de bezoeker nu staat. Dat was eerder af te leiden uit "geen
+   * pad", maar er zijn ook tussenkruimels zonder eigen pagina; die zijn geen
+   * link en ook niet de huidige plek.
+   */
+  isCurrent?: boolean;
 }
 
 interface BreadcrumbContext {
@@ -62,8 +68,13 @@ const routeConfig: Record<string, { labelKey: string; parent?: string }> = {
 };
 
 // Extended route config with nested paths
-const nestedRouteConfig: Record<string, { labelKey: string; parent: string }> = {
-  '/lists/:orchestraId': { labelKey: 'breadcrumbs.orchestra', parent: '/lists' },
+//
+// `withoutOwnPage` markeert een niveau dat wel in de hiërarchie zit maar geen
+// eigen route heeft. Zo'n kruimel wordt getoond en niet gelinkt.
+const nestedRouteConfig: Record<string, { labelKey: string; parent: string; withoutOwnPage?: boolean }> = {
+  // App.tsx kent alleen `lists` en `lists/:orchestraId/:listId`. Een link naar
+  // /lists/:orchestraId komt dus bij de catch-all uit, en die toont <NotFound />.
+  '/lists/:orchestraId': { labelKey: 'breadcrumbs.orchestra', parent: '/lists', withoutOwnPage: true },
   '/lists/:orchestraId/:listId': { labelKey: 'breadcrumbs.list', parent: '/lists/:orchestraId' },
   '/lists/:orchestraId/:listId/:titleId': { labelKey: 'breadcrumbs.title', parent: '/lists/:orchestraId/:listId' },
   '/rehearsals/:id': { labelKey: 'breadcrumbs.rehearsalDetail', parent: '/rehearsals' },
@@ -187,10 +198,13 @@ export function Breadcrumbs() {
         const baseConfig = routeConfig[path] || routeConfig['/' + patternSegments[0]];
         const nestedConfig = nestedRouteConfig[pattern];
 
+        const isCurrent = pattern === nestedMatch.pattern;
+
         if (baseConfig && pattern === '/' + patternSegments[0]) {
           items.push({
             label: t(baseConfig.labelKey),
-            path: pattern === nestedMatch.pattern ? undefined : path,
+            path: isCurrent ? undefined : path,
+            isCurrent,
           });
         } else if (nestedConfig) {
           // Check for dynamic context
@@ -199,7 +213,8 @@ export function Breadcrumbs() {
 
           items.push({
             label: context?.label || t(nestedConfig.labelKey),
-            path: pattern === nestedMatch.pattern ? undefined : path,
+            path: isCurrent || nestedConfig.withoutOwnPage ? undefined : path,
+            isCurrent,
             isDynamic: !!context,
           });
         }
@@ -222,27 +237,33 @@ export function Breadcrumbs() {
         path = routeConfig[path]?.parent;
       }
 
+      // Een detailpagina onder deze sectie krijgt zijn naam van de pagina zelf.
+      // Die kruimel komt achter de sectie, dus de sectie is dan niet de huidige
+      // plek en moet klikbaar blijven - anders staat de bezoeker op een
+      // detailpagina met twee keer aria-current="page" en zonder weg terug.
+      const detailContext = pathSegments.length > 1 ? dynamicContext[location.pathname] : undefined;
+
       // Skip dashboard as we already added it
       paths.forEach((p, index) => {
         if (p === '/') return;
         const cfg = routeConfig[p];
         if (cfg) {
+          const isLastSection = index === paths.length - 1;
           items.push({
             label: t(cfg.labelKey),
-            path: index < paths.length - 1 ? p : undefined,
+            path: !isLastSection || detailContext ? p : undefined,
+            isCurrent: isLastSection && !detailContext,
           });
         }
       });
 
       // Handle detail pages with dynamic segments
-      if (pathSegments.length > 1) {
-        const detailContext = dynamicContext[location.pathname];
-        if (detailContext) {
-          items.push({
-            label: detailContext.label,
-            isDynamic: true,
-          });
-        }
+      if (detailContext) {
+        items.push({
+          label: detailContext.label,
+          isDynamic: true,
+          isCurrent: true,
+        });
       }
     }
 
@@ -279,10 +300,19 @@ export function Breadcrumbs() {
             </span>
           )}
         </>
-      ) : (
+      ) : item.isCurrent ? (
         <span className="breadcrumbs-current" aria-current="page">
           {item.label}
         </span>
+      ) : (
+        <>
+          <span className="breadcrumbs-current">{item.label}</span>
+          {showSeparator && (
+            <span className="breadcrumbs-separator" aria-hidden="true">
+              /
+            </span>
+          )}
+        </>
       )}
     </li>
   );
@@ -313,17 +343,25 @@ export function Breadcrumbs() {
 
               {isDropdownOpen && (
                 <div className="breadcrumbs-dropdown" role="menu">
-                  {collapsedItems.map((item, index) => (
-                    <Link
-                      key={index}
-                      to={item.path || '#'}
-                      className="breadcrumbs-dropdown-item"
-                      role="menuitem"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
+                  {collapsedItems.map((item, index) =>
+                    item.path ? (
+                      <Link
+                        key={index}
+                        to={item.path}
+                        className="breadcrumbs-dropdown-item"
+                        role="menuitem"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    ) : (
+                      // Een niveau zonder eigen pagina: tonen mag, klikbaar
+                      // maken niet - `to="#"` bracht de bezoeker nergens.
+                      <span key={index} className="breadcrumbs-dropdown-item">
+                        {item.label}
+                      </span>
+                    ),
+                  )}
                 </div>
               )}
             </li>

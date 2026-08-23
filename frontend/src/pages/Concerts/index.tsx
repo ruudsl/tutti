@@ -331,27 +331,24 @@ export default function Concerts() {
     showSuccess(t('tickets.urlCopied'));
   };
 
+  /**
+   * De verzendknoppen van deze pagina wachtten op `mutateAsync` zonder vangnet.
+   *
+   * Bij een geweigerde opslag - een dubbele datum, een verlopen sessie - kwam
+   * die afwijzing dus nergens terecht: de browser meldde "Uncaught (in
+   * promise)" en alles wat achter de `await` stond bleef liggen. De melding
+   * aan de gebruiker kwam nog wel, want die hangt aan de `onError` van de
+   * mutatie zelf, maar de pagina liet een onafgehandelde afwijzing achter en
+   * dat is precies wat een foutenrapportage als een storing telt.
+   *
+   * Vandaar de `catch` hier en bij de andere verzendfuncties hieronder: de
+   * mutatie meldt de fout zelf, en het venster blijft staan zodat de invoer
+   * niet weg is.
+   */
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createMutation.mutateAsync({
-      name: formData.name,
-      date: formData.date,
-      endDate: formData.endDate || undefined,
-      location: formData.location || undefined,
-      concertType: formData.concertType || undefined,
-      description: formData.description || undefined,
-      notes: formData.notes || undefined,
-    });
-    setShowAddModal(false);
-    resetForm();
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingConcert) return;
-    await updateMutation.mutateAsync({
-      id: editingConcert.id,
-      data: {
+    try {
+      await createMutation.mutateAsync({
         name: formData.name,
         date: formData.date,
         endDate: formData.endDate || undefined,
@@ -359,31 +356,64 @@ export default function Concerts() {
         concertType: formData.concertType || undefined,
         description: formData.description || undefined,
         notes: formData.notes || undefined,
-      },
-    });
+      });
+    } catch {
+      return;
+    }
+    setShowAddModal(false);
+    resetForm();
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingConcert) return;
+    try {
+      await updateMutation.mutateAsync({
+        id: editingConcert.id,
+        data: {
+          name: formData.name,
+          date: formData.date,
+          endDate: formData.endDate || undefined,
+          location: formData.location || undefined,
+          concertType: formData.concertType || undefined,
+          description: formData.description || undefined,
+          notes: formData.notes || undefined,
+        },
+      });
+    } catch {
+      return;
+    }
     setEditingConcert(null);
     resetForm();
   };
 
   const handleDelete = async () => {
     if (!deletingConcert) return;
-    await deleteMutation.mutateAsync(deletingConcert.id);
+    try {
+      await deleteMutation.mutateAsync(deletingConcert.id);
+    } catch {
+      return;
+    }
     setDeletingConcert(null);
   };
 
   const handleAddProgram = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!viewingConcert) return;
-    await addProgramMutation.mutateAsync({
-      concertId: viewingConcert,
-      item: {
-        title: programFormData.title,
-        arranger: programFormData.arranger || undefined,
-        notes: programFormData.notes || undefined,
-        partOfSet: programFormData.partOfSet || undefined,
-        musicTitleId: programFormData.musicTitleId || undefined,
-      },
-    });
+    try {
+      await addProgramMutation.mutateAsync({
+        concertId: viewingConcert,
+        item: {
+          title: programFormData.title,
+          arranger: programFormData.arranger || undefined,
+          notes: programFormData.notes || undefined,
+          partOfSet: programFormData.partOfSet || undefined,
+          musicTitleId: programFormData.musicTitleId || undefined,
+        },
+      });
+    } catch {
+      return;
+    }
     setShowAddProgramModal(false);
     setProgramFormData({ title: '', arranger: '', notes: '', partOfSet: '', musicTitleId: '' });
   };
@@ -391,14 +421,18 @@ export default function Concerts() {
   const handleAddMedia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!viewingConcert) return;
-    await addMediaMutation.mutateAsync({
-      concertId: viewingConcert,
-      media: {
-        mediaType: mediaFormData.mediaType,
-        url: mediaFormData.url || undefined,
-        description: mediaFormData.description || undefined,
-      },
-    });
+    try {
+      await addMediaMutation.mutateAsync({
+        concertId: viewingConcert,
+        media: {
+          mediaType: mediaFormData.mediaType,
+          url: mediaFormData.url || undefined,
+          description: mediaFormData.description || undefined,
+        },
+      });
+    } catch {
+      return;
+    }
     setShowAddMediaModal(false);
     setMediaFormData({ mediaType: 'photo', url: '', description: '' });
   };
@@ -406,20 +440,28 @@ export default function Concerts() {
   const handleAddAttendance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!viewingConcert || selectedUserIds.length === 0) return;
-    await addAttendanceMutation.mutateAsync({
-      concertId: viewingConcert,
-      userIds: selectedUserIds,
-    });
+    try {
+      await addAttendanceMutation.mutateAsync({
+        concertId: viewingConcert,
+        userIds: selectedUserIds,
+      });
+    } catch {
+      return;
+    }
     setShowAddAttendanceModal(false);
     setSelectedUserIds([]);
   };
 
   const handleExportBumaStemra = async (e: React.FormEvent) => {
     e.preventDefault();
-    await exportBumaStemraMutation.mutateAsync({
-      startDate: bumaStemraStartDate,
-      endDate: bumaStemraEndDate,
-    });
+    try {
+      await exportBumaStemraMutation.mutateAsync({
+        startDate: bumaStemraStartDate,
+        endDate: bumaStemraEndDate,
+      });
+    } catch {
+      return;
+    }
     setShowBumaStemraModal(false);
   };
 
