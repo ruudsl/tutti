@@ -27,6 +27,7 @@ import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
 import { PostCategoriesManager } from '../components/PostCategoriesManager';
 import { useConfirm } from '../hooks/useConfirm';
+import { useDebounce } from '../hooks/useDebounce';
 
 const STATUS_COLORS: Record<PostStatus, string> = {
   draft: 'badge-secondary',
@@ -52,13 +53,23 @@ export default function Posts() {
 
   const canCreate = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
-  const { data: posts = [], isLoading } = useQuery({
-    queryKey: ['posts', filterStatus, filterCategory, searchTerm],
+  // Zonder ontdubbeling vuurt elke toetsaanslag in het zoekveld een eigen
+  // verzoek af: `searchTerm` zat rechtstreeks in de queryKey. Ontdubbeld
+  // blijft alleen de term over waar de gebruiker bij stilvalt.
+  const gedebouncedeZoekterm = useDebounce(searchTerm, 300);
+
+  const {
+    data: posts = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['posts', filterStatus, filterCategory, gedebouncedeZoekterm],
     queryFn: () =>
       getPosts({
         status: filterStatus || undefined,
         category: filterCategory || undefined,
-        search: searchTerm || undefined,
+        search: gedebouncedeZoekterm || undefined,
       }),
   });
 
@@ -169,6 +180,21 @@ export default function Posts() {
       {/* Posts list */}
       {isLoading ? (
         <SkeletonTable rows={5} columns={4} />
+      ) : isError ? (
+        // Een mislukte aanvraag gaf hier de lege staat: "er zijn geen
+        // berichten". Precies wat een gewoon lid te zien kreeg toen de server
+        // de berichten van vandaag wegfilterde - en aan dat scherm was niet te
+        // zien of er niets was of dat er iets misging.
+        <div className="card bg-base-200 p-8 text-center space-y-4">
+          <div className="alert alert-danger justify-center">
+            <Icon name="warning" size={16} />
+            <span>{t('common.error')}</span>
+          </div>
+          <button className="btn btn-secondary gap-2 mx-auto" onClick={() => refetch()}>
+            <Icon name="refresh" size={16} />
+            {t('common.retry')}
+          </button>
+        </div>
       ) : posts.length === 0 ? (
         <div className="card bg-base-200 p-8 text-center">
           <Icon name="fileText" size={48} className="mx-auto opacity-50 mb-4" />
@@ -502,7 +528,12 @@ function CreatePostModal({
     },
   });
 
-  const canSubmit = formData.title.trim() && formData.content.trim();
+  // Het veld staat met een sterretje als verplicht in beeld, maar de knop bleef
+  // klikbaar zonder datum. De server weigert zo'n bericht met 400
+  // ("Publicatiedatum is verplicht voor geplande berichten"), dus de gebruiker
+  // kreeg een foutmelding voor iets wat het scherm zelf al wist.
+  const canSubmit =
+    formData.title.trim() && formData.content.trim() && (formData.status !== 'scheduled' || !!formData.scheduledAt);
 
   const toggleCategory = (catId: string) => {
     setFormData((prev) => ({
