@@ -544,15 +544,16 @@ export default function Layout() {
             <Breadcrumbs />
           </SectionErrorBoundary>
           {/*
-            De sleutel op het pad is er niet voor het tekenen maar voor het
-            vergeten. Een foutgrens houdt zijn toestand vast tot iemand hem
-            terugzet, en zonder deze sleutel deed hij dat ook over een
-            paginawissel heen: wie op een kapotte pagina belandde en daarna in
-            het menu iets anders aanklikte, kreeg opnieuw "kon niet worden
-            geladen" te zien voor een pagina die niets mankeerde. Het menu naast
-            de grens is juist de ontsnapping die die grens hoort te bieden.
+            Deze grens vergeet zijn fout bij een paginawissel. Dat zit sinds
+            #177 in SectionErrorBoundary zelf, die het huidige pad als resetKey
+            oppikt - een sleutel hier zou hetzelfde doen, maar dan alleen voor
+            deze ene plek en met een volledige hermontage in plaats van een
+            reset. Zonder dat vergeten kreeg wie op een kapotte pagina belandde
+            en daarna in het menu iets anders aanklikte, opnieuw "kon niet
+            worden geladen" voor een pagina die niets mankeerde - terwijl dat
+            menu juist de ontsnapping is die de grens hoort te bieden.
           */}
-          <SectionErrorBoundary key={location.pathname} sectionName="Page Content">
+          <SectionErrorBoundary sectionName="Page Content">
             <Outlet />
           </SectionErrorBoundary>
         </main>
