@@ -999,7 +999,10 @@ async function processPaymentUpdate(orderId: string, status: string): Promise<vo
         );
       }
 
-      logger.info(`Order ${orderId} paid, tickets created`);
+      // orderId komt uit de payload van de betaalprovider (zie de webhook
+      // hierboven), dus niet in de tekstregel maar in de bijlage: anders kan
+      // wie die payload beheerst er een eigen logregel tussen schuiven.
+      logger.info('Order paid, tickets created', { orderId });
     } catch (error) {
       logger.error('Failed to create tickets:', error);
     }
@@ -1025,7 +1028,7 @@ async function processPaymentUpdate(orderId: string, status: string): Promise<vo
         `,
     ).run(status, orderId);
 
-    logger.info(`Order ${orderId} ${status}, tickets released`);
+    logger.info('Order settled, tickets released', { orderId, status });
   }
 }
 
@@ -2590,8 +2593,15 @@ router.post(
       resultaten.push({ id: scan.id, code: scan.qrCode, status: uitkomst });
     }
 
+    // Het concertnummer komt uit het pad en gaat daarom niet in de tekstregel
+    // maar in de bijlage. Het is op dit punt weliswaar al gecontroleerd door
+    // eigenConcertOfNiets - een onbekend nummer is dan al een 404 geworden -
+    // maar een waarde uit een verzoek in een logregel plakken blijft een manier
+    // om er een eigen regel tussen te schuiven, en dat is precies waar CodeQL
+    // hier op wees.
     logger.info(
-      `Offline scans nagestuurd voor concert ${concertId}: ${verwerkt} verwerkt, ${overgeslagen} al bekend, ${waarschuwingen.length} met een waarschuwing`,
+      `Offline scans nagestuurd: ${verwerkt} verwerkt, ${overgeslagen} al bekend, ${waarschuwingen.length} met een waarschuwing`,
+      { concertId, userId: req.user!.id },
     );
 
     res.json({
