@@ -671,14 +671,21 @@ export function ConcertPosterGenerator({ initialData, onDownload, customThemes =
         clone.style.left = '-9999px';
         document.body.appendChild(clone);
 
-        const canvas = await html2canvas(clone, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: selectedTheme.background,
-        });
-
-        document.body.removeChild(clone);
+        // Het opruimen van de kopie hoort in `finally`. Stond het op de regel
+        // erna, dan bleef bij een mislukt fotomoment een volledige poster
+        // buiten beeld in de pagina achter - inclusief het logo - en die ging
+        // pas weg als de gebruiker ververste.
+        let canvas;
+        try {
+          canvas = await html2canvas(clone, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: selectedTheme.background,
+          });
+        } finally {
+          clone.remove();
+        }
 
         if (format === 'png') {
           const link = document.createElement('a');

@@ -117,9 +117,16 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
     }));
   };
 
-  // Calculate flat index for keyboard navigation
-  let flatIndex = 0;
-  const getFlatIndex = () => flatIndex++;
+  // Het nummer waaronder een resultaat bij de toetsenbordbediening bekend
+  // staat, is zijn plek in `results` - de ongegroepeerde volgorde zoals de
+  // server hem stuurde. `handleKeyDown` telt daarin, en `getSelectedResult`
+  // zoekt daarin op.
+  //
+  // Hier stond een teller die tijdens het tekenen meeliep. Omdat de lijst per
+  // soort gegroepeerd getekend wordt, is die tekenvolgorde een andere dan die
+  // van `results` zodra de server twee soorten door elkaar teruggeeft. De
+  // gebruiker zag dan rij A oplichten en kwam na Enter op pagina B uit.
+  const flatIndex = (result: SearchResult) => results.indexOf(result);
 
   if (!isOpen) return null;
 
@@ -286,7 +293,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                   </h3>
                   <ul className="global-search-result-list">
                     {typeResults.map((result) => {
-                      const index = getFlatIndex();
+                      const index = flatIndex(result);
                       const isSelected = index === selectedIndex;
                       return (
                         <li

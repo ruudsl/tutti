@@ -543,7 +543,16 @@ export default function Layout() {
           <SectionErrorBoundary sectionName="Breadcrumbs" compact>
             <Breadcrumbs />
           </SectionErrorBoundary>
-          <SectionErrorBoundary sectionName="Page Content">
+          {/*
+            De sleutel op het pad is er niet voor het tekenen maar voor het
+            vergeten. Een foutgrens houdt zijn toestand vast tot iemand hem
+            terugzet, en zonder deze sleutel deed hij dat ook over een
+            paginawissel heen: wie op een kapotte pagina belandde en daarna in
+            het menu iets anders aanklikte, kreeg opnieuw "kon niet worden
+            geladen" te zien voor een pagina die niets mankeerde. Het menu naast
+            de grens is juist de ontsnapping die die grens hoort te bieden.
+          */}
+          <SectionErrorBoundary key={location.pathname} sectionName="Page Content">
             <Outlet />
           </SectionErrorBoundary>
         </main>
