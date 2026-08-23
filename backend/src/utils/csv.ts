@@ -81,10 +81,6 @@ export function csvRegel(velden: unknown[], scheidingsteken: Scheidingsteken = '
  * De afsluitende regelovergang staat er omdat sommige verwerkers de laatste
  * regel anders overslaan.
  */
-export function csvBestand(
-  kopregel: string[],
-  rijen: unknown[][],
-  scheidingsteken: Scheidingsteken = ',',
-): string {
+export function csvBestand(kopregel: string[], rijen: unknown[][], scheidingsteken: Scheidingsteken = ','): string {
   return [csvRegel(kopregel, scheidingsteken), ...rijen.map((rij) => csvRegel(rij, scheidingsteken))].join('\n') + '\n';
 }
