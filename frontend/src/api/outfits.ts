@@ -13,7 +13,17 @@ export interface Outfit {
   createdAt: string;
 }
 
-export interface OutfitDetail extends Outfit {
+/**
+ * Eén tenue met alles erbij, zoals GET /outfits/:id het teruggeeft.
+ *
+ * `usageCount` staat hier bewust niet in, hoewel het wel in `Outfit` zit. De
+ * detailroute in backend/src/routes/outfits.ts telt de gekoppelde concerten
+ * niet - dat doet alleen de lijstroute. Zolang dit type `Outfit` ongewijzigd
+ * uitbreidde, beloofde het een getal dat er nooit was: `detail.usageCount`
+ * gaf `undefined` terug zonder dat de compiler iets zei en zonder dat er een
+ * fout optrad. Het scherm zette er dan "gebruikt in undefined concerten".
+ */
+export interface OutfitDetail extends Omit<Outfit, 'usageCount'> {
   createdByName?: string;
   updatedAt?: string;
   recentConcerts: { id: string; name: string; date: string }[];
