@@ -199,6 +199,43 @@ async function executeSendEmail(config: Record<string, any>, context: ExecutionC
   }
 }
 
+/**
+ * Hoort deze gebruiker bij de vereniging waarvoor de regel draait?
+ *
+ * De ontvanger van een melding en degene aan wie een taak wordt toegewezen
+ * komen allebei uit `workflow_actions.config`, en dat is vrij invulbare json
+ * die de beheerder van een vereniging zelf neerzet. De tabel notifications
+ * kent alleen user_id en geen association_id: wat daar in staat komt terecht
+ * bij die gebruiker, ongeacht bij welke vereniging hij hoort. Zonder deze
+ * controle kon een beheerder van vereniging A dus meldingen met een tekst
+ * naar keuze in de lijst van een lid van vereniging B laten verschijnen, en
+ * taken van A ophangen aan leden van B.
+ */
+function hoortBijVereniging(userId: string, associationId: string): boolean {
+  const rij = db
+    .prepare('SELECT id FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+    .get(userId, associationId);
+  return !!rij;
+}
+
+/**
+ * Wie komt er als aanmaker van een taak in de tabel te staan?
+ *
+ * tasks.created_by is NOT NULL. Een geplande regel en een regel die op een
+ * datumveld afgaat hebben geen aanvrager, dus daar stond null - en liep de
+ * insert stuk. Taken aanmaken werkte daardoor alleen handmatig, nooit vanuit
+ * de planner. De maker van de regel is dan de meest eerlijke eigenaar: die
+ * heeft de actie ingesteld.
+ */
+function aanmakerVoor(context: ExecutionContext): string | null {
+  if (context.userId) return context.userId;
+
+  const rij = db.prepare('SELECT created_by FROM workflows WHERE id = ?').get(context.workflowId) as
+    | { created_by: string | null }
+    | undefined;
+  return rij?.created_by ?? null;
+}
+
 async function executeSendNotification(config: Record<string, any>, context: ExecutionContext): Promise<void> {
   const { title, message, recipientType, recipientUserId, priority } = config;
 
@@ -220,11 +257,20 @@ async function executeSendNotification(config: Record<string, any>, context: Exe
     userIds = members.map((m) => m.id);
   }
 
+  // De grens rond de vereniging. all_members komt al uit een query met
+  // association_id erin; specific en entity_user komen rechtstreeks uit de
+  // config en moeten hier langs.
+  const ontvangers = userIds.filter((userId) => {
+    if (hoortBijVereniging(userId, context.associationId)) return true;
+    context.log.push(`Melding overgeslagen: gebruiker ${userId} hoort niet bij deze vereniging`);
+    return false;
+  });
+
   const now = new Date().toISOString();
   const processedTitle = replaceVariables(title || 'Notification', context);
   const processedMessage = replaceVariables(message || '', context);
 
-  for (const userId of userIds) {
+  for (const userId of ontvangers) {
     // De tabel heeft geen priority-kolom; die hoort bij de extra gegevens.
     db.prepare(
       `
@@ -234,7 +280,7 @@ async function executeSendNotification(config: Record<string, any>, context: Exe
     ).run(uuidv4(), userId, processedTitle, processedMessage, JSON.stringify({ priority: priority || 'medium' }), now);
   }
 
-  context.log.push(`Created ${userIds.length} notifications`);
+  context.log.push(`Created ${ontvangers.length} notifications`);
 }
 
 async function executeCreateTask(config: Record<string, any>, context: ExecutionContext): Promise<void> {
@@ -250,6 +296,11 @@ async function executeCreateTask(config: Record<string, any>, context: Execution
     assignee = context.entityData.userId;
   }
 
+  if (assignee && !hoortBijVereniging(assignee, context.associationId)) {
+    context.log.push(`Toewijzing overgeslagen: gebruiker ${assignee} hoort niet bij deze vereniging`);
+    assignee = null;
+  }
+
   let taskDueDate: string | null = null;
   if (dueDate) {
     taskDueDate = dueDate;
@@ -262,10 +313,20 @@ async function executeCreateTask(config: Record<string, any>, context: Execution
   const processedTitle = replaceVariables(title || 'New Task', context);
   const processedDescription = replaceVariables(description || '', context);
 
+  const aanmaker = aanmakerVoor(context);
+  if (!aanmaker) {
+    context.log.push('Taak niet aangemaakt: er is niemand om hem aan op te hangen');
+    return;
+  }
+
+  // 'todo', niet 'open'. De CHECK op tasks.status laat alleen todo,
+  // in_progress, review, done en cancelled toe; met 'open' liep elke insert
+  // stuk en viel de hele regel om, dus de actie 'taak aanmaken' deed het in
+  // geen enkele workflow. De rest van de applicatie gebruikt 'todo'.
   db.prepare(
     `
     INSERT INTO tasks (id, association_id, title, description, assigned_to, due_date, priority, status, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'todo', ?, ?, ?)
   `,
   ).run(
     taskId,
@@ -275,7 +336,7 @@ async function executeCreateTask(config: Record<string, any>, context: Execution
     assignee,
     taskDueDate,
     priority || 'medium',
-    context.userId || null,
+    aanmaker,
     now,
     now,
   );
@@ -425,9 +486,17 @@ function replaceVariables(text: string, context: ExecutionContext): string {
   let result = text;
 
   // Replace entity variables
+  //
+  // De vervanging gaat via een functie en niet via een tekst. In een
+  // vervangtekst hebben $&, $' en $` een eigen betekenis, en de waarde komt
+  // hier uit de database: een lid dat "Jan $& Co" heet leverde
+  // "Jan {{first_name}} Co" op, dus de variabele kwam letterlijk terug in de
+  // verstuurde mail of melding. Met een functie wordt de waarde overgenomen
+  // zoals hij is.
   if (context.entityData) {
     for (const [key, value] of Object.entries(context.entityData)) {
-      result = result.replace(new RegExp(`{{${key}}}`, 'g'), String(value ?? ''));
+      const vervanging = String(value ?? '');
+      result = result.replace(new RegExp(`{{${key}}}`, 'g'), () => vervanging);
     }
   }
 

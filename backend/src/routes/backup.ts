@@ -69,6 +69,36 @@ export function isVeiligeBestandsnaam(naam: string): boolean {
 }
 
 /**
+ * De bruikbare regels uit een lijst in manifest.json.
+ *
+ * Het manifest komt uit het aangeleverde zipbestand, dus over de vorm ervan is
+ * niets afgesproken. Er stond wel een vangnet om JSON.parse heen - "kapotte
+ * json? dan de oude manier" - maar dat ving alleen tekst op die geen json is.
+ * Een manifest dat wél json is maar geen pdfs- en mp3s-lijst heeft (een
+ * afgeknot bestand, een reservekopie uit een andere versie) liep stuk op de
+ * for-of eroverheen, en een regel met een getal in plaats van een naam liep
+ * stuk in path.basename. Beide fouten kwamen bij de buitenste catch terecht en
+ * werden daar 500: het terugzetten stopte in zijn geheel, terwijl de
+ * momentopname al gemaakt was. De beheerder hield dan een half karwei over met
+ * alleen "Fout bij herstellen van backup." als uitleg.
+ *
+ * Wat niet als regel te lezen is telt hier gewoon niet mee. Dat is dezelfde
+ * keuze als bij onleesbare json: dan maar de oude manier, met de naam uit het
+ * zipbestand zelf.
+ */
+function leesManifestRegels(waarde: unknown): { storedName: string; archiveName: string }[] {
+  if (!Array.isArray(waarde)) return [];
+
+  return waarde.filter(
+    (regel): regel is { storedName: string; archiveName: string } =>
+      !!regel &&
+      typeof regel === 'object' &&
+      typeof (regel as { storedName?: unknown }).storedName === 'string' &&
+      typeof (regel as { archiveName?: unknown }).archiveName === 'string',
+  );
+}
+
+/**
  * @swagger
  * /backup:
  *   get:
@@ -315,7 +345,12 @@ const backupUpload = multer({
     if (file.mimetype === 'application/zip' || file.originalname.toLowerCase().endsWith('.zip')) {
       cb(null, true);
     } else {
-      cb(new Error('Alleen ZIP bestanden zijn toegestaan.'));
+      // FileValidationError en niet Error: de centrale foutafhandeling kent
+      // alleen de eerste en maakt daar 400 van. Een gewone Error viel door
+      // naar de laatste regel daar, dus wie het verkeerde bestand aanklikte
+      // kreeg 500 "Interne serverfout" terwijl er niets aan de server
+      // mankeerde.
+      cb(new FileValidationError('Alleen ZIP bestanden zijn toegestaan.'));
     }
   },
 });
@@ -397,10 +432,15 @@ router.post(
       }
 
       // Try to read manifest for file mapping (new backup format)
+      //
+      // De velden staan hier bewust als `unknown`. Het manifest komt uit het
+      // aangeleverde zipbestand en niets garandeert dat het de vorm heeft die
+      // deze versie verwacht; leesManifestRegels hierboven maakt er weer een
+      // bruikbare lijst van.
       type ManifestType = {
-        version: number;
-        pdfs: { storedName: string; archiveName: string }[];
-        mp3s: { storedName: string; archiveName: string }[];
+        version?: unknown;
+        pdfs?: unknown;
+        mp3s?: unknown;
       };
       let manifest: ManifestType | null = null;
       const manifestEntry = zip.getEntry('manifest.json');
@@ -417,10 +457,10 @@ router.post(
       const pdfArchiveToStored = new Map<string, string>();
       const mp3ArchiveToStored = new Map<string, string>();
       if (manifest) {
-        for (const m of manifest.pdfs) {
+        for (const m of leesManifestRegels(manifest.pdfs)) {
           pdfArchiveToStored.set(m.archiveName, m.storedName);
         }
-        for (const m of manifest.mp3s) {
+        for (const m of leesManifestRegels(manifest.mp3s)) {
           mp3ArchiveToStored.set(m.archiveName, m.storedName);
         }
       }

@@ -122,6 +122,54 @@ function oorspronkelijkeNaam(tijdelijkeNaam: string): string {
   return delen.length > 2 ? delen.slice(2).join('_') : tijdelijkeNaam;
 }
 
+/**
+ * Een aangeleverde pdf inlezen, of een nette 400.
+ *
+ * PDFDocument.load gooit op alles wat geen leesbare pdf is, en die fout liep
+ * ongehinderd door naar de centrale foutafhandeling. De gebruiker kreeg dan
+ * 500 "Interne serverfout" op zijn eigen verkeerde bestand, en er kwam een
+ * stapeltrace in de logs bij elke verkeerd aangeklikte upload. Het bestand
+ * komt van buiten, dus dit is invoer die niet klopt en geen storing.
+ *
+ * De mime-controle van multer helpt hier niet: die kijkt naar wat de browser
+ * meestuurt en naar de extensie, niet naar de inhoud.
+ */
+async function laadPdf(inhoud: Buffer): Promise<PDFDocument> {
+  try {
+    return await PDFDocument.load(inhoud);
+  } catch {
+    throw new FileValidationError('Het PDF bestand kon niet gelezen worden. Is het beschadigd?');
+  }
+}
+
+/**
+ * Een lijst uit een formulierveld lezen, of een nette 400.
+ *
+ * `ranges` en `rotations` komen als tekst in een multipart-formulier binnen en
+ * gingen rechtstreeks door JSON.parse. Bij /split stond die aanroep binnen de
+ * voorwaarde die hem juist moest afvangen, dus een half afgebroken veld gooide
+ * voor de controle eraan toekwam; bij /rotate stond er helemaal geen controle
+ * en liep geldige json die geen lijst is stuk op de for-of eroverheen
+ * ("is not iterable"). Beide gaven 500 op invoer van de gebruiker.
+ */
+function leesLijstVeld<T>(waarde: unknown, melding: string): T[] {
+  if (typeof waarde !== 'string' || waarde.length === 0) {
+    throw new ApiError(400, melding);
+  }
+
+  let ontleed: unknown;
+  try {
+    ontleed = JSON.parse(waarde);
+  } catch {
+    throw new ApiError(400, melding);
+  }
+
+  if (!Array.isArray(ontleed)) {
+    throw new ApiError(400, melding);
+  }
+  return ontleed as T[];
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
@@ -166,7 +214,7 @@ router.post(
       return res.status(400).json({ error: 'Geen PDF bestand ontvangen' });
     }
 
-    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const pdfDoc = await laadPdf(req.file.buffer);
     const pages = pdfDoc.getPages();
 
     const pageInfo = pages.map((page, index) => {
@@ -217,13 +265,11 @@ router.post(
       return res.status(400).json({ error: 'Geen PDF bestand ontvangen' });
     }
 
-    const { ranges } = req.body;
-    if (!ranges || !Array.isArray(JSON.parse(ranges))) {
-      return res.status(400).json({ error: 'Geen pagina bereiken opgegeven' });
-    }
-
-    const parsedRanges = JSON.parse(ranges) as { start: number; end: number; name: string }[];
-    const sourcePdf = await PDFDocument.load(req.file.buffer);
+    const parsedRanges = leesLijstVeld<{ start: number; end: number; name: string }>(
+      req.body.ranges,
+      'Geen pagina bereiken opgegeven',
+    );
+    const sourcePdf = await laadPdf(req.file.buffer);
     const sourcePages = sourcePdf.getPages();
 
     const results = [];
@@ -282,7 +328,7 @@ router.post(
       return res.status(400).json({ error: 'Geen PDF bestand ontvangen' });
     }
 
-    const sourcePdf = await PDFDocument.load(req.file.buffer);
+    const sourcePdf = await laadPdf(req.file.buffer);
     const newPdf = await PDFDocument.create();
     const sourcePages = sourcePdf.getPages();
 
@@ -444,7 +490,7 @@ router.post(
     const mergedPdf = await PDFDocument.create();
 
     for (const file of files) {
-      const pdf = await PDFDocument.load(file.buffer);
+      const pdf = await laadPdf(file.buffer);
       const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
       pages.forEach((page) => mergedPdf.addPage(page));
     }
@@ -476,13 +522,11 @@ router.post(
       return res.status(400).json({ error: 'Geen PDF bestand ontvangen' });
     }
 
-    const { rotations } = req.body;
-    if (!rotations) {
-      return res.status(400).json({ error: 'Geen rotaties opgegeven' });
-    }
-
-    const parsedRotations = JSON.parse(rotations) as { pageNumber: number; degrees: number }[];
-    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const parsedRotations = leesLijstVeld<{ pageNumber: number; degrees: number }>(
+      req.body.rotations,
+      'Geen rotaties opgegeven',
+    );
+    const pdfDoc = await laadPdf(req.file.buffer);
     const pages = pdfDoc.getPages();
 
     for (const rotation of parsedRotations) {
