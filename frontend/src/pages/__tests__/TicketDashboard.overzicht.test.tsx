@@ -108,8 +108,40 @@ const ZAALKAART = {
   concertDate: '2026-09-12',
   totalCapacity: 200,
   totalSold: 120,
-  sections: [{ sectionId: 'sec-1', sectionName: 'Parterre', capacity: 100, sold: 60, revenue: 1200 }],
-  seats: [{ seatId: 'st-1', sectionId: 'sec-1', rowLabel: 'A', seatLabel: 'A1', x: 10, y: 20, status: 'sold' }],
+  // De vijf cijfers achteraan zijn verplicht in SectionHeatmapData. Ze weglaten
+  // maakte deze testgegevens iets wat de server nooit stuurt, en dan bewaakt de
+  // test niet wat de pagina werkelijk krijgt.
+  sections: [
+    {
+      sectionId: 'sec-1',
+      sectionName: 'Parterre',
+      capacity: 100,
+      sold: 60,
+      revenue: 1200,
+      averagePrice: 20,
+      salesVelocity: 3.5,
+      timeToSellOut: null,
+      popularityScore: 60,
+      pricePerformanceScore: 72,
+    },
+  ],
+  seats: [
+    {
+      seatId: 'st-1',
+      sectionId: 'sec-1',
+      rowLabel: 'A',
+      seatLabel: 'A1',
+      x: 10,
+      y: 20,
+      status: 'sold' as const,
+      soldAt: '2026-07-01T12:00:00.000Z',
+      price: 20,
+      ticketTypeId: 'tt-1',
+      ticketTypeName: 'Volwassene',
+      timeToSell: 3,
+      salesSpeedPercentile: 40,
+    },
+  ],
   salesPeriodStart: '2026-06-01',
   salesPeriodEnd: '2026-09-12',
 };

@@ -266,6 +266,10 @@ describe('M365GroepenSectie, een koppeling toevoegen', () => {
     await screen.findByText('harmonie@vereniging.nl');
     const venster = await openToevoegen(bediener);
 
+    // Het orkestveld draagt `required`, en jsdom houdt een formulier met een
+    // leeg verplicht veld tegen. Zonder deze keuze verzendt het formulier
+    // nooit en komt handleCreate niet eens aan bod.
+    await bediener.selectOptions(within(venster).getByLabelText(/settings\.m365Groups\.orchestra/), 'ork-2');
     await bediener.type(groepsnaamveld(venster), '   ');
     await bediener.click(within(venster).getByRole('button', { name: 'common.save' }));
 
@@ -281,6 +285,10 @@ describe('M365GroepenSectie, een koppeling toevoegen', () => {
     await screen.findByText('harmonie@vereniging.nl');
     const venster = await openToevoegen(bediener);
 
+    // Het orkestveld draagt `required`, en jsdom houdt een formulier met een
+    // leeg verplicht veld tegen. Zonder deze keuze verzendt het formulier
+    // nooit en komt handleCreate niet eens aan bod.
+    await bediener.selectOptions(within(venster).getByLabelText(/settings\.m365Groups\.orchestra/), 'ork-2');
     await bediener.type(groepsnaamveld(venster), 'nieuw@vereniging.nl');
     await bediener.click(within(venster).getByRole('button', { name: 'common.save' }));
 
@@ -295,6 +303,10 @@ describe('M365GroepenSectie, een koppeling toevoegen', () => {
     await screen.findByText('harmonie@vereniging.nl');
     const venster = await openToevoegen(bediener);
 
+    // Het orkestveld draagt `required`, en jsdom houdt een formulier met een
+    // leeg verplicht veld tegen. Zonder deze keuze verzendt het formulier
+    // nooit en komt handleCreate niet eens aan bod.
+    await bediener.selectOptions(within(venster).getByLabelText(/settings\.m365Groups\.orchestra/), 'ork-2');
     await bediener.type(groepsnaamveld(venster), 'nieuw@vereniging.nl');
     await bediener.click(within(venster).getByRole('button', { name: 'common.save' }));
 
@@ -344,12 +356,33 @@ describe('M365GroepenSectie, een koppeling bewerken', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('weigert een lege groepsnaam', async () => {
+  it('verstuurt niets als de groepsnaam leeg is', async () => {
     const bediener = userEvent.setup();
     toon();
     const venster = await openBewerken(bediener, 'harmonie@vereniging.nl');
 
     await bediener.clear(groepsnaamveld(venster));
+    await bediener.click(within(venster).getByRole('button', { name: 'common.save' }));
+
+    // Het veld draagt `required`, dus de browser houdt het formulier al tegen
+    // en de eigen controle in handleUpdate komt niet aan bod - er is geen
+    // eigen melding, alleen die van de browser. Dat is voor een leeg veld
+    // genoeg; de controle in de code vangt het geval dat de browser wél
+    // doorlaat, namelijk een naam van alleen spaties.
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+    expect(bijwerken).not.toHaveBeenCalled();
+    expect(fout).not.toHaveBeenCalled();
+  });
+
+  it('weigert een groepsnaam van alleen spaties met een eigen melding', async () => {
+    const bediener = userEvent.setup();
+    toon();
+    const venster = await openBewerken(bediener, 'harmonie@vereniging.nl');
+
+    // Spaties zijn voor `required` een gevulde waarde, dus dit komt wél bij
+    // handleUpdate terecht - en daar hoort de eigen controle op te slaan.
+    await bediener.clear(groepsnaamveld(venster));
+    await bediener.type(groepsnaamveld(venster), '   ');
     await bediener.click(within(venster).getByRole('button', { name: 'common.save' }));
 
     await waitFor(() => expect(fout).toHaveBeenCalledWith('settings.m365Groups.groupNameRequired'));

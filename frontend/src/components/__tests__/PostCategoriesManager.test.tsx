@@ -96,8 +96,7 @@ function toon(sluiten = vi.fn()) {
  */
 const naamVeld = (venster: HTMLElement) => within(venster).getByLabelText(/posts\.categories\.name/);
 const slugVeld = (venster: HTMLElement) => within(venster).getByLabelText('posts.categories.slug');
-const beschrijvingVeld = (venster: HTMLElement) =>
-  within(venster).getByLabelText('posts.categories.descriptionLabel');
+const beschrijvingVeld = (venster: HTMLElement) => within(venster).getByLabelText('posts.categories.descriptionLabel');
 
 /** Opent het toevoegvenster en geeft dat venster terug. */
 async function openToevoegen(bediener: ReturnType<typeof userEvent.setup>) {

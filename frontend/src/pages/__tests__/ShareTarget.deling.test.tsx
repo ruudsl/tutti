@@ -26,7 +26,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import ShareTarget from '../ShareTarget';
 import { uploadSharedPdf } from '../../api/music';
 import { showError, showSuccess } from '../../utils/toast';
@@ -152,10 +152,7 @@ describe('ShareTarget - gedeelde bestanden', () => {
     await laatEffectAflopen();
 
     expect(uploadSharedPdf).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(uploadSharedPdf).mock.calls.map(([b]) => (b as File).name)).toEqual([
-      'partij.pdf',
-      'tweede.pdf',
-    ]);
+    expect(vi.mocked(uploadSharedPdf).mock.calls.map(([b]) => (b as File).name)).toEqual(['partij.pdf', 'tweede.pdf']);
 
     // Het verzoek moet uit de cache, anders komt hetzelfde bestand bij het
     // volgende bezoek aan deze pagina nog een keer voorbij.

@@ -71,7 +71,9 @@ const { heerser, houder, api, muteerders } = vi.hoisted(() => {
   };
   return {
     heerser: { rol: 'admin' },
-    houder: { partijen: [] as unknown[], laden: false, totaal: 0, paginas: 1 },
+    // laatsteFilters staat er expliciet bij: hij wordt pas verderop gezet, en
+    // zonder vermelding kent het afgeleide type dat veld niet.
+    houder: { partijen: [] as unknown[], laden: false, totaal: 0, paginas: 1, laatsteFilters: undefined as unknown },
     api: { downloadMusicPiece: vi.fn(), logActivity: vi.fn() },
     muteerders,
   };
@@ -80,7 +82,7 @@ const { heerser, houder, api, muteerders } = vi.hoisted(() => {
 vi.mock('../../api', () => api);
 
 /** Elke muteerder geeft de terugmeldingen door, zodat de vensters echt sluiten. */
-function maakMuteerder(spion: ReturnType<typeof vi.fn>) {
+function maakMuteerder(spion: (waarden: unknown) => void) {
   return () => ({
     mutate: (waarden: unknown, opties?: { onSuccess?: (r: unknown) => void }) => {
       spion(waarden);

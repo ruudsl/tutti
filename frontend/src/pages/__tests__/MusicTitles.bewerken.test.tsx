@@ -165,8 +165,7 @@ describe('titelpagina - genres aan- en uitzetten', () => {
     const groep = screen.getByRole('group', { name: 'titles.genres' });
     // De vakjes zelf staan op `display: none`; de omhullende label is wat de
     // gebruiker ziet en aanklikt, dus zo worden ze hier ook opgezocht.
-    const vakje = (naam: string) =>
-      within(groep).getByText(naam).querySelector('input') as HTMLInputElement;
+    const vakje = (naam: string) => within(groep).getByText(naam).querySelector('input') as HTMLInputElement;
 
     expect(vakje('Klassiek')).toBeChecked();
     expect(vakje('Pop')).not.toBeChecked();

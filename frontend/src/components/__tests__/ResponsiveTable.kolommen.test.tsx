@@ -87,9 +87,7 @@ describe('meebewegende tabel - breed scherm', () => {
   it('meldt een klik op een sorteerbare kop met de nieuwe richting', async () => {
     const gebruiker = userEvent.setup();
     const bijSorteren = vi.fn();
-    render(
-      <ResponsiveTable data={LEDEN} columns={KOLOMMEN} keyExtractor={(r) => r.id} onSort={bijSorteren} />,
-    );
+    render(<ResponsiveTable data={LEDEN} columns={KOLOMMEN} keyExtractor={(r) => r.id} onSort={bijSorteren} />);
 
     await gebruiker.click(screen.getByRole('columnheader', { name: /Naam/ }));
 

@@ -66,7 +66,9 @@ describe('dashboardindeling - laden', () => {
   it('neemt de bewaarde keuzes over en vult onbekende vakken aan met de standaard', () => {
     localStorage.setItem(
       OPSLAGSLEUTEL,
-      JSON.stringify([{ id: 'favorites', type: 'favorites', title: 'Favorieten', enabled: false, order: 6, size: 'large' }]),
+      JSON.stringify([
+        { id: 'favorites', type: 'favorites', title: 'Favorieten', enabled: false, order: 6, size: 'large' },
+      ]),
     );
 
     const { result } = renderHook(() => useDashboardWidgets());

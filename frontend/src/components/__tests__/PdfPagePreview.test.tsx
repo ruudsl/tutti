@@ -26,7 +26,10 @@ const { loadPdfjsMock } = vi.hoisted(() => ({ loadPdfjsMock: vi.fn() }));
 vi.mock('../../lib/pdfjs', () => ({ loadPdfjs: loadPdfjsMock }));
 
 /** Welke bladzijden staan in beeld? Per test in te stellen. */
-const zicht = vi.hoisted(() => ({ inBeeld: (_index: number) => true }));
+// Het rendement expliciet als boolean: zonder annotatie leidt TypeScript
+// hier het letterlijke type `true` af, en dan past een test die soms false
+// teruggeeft er niet meer in.
+const zicht = vi.hoisted(() => ({ inBeeld: (_index: number): boolean => true }));
 vi.mock('../../hooks/useLazyLoad', () => ({
   useLazyLoadMultiple: ({ count }: { count: number }) => ({
     getRef: () => () => {},
@@ -53,7 +56,11 @@ function geefDocument(aantalBladzijden: number) {
     render: vi.fn(() => ({ promise: Promise.resolve() })),
   }));
   getDocumentMock = vi.fn(() => ({
-    promise: Promise.resolve({ numPages: aantalBladzijden, getPage: getPageMock, loadingTask: { destroy: vernietigd } }),
+    promise: Promise.resolve({
+      numPages: aantalBladzijden,
+      getPage: getPageMock,
+      loadingTask: { destroy: vernietigd },
+    }),
   }));
   loadPdfjsMock.mockResolvedValue({ getDocument: getDocumentMock });
 }

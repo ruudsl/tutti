@@ -120,7 +120,7 @@ beforeEach(() => {
     details: { id: 'tr_123', status: 'paid', amount: 40, method: 'ideal', paidAt: '2026-08-20T18:35:00.000Z' },
   });
   vi.mocked(exportTicketSalesCsv).mockResolvedValue(undefined);
-  vi.mocked(refundOrder).mockResolvedValue(undefined);
+  vi.mocked(refundOrder).mockResolvedValue({ success: true, refundId: 'ref_1', message: 'Terugbetaald' });
 });
 
 describe('kaartverkoop - de lijst', () => {
@@ -350,7 +350,9 @@ describe('kaartverkoop - filteren, bladeren en uitvoeren', () => {
     await gebruiker.selectOptions(screen.getByLabelText('tickets.concert'), 'con-1');
     await gebruiker.click(screen.getByRole('button', { name: 'common.exportCsv' }));
 
-    await waitFor(() => expect(exportTicketSalesCsv).toHaveBeenCalledWith(expect.objectContaining({ concertId: 'con-1' })));
+    await waitFor(() =>
+      expect(exportTicketSalesCsv).toHaveBeenCalledWith(expect.objectContaining({ concertId: 'con-1' })),
+    );
     expect(showSuccess).toHaveBeenCalledWith('tickets.exportSuccess');
   });
 

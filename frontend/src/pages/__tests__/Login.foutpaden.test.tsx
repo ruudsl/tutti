@@ -76,7 +76,9 @@ vi.mock('../../api/integrations', () => ({
 }));
 
 vi.mock('../../components/LanguageSwitcher', () => ({ LanguageSwitcher: () => null }));
-vi.mock('../../components/Icon', () => ({ Icon: ({ name }: { name: string }) => <span data-testid={`icoon-${name}`} /> }));
+vi.mock('../../components/Icon', () => ({
+  Icon: ({ name }: { name: string }) => <span data-testid={`icoon-${name}`} />,
+}));
 vi.mock('../../components/LazyImage', () => ({
   LazyImage: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }));
@@ -240,7 +242,9 @@ describe('inlogscherm - tweestapsverificatie', () => {
   });
 
   it('leegt de code na een verkeerde code, zodat er geen half getal blijft staan', async () => {
-    stand.inloggen.mockResolvedValueOnce({ requiresMfa: true }).mockRejectedValueOnce(serverfout(401, 'Ongeldige code.'));
+    stand.inloggen
+      .mockResolvedValueOnce({ requiresMfa: true })
+      .mockRejectedValueOnce(serverfout(401, 'Ongeldige code.'));
     const gebruiker = await velInFormulier();
 
     await gebruiker.type(await screen.findByLabelText('auth.mfa.code'), '123456');

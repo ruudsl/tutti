@@ -188,13 +188,7 @@ describe('TitleMetadataModal - bewaren', () => {
 
   it('houdt de bewaarknop uit terwijl er bewaard wordt', () => {
     render(
-      <TitleMetadataModal
-        title={maakTitel()}
-        genres={GENRES as never}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-        saving
-      />,
+      <TitleMetadataModal title={maakTitel()} genres={GENRES as never} onClose={vi.fn()} onSave={vi.fn()} saving />,
     );
 
     expect(screen.getByRole('button', { name: /common\.save/ })).toBeDisabled();

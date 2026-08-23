@@ -24,6 +24,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -64,13 +65,13 @@ function wikkel({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-let sluiten: ReturnType<typeof vi.fn>;
-let bewaren: ReturnType<typeof vi.fn>;
+let sluiten: Mock<() => void>;
+let bewaren: Mock<() => void>;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  sluiten = vi.fn();
-  bewaren = vi.fn();
+  sluiten = vi.fn<() => void>();
+  bewaren = vi.fn<() => void>();
 });
 
 afterEach(() => {
@@ -89,19 +90,19 @@ function toon() {
 const venster = () => screen.getByRole('dialog');
 
 /** De regels van de factuur, in schermvolgorde. */
-const regels = () => [...venster().querySelectorAll('tbody tr')];
+const regels = () => [...venster().querySelectorAll<HTMLElement>('tbody tr')];
 
 /** De drie invoervelden van een regel: beschrijving, aantal, stuksprijs. */
 function velden(regel: Element) {
-  const [beschrijving, aantal, stuksprijs] = [...regel.querySelectorAll('input')];
+  const [beschrijving, aantal, stuksprijs] = [...regel.querySelectorAll<HTMLElement>('input')];
   return { beschrijving, aantal, stuksprijs };
 }
 
 /** Het regeltotaal zoals het op het scherm staat. */
-const regeltotaal = (regel: Element) => regel.querySelectorAll('td')[4].textContent;
+const regeltotaal = (regel: Element) => regel.querySelectorAll<HTMLElement>('td')[4].textContent;
 
 /** Het subtotaal onder de tabel. */
-const subtotaal = () => venster().querySelector('tfoot td.font-mono')?.textContent;
+const subtotaal = () => venster().querySelector<HTMLElement>('tfoot td.font-mono')?.textContent;
 
 /** De keuzelijsten boven de tabel: 0 is het factuursoort, 1 de relatie. */
 const kopkeuze = (index: number) => screen.getAllByRole('combobox')[index] as HTMLSelectElement;
@@ -388,7 +389,7 @@ describe('factuurvenster - regels en rekeningen', () => {
   it('biedt bij een verkoopfactuur alleen opbrengstrekeningen aan', () => {
     toon();
 
-    const rekeningkeuze = regels()[0].querySelector('select') as HTMLSelectElement;
+    const rekeningkeuze = regels()[0].querySelector<HTMLElement>('select') as HTMLSelectElement;
     const opties = [...rekeningkeuze.options].map((o) => o.textContent);
     // Bank (bezitting) en Bladmuziek (kosten) horen hier niet tussen: een
     // verkoopfactuur boekt op een opbrengstrekening.
@@ -400,7 +401,9 @@ describe('factuurvenster - regels en rekeningen', () => {
 
     await gebruiker.selectOptions(kopkeuze(0), 'purchase');
 
-    const opties = [...(regels()[0].querySelector('select') as HTMLSelectElement).options].map((o) => o.textContent);
+    const opties = [...(regels()[0].querySelector<HTMLElement>('select') as HTMLSelectElement).options].map(
+      (o) => o.textContent,
+    );
     expect(opties).toEqual(['-', '4000 - Bladmuziek']);
   });
 
@@ -410,7 +413,7 @@ describe('factuurvenster - regels en rekeningen', () => {
 
     await kiesRelatie(gebruiker);
     await vulRegel(gebruiker, 0, { beschrijving: 'Contributie', aantal: '1', stuksprijs: '45' });
-    await gebruiker.selectOptions(regels()[0].querySelector('select') as HTMLSelectElement, 'r-8000');
+    await gebruiker.selectOptions(regels()[0].querySelector<HTMLElement>('select') as HTMLSelectElement, 'r-8000');
     await gebruiker.click(screen.getByRole('button', { name: 'common.save' }));
 
     await waitFor(() => expect(createInvoice).toHaveBeenCalledTimes(1));
@@ -489,7 +492,7 @@ describe('factuurvenster - de standaarddatums', () => {
   const lokaleDatum = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  const datumvelden = () => [...venster().querySelectorAll('input[type="date"]')] as HTMLInputElement[];
+  const datumvelden = () => [...venster().querySelectorAll<HTMLElement>('input[type="date"]')] as HTMLInputElement[];
 
   it('stelt de dag van de gebruiker voor als factuurdatum, ook vlak na middernacht', () => {
     // 1 januari, half een 's nachts: in UTC is het dan nog 31 december.

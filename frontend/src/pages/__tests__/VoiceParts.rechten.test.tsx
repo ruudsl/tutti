@@ -37,9 +37,30 @@ const { stand, opslaan } = vi.hoisted(() => ({
       { id: 'sec-2', name: 'Trompetten' },
     ],
     toewijzingen: [
-      { id: 'toe-1', sectionId: 'sec-1', userName: 'Marieke de Vries', instruments: 'Klarinet', seatLabel: '1e stem', positionInSection: 2 },
-      { id: 'toe-2', sectionId: 'sec-1', userName: 'Joris Bakker', instruments: 'Klarinet', seatLabel: null, positionInSection: 1 },
-      { id: 'toe-3', sectionId: 'sec-2', userName: 'Anne Peters', instruments: null, seatLabel: 'Solo', positionInSection: 1 },
+      {
+        id: 'toe-1',
+        sectionId: 'sec-1',
+        userName: 'Marieke de Vries',
+        instruments: 'Klarinet',
+        seatLabel: '1e stem',
+        positionInSection: 2,
+      },
+      {
+        id: 'toe-2',
+        sectionId: 'sec-1',
+        userName: 'Joris Bakker',
+        instruments: 'Klarinet',
+        seatLabel: null,
+        positionInSection: 1,
+      },
+      {
+        id: 'toe-3',
+        sectionId: 'sec-2',
+        userName: 'Anne Peters',
+        instruments: null,
+        seatLabel: 'Solo',
+        positionInSection: 1,
+      },
     ] as Record<string, unknown>[],
   },
   opslaan: vi.fn(),
@@ -107,7 +128,7 @@ describe('stemverdeling - een gewoon lid leest alleen', () => {
   it('laat een lid een lege stem als streepje zien in plaats van als uitnodiging', async () => {
     await toonPagina();
 
-    const rij = screen.getByText('Joris Bakker').closest('tr')!;
+    const rij = screen.getByText('Joris Bakker').closest<HTMLElement>('tr')!;
     expect(within(rij).getByText('-')).toBeInTheDocument();
   });
 
@@ -138,7 +159,7 @@ describe('stemverdeling - een beheerder wijst toe', () => {
   it('slaat een nieuwe stem op via de knop Opslaan', async () => {
     const gebruiker = await toonPagina();
 
-    const rij = screen.getByText('Joris Bakker').closest('tr')!;
+    const rij = screen.getByText('Joris Bakker').closest<HTMLElement>('tr')!;
     await gebruiker.click(within(rij).getByRole('button', { name: 'common.edit' }));
 
     const veld = within(rij).getByPlaceholderText('voiceParts.enterVoice');
@@ -152,7 +173,7 @@ describe('stemverdeling - een beheerder wijst toe', () => {
   it('neemt de bestaande stem over in het veld en slaat op met Enter', async () => {
     const gebruiker = await toonPagina();
 
-    const rij = screen.getByText('Marieke de Vries').closest('tr')!;
+    const rij = screen.getByText('Marieke de Vries').closest<HTMLElement>('tr')!;
     await gebruiker.click(within(rij).getByText('1e stem'));
 
     const veld = within(rij).getByPlaceholderText('voiceParts.enterVoice');
@@ -167,7 +188,7 @@ describe('stemverdeling - een beheerder wijst toe', () => {
   it('laat de wijziging vallen bij Escape en bij Annuleren', async () => {
     const gebruiker = await toonPagina();
 
-    const rij = screen.getByText('Marieke de Vries').closest('tr')!;
+    const rij = screen.getByText('Marieke de Vries').closest<HTMLElement>('tr')!;
     await gebruiker.click(within(rij).getByRole('button', { name: 'common.edit' }));
     await gebruiker.type(within(rij).getByPlaceholderText('voiceParts.enterVoice'), 'x{Escape}');
 
@@ -185,7 +206,7 @@ describe('stemverdeling - een beheerder wijst toe', () => {
     opslaan.mockRejectedValue({ response: { data: { error: 'Geen toegang tot dit orkest.' } } });
     const gebruiker = await toonPagina();
 
-    const rij = screen.getByText('Anne Peters').closest('tr')!;
+    const rij = screen.getByText('Anne Peters').closest<HTMLElement>('tr')!;
     await gebruiker.click(within(rij).getByRole('button', { name: 'common.edit' }));
     await gebruiker.click(within(rij).getByRole('button', { name: 'common.save' }));
 
@@ -199,7 +220,7 @@ describe('stemverdeling - wat er in de lijst staat', () => {
   it('sorteert op plaats in de sectie en nummert vanaf één', async () => {
     await toonPagina();
 
-    const klarinetten = screen.getByRole('heading', { name: 'Klarinetten' }).closest('.card')!;
+    const klarinetten = screen.getByRole('heading', { name: 'Klarinetten' }).closest<HTMLElement>('.card')!;
     const rijen = within(klarinetten).getAllByRole('row').slice(1);
 
     // Joris staat op plaats 1 en Marieke op plaats 2, ook al kwamen ze in de
@@ -223,7 +244,7 @@ describe('stemverdeling - wat er in de lijst staat', () => {
   it('toont een streepje als er geen instrument bekend is', async () => {
     await toonPagina();
 
-    const rij = screen.getByText('Anne Peters').closest('tr')!;
+    const rij = screen.getByText('Anne Peters').closest<HTMLElement>('tr')!;
     expect(within(rij).getByText('-')).toBeInTheDocument();
   });
 
@@ -260,7 +281,7 @@ describe('stemverdeling - wat er in de lijst staat', () => {
 
     await toonPagina();
 
-    const slagwerk = screen.getByRole('heading', { name: 'Slagwerk' }).closest('.card')!;
+    const slagwerk = screen.getByRole('heading', { name: 'Slagwerk' }).closest<HTMLElement>('.card')!;
     expect(within(slagwerk).getByText('voiceParts.noMembers')).toBeInTheDocument();
     expect(within(slagwerk).queryByRole('table')).toBeNull();
 

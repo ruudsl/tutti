@@ -246,7 +246,9 @@ describe('BackupSettings, terugzetten', () => {
 
   it('toont de reden van de server als het terugzetten mislukt en herlaadt niet', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    terugzetten.mockRejectedValueOnce({ response: { data: { error: 'Reservekopie hoort bij een andere vereniging' } } });
+    terugzetten.mockRejectedValueOnce({
+      response: { data: { error: 'Reservekopie hoort bij een andere vereniging' } },
+    });
     const bediener = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<BackupSettings />);
     await screen.findByText('43 MB');

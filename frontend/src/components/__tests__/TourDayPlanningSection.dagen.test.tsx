@@ -89,9 +89,7 @@ function metOmgeving(kind: ReactNode) {
 }
 
 function toon(dagen: TourDay[] = DAGEN) {
-  return render(
-    metOmgeving(<TourDayPlanningSection tourId="reis-praag" days={dagen} onRefresh={verversen} />),
-  );
+  return render(metOmgeving(<TourDayPlanningSection tourId="reis-praag" days={dagen} onRefresh={verversen} />));
 }
 
 /** De uitklapknop van een dag, herkend aan zijn dagnummer. */
@@ -254,9 +252,7 @@ describe('TourDayPlanningSection - activiteiten', () => {
     // De tweede prullenbak hoort bij het diner.
     await gebruiker.click(screen.getAllByLabelText('common.delete')[1]);
 
-    await waitFor(() =>
-      expect(reizenApi.deleteDayActivity).toHaveBeenCalledWith('reis-praag', 'dag-2', 'act-diner'),
-    );
+    await waitFor(() => expect(reizenApi.deleteDayActivity).toHaveBeenCalledWith('reis-praag', 'dag-2', 'act-diner'));
     expect(showSuccess).toHaveBeenCalledWith('tours.activityDeleted');
   });
 

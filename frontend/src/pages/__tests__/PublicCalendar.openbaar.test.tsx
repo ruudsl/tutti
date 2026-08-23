@@ -112,8 +112,7 @@ describe('openbare agenda - wat de bezoeker ziet', () => {
 
     // De koppen worden uit de datum afgeleid, dus hier op dezelfde manier
     // opgebouwd in plaats van een taal vast te leggen.
-    const maand = (datum: string) =>
-      new Date(datum).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const maand = (datum: string) => new Date(datum).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
     await screen.findByRole('heading', { name: 'Najaarsconcert' });
     const koppen = screen.getAllByRole('heading', { level: 2 }).map((k) => k.textContent);

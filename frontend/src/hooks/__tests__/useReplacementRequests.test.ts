@@ -214,10 +214,10 @@ describe('useReplacementSuggestions', () => {
   it('haalt opnieuw op als alleen de soort gebeurtenis verandert', async () => {
     alsMock(getReplacementSuggestions).mockResolvedValue([]);
 
-    const { result, rerender } = renderHook(
-      ({ soort }: { soort: string }) => useReplacementSuggestions('c-1', soort),
-      { wrapper, initialProps: { soort: 'concert' } },
-    );
+    const { result, rerender } = renderHook(({ soort }: { soort: string }) => useReplacementSuggestions('c-1', soort), {
+      wrapper,
+      initialProps: { soort: 'concert' },
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     rerender({ soort: 'rehearsal' });

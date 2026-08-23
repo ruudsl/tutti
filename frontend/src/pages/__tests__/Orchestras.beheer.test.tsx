@@ -126,7 +126,7 @@ describe('orkesten - de lijst links', () => {
     const kop = await screen.findByRole('heading', { level: 1 });
     expect(within(kop).getByText('2')).toBeInTheDocument();
 
-    const regel = screen.getByText('Harmonie').closest('.flex')!;
+    const regel = screen.getByText('Harmonie').closest<HTMLElement>('.flex')!;
     expect(regel).toHaveTextContent('2 orchestras.membersCount');
     expect(regel).toHaveTextContent('1 orchestras.listsCount');
   });
@@ -199,7 +199,7 @@ describe('orkesten - toevoegen, wijzigen en verwijderen', () => {
     const gebruiker = userEvent.setup();
     render(<Orchestras />, { wrapper: wikkel });
 
-    const regel = (await screen.findByText('Harmonie')).closest('.flex')!;
+    const regel = (await screen.findByText('Harmonie')).closest<HTMLElement>('.flex')!;
     await gebruiker.click(within(regel).getByTitle('common.edit'));
 
     const venster = await screen.findByRole('dialog');
@@ -217,7 +217,7 @@ describe('orkesten - toevoegen, wijzigen en verwijderen', () => {
     const gebruiker = userEvent.setup();
     render(<Orchestras />, { wrapper: wikkel });
 
-    const regel = (await screen.findByText('Harmonie')).closest('.flex')!;
+    const regel = (await screen.findByText('Harmonie')).closest<HTMLElement>('.flex')!;
     await gebruiker.click(within(regel).getByTitle('common.edit'));
     await gebruiker.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'common.cancel' }));
 
@@ -231,7 +231,7 @@ describe('orkesten - toevoegen, wijzigen en verwijderen', () => {
     const gebruiker = userEvent.setup();
     render(<Orchestras />, { wrapper: wikkel });
 
-    const regel = (await screen.findByText('Harmonie')).closest('.flex')!;
+    const regel = (await screen.findByText('Harmonie')).closest<HTMLElement>('.flex')!;
     await gebruiker.click(within(regel).getByTitle('common.delete'));
 
     const venster = await screen.findByRole('alertdialog');
@@ -247,7 +247,7 @@ describe('orkesten - toevoegen, wijzigen en verwijderen', () => {
 
     // De naam staat twee keer op het scherm: links in de lijst en rechts als
     // kop van de details. De knoppen zitten links.
-    const regel = screen.getAllByText('Harmonie')[0].closest('.flex')!;
+    const regel = screen.getAllByText('Harmonie')[0].closest<HTMLElement>('.flex')!;
     await gebruiker.click(within(regel).getByTitle('common.delete'));
     await gebruiker.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'common.delete' }),
@@ -262,7 +262,7 @@ describe('orkesten - toevoegen, wijzigen en verwijderen', () => {
     const gebruiker = userEvent.setup();
     render(<Orchestras />, { wrapper: wikkel });
 
-    const regel = (await screen.findByText('Harmonie')).closest('.flex')!;
+    const regel = (await screen.findByText('Harmonie')).closest<HTMLElement>('.flex')!;
     await gebruiker.click(within(regel).getByTitle('common.delete'));
     await gebruiker.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'common.cancel' }),
@@ -292,7 +292,7 @@ describe('orkesten - muzieklijsten', () => {
   it('opent het venster Lijst bewerken met de huidige naam erin', async () => {
     const gebruiker = await kiesOrkest();
 
-    const regel = screen.getByText('Voorjaarsconcert').closest('.flex')!;
+    const regel = screen.getByText('Voorjaarsconcert').closest<HTMLElement>('.flex')!;
     await gebruiker.click(within(regel).getByTitle('common.edit'));
 
     const venster = await screen.findByRole('dialog');
@@ -309,7 +309,7 @@ describe('orkesten - muzieklijsten', () => {
   it('noemt de lijst bij naam in de bevestiging en verwijdert pas na bevestigen', async () => {
     const gebruiker = await kiesOrkest();
 
-    const regel = screen.getByText('Voorjaarsconcert').closest('.flex')!;
+    const regel = screen.getByText('Voorjaarsconcert').closest<HTMLElement>('.flex')!;
     await gebruiker.click(within(regel).getByTitle('common.delete'));
 
     const venster = await screen.findByRole('alertdialog');
@@ -393,7 +393,7 @@ describe('orkesten - een mislukte opslag laat niets rondslingeren', () => {
     const afwijzingen = await zonderLosseAfwijzing(async () => {
       const gebruiker = userEvent.setup();
       render(<Orchestras />, { wrapper: wikkel });
-      const regel = (await screen.findByText('Harmonie')).closest('.flex')!;
+      const regel = (await screen.findByText('Harmonie')).closest<HTMLElement>('.flex')!;
       await gebruiker.click(within(regel).getByTitle('common.edit'));
       const venster = await screen.findByRole('dialog');
       await gebruiker.click(within(venster).getByRole('button', { name: 'common.save' }));
@@ -409,7 +409,7 @@ describe('orkesten - een mislukte opslag laat niets rondslingeren', () => {
     const afwijzingen = await zonderLosseAfwijzing(async () => {
       const gebruiker = userEvent.setup();
       render(<Orchestras />, { wrapper: wikkel });
-      const regel = (await screen.findByText('Harmonie')).closest('.flex')!;
+      const regel = (await screen.findByText('Harmonie')).closest<HTMLElement>('.flex')!;
       await gebruiker.click(within(regel).getByTitle('common.delete'));
       const venster = await screen.findByRole('alertdialog');
       await gebruiker.click(within(venster).getByRole('button', { name: 'common.delete' }));
@@ -427,7 +427,7 @@ describe('orkesten - een mislukte opslag laat niets rondslingeren', () => {
 
     const afwijzingen = await zonderLosseAfwijzing(async () => {
       const gebruiker = await kiesOrkest();
-      const regel = screen.getByText('Voorjaarsconcert').closest('.flex')!;
+      const regel = screen.getByText('Voorjaarsconcert').closest<HTMLElement>('.flex')!;
       await gebruiker.click(within(regel).getByTitle('common.delete'));
       const venster = await screen.findByRole('alertdialog');
       await gebruiker.click(within(venster).getByRole('button', { name: 'common.delete' }));

@@ -52,7 +52,7 @@ const { heerser, houder, muteerders } = vi.hoisted(() => ({
   muteerders: { maken: vi.fn(), bijwerken: vi.fn(), verwijderen: vi.fn() },
 }));
 
-function maakMuteerder(spion: ReturnType<typeof vi.fn>) {
+function maakMuteerder(spion: (waarden: unknown) => void) {
   return () => ({
     mutate: (waarden: unknown) => spion(waarden),
     mutateAsync: async (waarden: unknown) => spion(waarden),
@@ -98,7 +98,14 @@ const MUZIKANT_DETAIL = {
   notes: 'Speelt graag hoge partijen',
   lastPlayedDate: '2026-05-04',
   instruments: [
-    { id: 'i-1', instrumentId: 'inst-1', instrumentName: 'Trompet', instrumentTuning: 'Bb', isPrimary: true, skillLevel: 'advanced' },
+    {
+      id: 'i-1',
+      instrumentId: 'inst-1',
+      instrumentName: 'Trompet',
+      instrumentTuning: 'Bb',
+      isPrimary: true,
+      skillLevel: 'advanced',
+    },
   ],
   recentAssignments: [
     {

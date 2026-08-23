@@ -32,7 +32,13 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
 }));
 
-function stoel(id: string, naam: string, rij: number, plek: number, extra: Partial<SeatingChartSeat> = {}): SeatingChartSeat {
+function stoel(
+  id: string,
+  naam: string,
+  rij: number,
+  plek: number,
+  extra: Partial<SeatingChartSeat> = {},
+): SeatingChartSeat {
   return {
     id,
     userId: `u-${id}`,
@@ -162,7 +168,12 @@ describe('opstelling - de stoelen', () => {
     );
 
     const x = (naam: string) =>
-      Number(stoelvorm(naam).closest('g')!.getAttribute('transform')!.match(/translate\(([-\d.]+)/)![1]);
+      Number(
+        stoelvorm(naam)
+          .closest('g')!
+          .getAttribute('transform')!
+          .match(/translate\(([-\d.]+)/)![1],
+      );
     // Stoel 1 en stoel 5 komen als buren te staan: 80 breed plus 8 tussenruimte.
     expect(x('Bram') - x('Anna')).toBe(88);
   });
@@ -209,9 +220,7 @@ describe('opstelling - aanwijzen en aanklikken', () => {
   it('meldt welke stoel is aangeklikt', async () => {
     const gebruiker = userEvent.setup();
     const bijKlik = vi.fn();
-    render(
-      <SeatingChartVisualization chart={opstelling([stoel('s1', 'Anna Aalders', 1, 1)])} onSeatClick={bijKlik} />,
-    );
+    render(<SeatingChartVisualization chart={opstelling([stoel('s1', 'Anna Aalders', 1, 1)])} onSeatClick={bijKlik} />);
 
     await gebruiker.click(screen.getByText('Anna'));
 

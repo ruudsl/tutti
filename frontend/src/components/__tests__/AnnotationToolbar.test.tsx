@@ -519,9 +519,7 @@ describe('gereedschapsbalk - stempels', () => {
     expect(screen.getByTitle('rit.')).toBeInTheDocument();
     expect(screen.queryByTitle('ff')).not.toBeInTheDocument();
     // Tijdens het zoeken zijn de tabbladen weg - ze zouden toch niets doen.
-    expect(
-      screen.queryByRole('button', { name: 'annotationToolbar.stampCategories.tempo' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'annotationToolbar.stampCategories.tempo' })).not.toBeInTheDocument();
   });
 
   it('zoekt ook op de naam van de soort', async () => {

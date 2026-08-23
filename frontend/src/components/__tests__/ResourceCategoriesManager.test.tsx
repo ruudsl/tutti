@@ -246,7 +246,7 @@ describe('ResourceCategoriesManager, toevoegen', () => {
     await bediener.type(within(venster).getByLabelText(/common\.name/), 'Podiumdelen');
     await bediener.click(within(venster).getByRole('radio', { name: 'resources.categories.selectIcon:truck' }));
 
-    const voorbeeld = within(venster).getByText('Podiumdelen').closest('[aria-live="polite"]')!;
+    const voorbeeld = within(venster).getByText('Podiumdelen').closest<HTMLElement>('[aria-live="polite"]')!;
     expect(within(voorbeeld).getByTestId('icoon-truck')).toBeInTheDocument();
   });
 

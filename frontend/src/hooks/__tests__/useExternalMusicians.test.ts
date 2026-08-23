@@ -243,6 +243,9 @@ const NIEUWE_MUZIKANT = {
   firstName: 'Wim',
   lastName: 'de Vries',
   email: 'wim@example.org',
+  // Verplicht in CreateExternalMusicianData; zonder dit veld is dit geen
+  // aanvraag die de api-laag zou aannemen, en dan bewaakt de test niets.
+  musicianType: 'substitute' as const,
 };
 
 describe('useCreateExternalMusician', () => {
@@ -355,9 +358,7 @@ describe('useAddMusicianInstrument', () => {
 
     const { result } = renderHook(() => useAddMusicianInstrument(), { wrapper });
     await act(async () => {
-      await expect(
-        result.current.mutateAsync({ musicianId: 'm-1', instrumentData: INSTRUMENT }),
-      ).rejects.toBeDefined();
+      await expect(result.current.mutateAsync({ musicianId: 'm-1', instrumentData: INSTRUMENT })).rejects.toBeDefined();
     });
 
     expect(showError).toHaveBeenCalledWith('Instrument staat er al bij');

@@ -168,9 +168,7 @@ describe('ProjectEventsSection - repetitie koppelen', () => {
     // WACHT - dit riep het scherm al goed aan; de reparatie zat aan de
     // serverkant. De test houdt vast dat het project-id en het repetitie-id in
     // die volgorde meegaan, want dat is precies wat de route leest.
-    await waitFor(() =>
-      expect(projectenApi.linkRehearsalToProject).toHaveBeenCalledWith('pr-voorjaar', 're-vrij'),
-    );
+    await waitFor(() => expect(projectenApi.linkRehearsalToProject).toHaveBeenCalledWith('pr-voorjaar', 're-vrij'));
     await waitFor(() => expect(showSuccess).toHaveBeenCalledWith('projects.events.rehearsalLinked'));
     expect(naVerversen).toHaveBeenCalled();
 

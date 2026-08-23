@@ -225,9 +225,7 @@ describe('Projects - handelingen op een kaart', () => {
     // Alleen het project in planning heeft "markActive" in zijn menu.
     await gebruiker.click(screen.getByText('projects.markActive'));
 
-    await waitFor(() =>
-      expect(projectenApi.updateProjectStatus).toHaveBeenCalledWith('pr-concours', 'active'),
-    );
+    await waitFor(() => expect(projectenApi.updateProjectStatus).toHaveBeenCalledWith('pr-concours', 'active'));
     expect(showSuccess).toHaveBeenCalledWith('projects.statusUpdated');
 
     // BEWIJS - rood zonder de reparatie in Projects.tsx.

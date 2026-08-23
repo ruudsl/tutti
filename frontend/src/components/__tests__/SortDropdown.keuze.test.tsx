@@ -311,7 +311,9 @@ describe('SortDropdown - onthouden tussen bezoeken', () => {
 
 /** Kleine bladzijde die de haak zelf bedient, zonder het menu erbij. */
 function HaakProef({ opslagsleutel }: { opslagsleutel?: string }) {
-  const [stand, zetStand] = useSortState('titel', 'asc', opslagsleutel);
+  // Expliciet op string: zonder die parameter leidt useSortState het type af
+  // uit de beginwaarde, en dan is 'titel' de enige toegestane sorteersleutel.
+  const [stand, zetStand] = useSortState<string>('titel', 'asc', opslagsleutel);
   return (
     <div>
       <span data-testid="stand">{`${stand.sortBy}/${stand.direction}`}</span>

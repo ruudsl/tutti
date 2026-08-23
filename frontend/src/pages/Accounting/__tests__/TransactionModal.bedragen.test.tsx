@@ -23,6 +23,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -59,13 +60,13 @@ function wikkel({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-let sluiten: ReturnType<typeof vi.fn>;
-let bewaren: ReturnType<typeof vi.fn>;
+let sluiten: Mock<() => void>;
+let bewaren: Mock<() => void>;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  sluiten = vi.fn();
-  bewaren = vi.fn();
+  sluiten = vi.fn<() => void>();
+  bewaren = vi.fn<() => void>();
 });
 
 function toon(boeking?: Transaction | null) {
@@ -84,17 +85,17 @@ function toon(boeking?: Transaction | null) {
 }
 
 const venster = () => screen.getByRole('dialog');
-const regels = () => [...venster().querySelectorAll('tbody tr')];
+const regels = () => [...venster().querySelectorAll<HTMLElement>('tbody tr')];
 
 /** De twee keuzelijsten van een regel: rekening en kostenplaats. */
-const keuzes = (regel: Element) => [...regel.querySelectorAll('select')];
+const keuzes = (regel: Element) => [...regel.querySelectorAll<HTMLElement>('select')];
 
 /** De twee bedragvelden van een regel: debet en credit. */
-const bedragen = (regel: Element) => [...regel.querySelectorAll('input')];
+const bedragen = (regel: Element) => [...regel.querySelectorAll<HTMLElement>('input')];
 
 /** De totalen onder de tabel: [debet, credit]. */
 const totalen = () => {
-  const cellen = [...(venster().querySelector('tfoot tr') as Element).querySelectorAll('td')];
+  const cellen = [...(venster().querySelector<HTMLElement>('tfoot tr') as Element).querySelectorAll<HTMLElement>('td')];
   return [cellen[1].textContent, cellen[2].textContent];
 };
 
@@ -117,7 +118,7 @@ async function vulRegel(
 
 /** Vult de omschrijving, want zonder komt het formulier de browser niet uit. */
 async function vulOmschrijving(gebruiker: ReturnType<typeof userEvent.setup>, tekst = 'Contributie september') {
-  const omschrijving = venster().querySelectorAll('input[type="text"]')[1] as HTMLInputElement;
+  const omschrijving = venster().querySelectorAll<HTMLElement>('input[type="text"]')[1] as HTMLInputElement;
   await gebruiker.clear(omschrijving);
   await gebruiker.type(omschrijving, tekst);
 }
@@ -323,7 +324,7 @@ describe('boekingsvenster - wat er naar de server gaat', () => {
 
     await vulKloppendeBoeking(gebruiker);
     await gebruiker.selectOptions(screen.getAllByRole('combobox')[0], 'bank');
-    const kenmerk = venster().querySelectorAll('input[type="text"]')[0] as HTMLInputElement;
+    const kenmerk = venster().querySelectorAll<HTMLElement>('input[type="text"]')[0] as HTMLInputElement;
     await gebruiker.type(kenmerk, 'MUT-2026-09');
     await gebruiker.click(opslaanKnop());
 
@@ -401,7 +402,7 @@ describe('boekingsvenster - een bestaande boeking bewerken', () => {
 
     // De server stuurt een volledige ISO-tekst; een <input type="date"> neemt
     // alleen JJJJ-MM-DD aan en zou anders leeg blijven.
-    expect(venster().querySelector('input[type="date"]')).toHaveValue('2026-09-12');
+    expect(venster().querySelector<HTMLElement>('input[type="date"]')).toHaveValue('2026-09-12');
   });
 
   it('noemt zichzelf een bewerking en werkt de bestaande boeking bij', async () => {

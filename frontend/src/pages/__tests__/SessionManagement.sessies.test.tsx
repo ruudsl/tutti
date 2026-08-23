@@ -107,7 +107,7 @@ describe('sessiebeheer - de huidige sessie blijft buiten schot', () => {
   it('merkt de huidige sessie aan en geeft die geen knop Intrekken', async () => {
     await toonPagina();
 
-    const hier = screen.getByText('sessions.currentSession').closest('.session-card')!;
+    const hier = screen.getByText('sessions.currentSession').closest<HTMLElement>('.session-card')!;
     // Het label en het ontbreken van de knop horen bij elkaar: de sessie waar
     // je op zit kun je niet vanaf dit scherm afsluiten.
     expect(within(hier).queryByRole('button', { name: 'sessions.revoke' })).toBeNull();
@@ -193,14 +193,14 @@ describe('sessiebeheer - wat er per sessie te lezen is', () => {
 
     expect(screen.getByText('Chrome on Windows')).toBeInTheDocument();
     // Een computer krijgt een schermicoon, geen telefoonicoon.
-    const hier = screen.getByText('Chrome on Windows').closest('.session-card')!;
+    const hier = screen.getByText('Chrome on Windows').closest<HTMLElement>('.session-card')!;
     expect(within(hier).getByTestId('icoon-monitor')).toBeInTheDocument();
   });
 
   it('beschrijft een telefoon als telefoon, met een eigen icoon', async () => {
     await toonPagina();
 
-    const telefoon = screen.getByText(/mobile - Mobile Safari/).closest('.session-card')!;
+    const telefoon = screen.getByText(/mobile - Mobile Safari/).closest<HTMLElement>('.session-card')!;
     expect(within(telefoon).getByTestId('icoon-smartphone')).toBeInTheDocument();
   });
 
@@ -221,10 +221,10 @@ describe('sessiebeheer - wat er per sessie te lezen is', () => {
 
     await toonPagina();
 
-    const metIp = screen.getByText('Chrome on Windows').closest('.session-card')!;
+    const metIp = screen.getByText('Chrome on Windows').closest<HTMLElement>('.session-card')!;
     expect(within(metIp).getByText(/203\.0\.113\.7/)).toBeInTheDocument();
 
-    const zonderIp = screen.getByText(/mobile - Mobile Safari/).closest('.session-card')!;
+    const zonderIp = screen.getByText(/mobile - Mobile Safari/).closest<HTMLElement>('.session-card')!;
     expect(within(zonderIp).queryByText(/sessions.ipAddress/)).toBeNull();
   });
 
@@ -244,9 +244,7 @@ describe('sessiebeheer - wat er per sessie te lezen is', () => {
   });
 
   it('valt terug op de aanmaakdatum als er nog geen activiteit is', async () => {
-    haal.mockResolvedValue([
-      sessie({ id: 'a', lastActive: '', createdAt: new Date(Date.now() - 1000).toISOString() }),
-    ]);
+    haal.mockResolvedValue([sessie({ id: 'a', lastActive: '', createdAt: new Date(Date.now() - 1000).toISOString() })]);
 
     await toonPagina();
 

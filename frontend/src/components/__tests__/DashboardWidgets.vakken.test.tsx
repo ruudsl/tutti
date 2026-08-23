@@ -117,7 +117,7 @@ describe('dashboardvakken - oefenvoortgang', () => {
 
     expect(await screen.findByText(/^60 \/ 120/)).toBeInTheDocument();
     // 60 van 120 is de helft.
-    expect(container.querySelector('.progress-bar')).toHaveStyle({ width: '50%' });
+    expect(container.querySelector<HTMLElement>('.progress-bar')).toHaveStyle({ width: '50%' });
   });
 
   it('loopt niet voorbij de honderd procent', async () => {
@@ -125,14 +125,14 @@ describe('dashboardvakken - oefenvoortgang', () => {
     const { container } = toonVak('practice-progress');
 
     await screen.findByText(/^300 \/ 120/);
-    expect(container.querySelector('.progress-bar')).toHaveStyle({ width: '100%' });
+    expect(container.querySelector<HTMLElement>('.progress-bar')).toHaveStyle({ width: '100%' });
   });
 
   it('staat op nul zonder gegevens', async () => {
     vi.mocked(api.getPracticeStats).mockRejectedValue(new Error('weg'));
     const { container } = toonVak('practice-progress');
 
-    await waitFor(() => expect(container.querySelector('.progress-bar')).toHaveStyle({ width: '0%' }));
+    await waitFor(() => expect(container.querySelector<HTMLElement>('.progress-bar')).toHaveStyle({ width: '0%' }));
     expect(screen.getByText(/^0 \/ 120/)).toBeInTheDocument();
   });
 });
@@ -181,9 +181,9 @@ describe('dashboardvakken - lijsten', () => {
 
     expect(await screen.findByText('Lijst 0')).toBeInTheDocument();
     expect(screen.queryByText('Lijst 5')).not.toBeInTheDocument();
-    expect(screen.getByText('Lijst 4').closest('li')).toHaveTextContent('4');
+    expect(screen.getByText('Lijst 4').closest<HTMLElement>('li')).toHaveTextContent('4');
     // Een lijst zonder titels toont een nul, geen leeg vakje.
-    expect(screen.getByText('Lijst 0').closest('li')).toHaveTextContent('0');
+    expect(screen.getByText('Lijst 0').closest<HTMLElement>('li')).toHaveTextContent('0');
   });
 
   it('meldt het als er geen muzieklijsten zijn', async () => {
@@ -293,8 +293,8 @@ describe('dashboardvakken - de bewerkstand', () => {
       />,
     );
 
-    expect(container.querySelector('.widget-edit-overlay')).toBeNull();
-    expect(container.querySelector('.widget-wrapper')).not.toHaveAttribute('draggable', 'true');
+    expect(container.querySelector<HTMLElement>('.widget-edit-overlay')).toBeNull();
+    expect(container.querySelector<HTMLElement>('.widget-wrapper')).not.toHaveAttribute('draggable', 'true');
   });
 
   it('zet een vak uit en verandert de grootte', async () => {
@@ -313,7 +313,7 @@ describe('dashboardvakken - de bewerkstand', () => {
       />,
     );
 
-    expect(container.querySelector('.widget-wrapper')).toHaveClass('widget-small', 'edit-mode');
+    expect(container.querySelector<HTMLElement>('.widget-wrapper')).toHaveClass('widget-small', 'edit-mode');
     expect(screen.getByTestId('icon-eye')).toBeInTheDocument();
 
     await gebruiker.click(screen.getByRole('button', { name: 'dashboard.hideWidget' }));
@@ -358,7 +358,7 @@ describe('dashboardvakken - de bewerkstand', () => {
       />,
     );
 
-    const omhulsel = container.querySelector('.widget-wrapper')!;
+    const omhulsel = container.querySelector<HTMLElement>('.widget-wrapper')!;
     expect(omhulsel).toHaveAttribute('draggable', 'true');
 
     fireEvent.dragStart(omhulsel, { dataTransfer: { effectAllowed: 'none' } });
@@ -397,7 +397,7 @@ describe('dashboardvakken - koppen en links', () => {
   it('elk vak wijst naar zijn eigen pagina', async () => {
     toonVak('music-lists');
 
-    const kop = screen.getByText('widgets.myMusicLists').closest('.widget-header')!;
+    const kop = screen.getByText('widgets.myMusicLists').closest<HTMLElement>('.widget-header')!;
     expect(within(kop).getByRole('link', { name: 'widgets.viewAll' })).toHaveAttribute('href', '/my-music');
   });
 });

@@ -21,12 +21,7 @@ import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {
-  PdfThumbnail,
-  clearThumbnailCache,
-  getThumbnailCacheSize,
-  removeThumbnailFromCache,
-} from '../PdfThumbnail';
+import { PdfThumbnail, clearThumbnailCache, getThumbnailCacheSize, removeThumbnailFromCache } from '../PdfThumbnail';
 
 const { loadPdfjsMock } = vi.hoisted(() => ({ loadPdfjsMock: vi.fn() }));
 vi.mock('../../lib/pdfjs', () => ({ loadPdfjs: loadPdfjsMock }));

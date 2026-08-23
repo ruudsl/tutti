@@ -199,7 +199,10 @@ describe('bluetooth-pedaal - koppelen', () => {
     // De hook vraagt de browser om elk apparaat te tonen, want een pedaal
     // meldt zich niet altijd met een herkenbare dienst.
     expect(requestDevice).toHaveBeenCalledWith(
-      expect.objectContaining({ acceptAllDevices: true, optionalServices: expect.arrayContaining([expect.any(String)]) }),
+      expect.objectContaining({
+        acceptAllDevices: true,
+        optionalServices: expect.arrayContaining([expect.any(String)]),
+      }),
     );
     expect(apparaat.gatt?.connect).toHaveBeenCalled();
   });

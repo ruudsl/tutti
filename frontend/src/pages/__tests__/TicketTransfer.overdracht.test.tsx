@@ -22,6 +22,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { TicketTransferHistory } from '../../types';
 import type { ReactNode } from 'react';
 import { AriaLiveProvider } from '../../components/AriaLiveRegion';
 import TicketTransferPage from '../TicketTransfer';
@@ -105,9 +106,10 @@ const LOPENDE_OVERDRACHT = {
   cancelledAt: null,
 };
 
-const GESCHIEDENIS = [
+const GESCHIEDENIS: TicketTransferHistory[] = [
   {
     id: 'gsc-1',
+    ticketId: 'k-9',
     ticket: { id: 'k-9', code: 'OUD123', ticketType: 'Volwassene', concert: NAJAARSCONCERT },
     fromName: 'Anna de Groot',
     fromEmail: 'anna@example.org',
@@ -118,6 +120,7 @@ const GESCHIEDENIS = [
   },
   {
     id: 'gsc-2',
+    ticketId: 'k-8',
     ticket: { id: 'k-8', code: 'OUD456', ticketType: 'Kind', concert: KERSTCONCERT },
     fromName: 'Anna de Groot',
     fromEmail: 'anna@example.org',
@@ -153,8 +156,8 @@ beforeEach(() => {
   vi.mocked(getTransferableTickets).mockResolvedValue(KAARTJES);
   vi.mocked(getPendingTransfers).mockResolvedValue([LOPENDE_OVERDRACHT]);
   vi.mocked(getTransferHistory).mockResolvedValue(GESCHIEDENIS);
-  vi.mocked(initiateTicketTransfer).mockResolvedValue({});
-  vi.mocked(cancelTicketTransfer).mockResolvedValue({});
+  vi.mocked(initiateTicketTransfer).mockResolvedValue({ transfer: LOPENDE_OVERDRACHT, message: 'Overdracht gestart' });
+  vi.mocked(cancelTicketTransfer).mockResolvedValue({ success: true, message: 'Overdracht ingetrokken' });
 });
 
 describe('kaartoverdracht - de eigen kaartjes', () => {

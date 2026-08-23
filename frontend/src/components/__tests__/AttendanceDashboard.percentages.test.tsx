@@ -77,7 +77,10 @@ function kaartwaarde(label: string): string {
 
 /** De namen in de ledentabel, in de volgorde waarin ze op het scherm staan. */
 function namenInTabel(): string[] {
-  return screen.getAllByRole('row').slice(1).map((rij) => within(rij).getAllByRole('cell')[0].textContent!.trim());
+  return screen
+    .getAllByRole('row')
+    .slice(1)
+    .map((rij) => within(rij).getAllByRole('cell')[0].textContent!.trim());
 }
 
 describe('AttendanceDashboard - de rekensom achter de percentages', () => {
@@ -127,11 +130,7 @@ describe('AttendanceDashboard - de rekensom achter de percentages', () => {
 
   it('net onder de grenzen kantelt de telling wel', () => {
     render(
-      <AttendanceDashboard
-        members={[lid('1', 'Anna', 79.9), lid('2', 'Bram', 49.9)]}
-        rehearsals={[]}
-        trends={[]}
-      />,
+      <AttendanceDashboard members={[lid('1', 'Anna', 79.9), lid('2', 'Bram', 49.9)]} rehearsals={[]} trends={[]} />,
     );
 
     expect(kaartwaarde('attendanceDashboard.highAttendance')).toBe('0');
@@ -266,9 +265,7 @@ describe('AttendanceDashboard - filters en export', () => {
   it('geeft ook een nieuwe begin- en einddatum door', async () => {
     const gebruiker = userEvent.setup();
     const bijFilter = vi.fn();
-    render(
-      <AttendanceDashboard members={[]} rehearsals={[]} trends={[]} onFilterChange={bijFilter} />,
-    );
+    render(<AttendanceDashboard members={[]} rehearsals={[]} trends={[]} onFilterChange={bijFilter} />);
 
     const van = screen.getByLabelText('attendanceDashboard.from');
     const tot = screen.getByLabelText('attendanceDashboard.to');
@@ -398,13 +395,7 @@ describe('AttendanceDashboard - de grafiek en de repetities', () => {
   });
 
   it('toont per repetitie de tellingen en het percentage', () => {
-    render(
-      <AttendanceDashboard
-        members={[]}
-        rehearsals={[repetitie('r1', '2026-03-02', 62.5, 25, 15)]}
-        trends={[]}
-      />,
-    );
+    render(<AttendanceDashboard members={[]} rehearsals={[repetitie('r1', '2026-03-02', 62.5, 25, 15)]} trends={[]} />);
 
     expect(screen.getByText('attendanceDashboard.rehearsals (1)')).toBeInTheDocument();
     expect(screen.getByText('25')).toBeInTheDocument();

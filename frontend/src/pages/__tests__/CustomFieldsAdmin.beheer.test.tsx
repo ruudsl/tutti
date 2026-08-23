@@ -187,10 +187,7 @@ describe('maatwerkvelden - toevoegen', () => {
     await gebruiker.type(within(venster).getByPlaceholderText('my_field_key'), 'allergie');
     const labels = within(venster).getAllByRole('textbox');
     await gebruiker.type(labels[1], 'Allergie');
-    await gebruiker.selectOptions(
-      within(venster).getByDisplayValue('customFields.visibility.all'),
-      'committee_plus',
-    );
+    await gebruiker.selectOptions(within(venster).getByDisplayValue('customFields.visibility.all'), 'committee_plus');
     await gebruiker.click(within(venster).getByLabelText('customFields.isRequired'));
     await gebruiker.click(within(venster).getByRole('button', { name: 'common.save' }));
 
@@ -280,10 +277,7 @@ describe('maatwerkvelden - wijzigen', () => {
     await gebruiker.click(within(rij).getByRole('button', { name: 'common.edit' }));
 
     const venster = await screen.findByRole('dialog');
-    await gebruiker.selectOptions(
-      within(venster).getByDisplayValue('customFields.visibility.admin_only'),
-      'all',
-    );
+    await gebruiker.selectOptions(within(venster).getByDisplayValue('customFields.visibility.admin_only'), 'all');
     await gebruiker.click(within(venster).getByRole('button', { name: 'common.save' }));
 
     await waitFor(() => expect(wijzig).toHaveBeenCalled());
@@ -327,7 +321,9 @@ describe('maatwerkvelden - verwijderen', () => {
 
     const rij = screen.getByText('Rijbewijs').closest('tr')!;
     await gebruiker.click(within(rij).getByRole('button', { name: 'common.delete' }));
-    await gebruiker.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'common.cancel' }));
+    await gebruiker.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'common.cancel' }),
+    );
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(verwijder).not.toHaveBeenCalled();
@@ -339,7 +335,9 @@ describe('maatwerkvelden - verwijderen', () => {
 
     const rij = screen.getByText('Rijbewijs').closest('tr')!;
     await gebruiker.click(within(rij).getByRole('button', { name: 'common.delete' }));
-    await gebruiker.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'common.delete' }));
+    await gebruiker.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'common.delete' }),
+    );
 
     await waitFor(() => expect(meldingen.fout).toHaveBeenCalledWith('Dit veld is nog in gebruik.'));
   });
