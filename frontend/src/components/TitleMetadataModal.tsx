@@ -380,16 +380,13 @@ export function TitleMetadataModal({
           {showExtendedMeta && (
             <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {/* MusicXML Upload */}
-              <div>
-                <label className="form-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                  {t('metadata.musicXMLFile')}
-                </label>
+              <FormField className="" label={t('metadata.musicXMLFile')}>
                 <MusicXMLUpload
                   titleId={titleId}
                   hasExistingData={extendedMeta?.metadata?.parts?.length > 0}
                   onSuccess={() => {}}
                 />
-              </div>
+              </FormField>
 
               {/* Work/Movement Info */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
@@ -429,23 +426,17 @@ export function TitleMetadataModal({
               </FormField>
 
               {/* Instruments */}
-              <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                  {t('metadata.instruments')}
-                </label>
+              <FormField className="" label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.instruments')}</span>}>
                 <InstrumentPicker
                   value={form.instruments}
                   onChange={(instruments) => setForm((f) => ({ ...f, instruments }))}
                 />
-              </div>
+              </FormField>
 
               {/* JSKOS Genres */}
-              <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                  {t('metadata.jskosGenres')}
-                </label>
+              <FormField className="" label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.jskosGenres')}</span>}>
                 <GenrePicker value={form.genreUris} onChange={(genreUris) => setForm((f) => ({ ...f, genreUris }))} />
-              </div>
+              </FormField>
 
               {/* Additional Credits */}
               <FormField className="" label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.lyricist')}</span>}>

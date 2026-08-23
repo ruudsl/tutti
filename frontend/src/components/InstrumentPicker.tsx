@@ -21,9 +21,14 @@ interface InstrumentPickerProps {
   value: SelectedInstrument[];
   onChange: (instruments: SelectedInstrument[]) => void;
   disabled?: boolean;
+  /**
+   * Id voor het zoekveld, zodat een `<label htmlFor>` erbuiten er echt naartoe
+   * kan wijzen. Optioneel, want niet elke aanroeper heeft een label nodig.
+   */
+  id?: string;
 }
 
-export function InstrumentPicker({ value, onChange, disabled }: InstrumentPickerProps) {
+export function InstrumentPicker({ value, onChange, disabled, id }: InstrumentPickerProps) {
   const { t, i18n } = useTranslation();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -132,8 +137,16 @@ export function InstrumentPicker({ value, onChange, disabled }: InstrumentPicker
 
       {/* Search input */}
       <div className="relative" ref={dropdownRef}>
+        {/*
+          Het id hoort op dit zoekveld en niet op de eerste knop in de opmaak.
+          De reeds gekozen instrumenten staan er weliswaar bóven, maar dat zijn
+          knoppen om een keuze te wijzigen of te wissen; wie op het label klikt
+          wil een instrument toevoegen, en dat begint hier. De keuzeknoppen
+          dragen hun eigen naam al, dit veld had er geen.
+        */}
         <input
           ref={inputRef}
+          id={id}
           type="text"
           className="input input-bordered w-full"
           placeholder={t('metadata.searchInstruments')}

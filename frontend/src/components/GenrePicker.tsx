@@ -14,9 +14,15 @@ interface GenrePickerProps {
   value: string[]; // Array of genre URIs
   onChange: (uris: string[]) => void;
   disabled?: boolean;
+  /**
+   * Id voor de knop die het genremenu opent, zodat een `<label htmlFor>`
+   * erbuiten er echt naartoe kan wijzen. Optioneel, want niet elke aanroeper
+   * heeft een label nodig.
+   */
+  id?: string;
 }
 
-export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
+export function GenrePicker({ value, onChange, disabled, id }: GenrePickerProps) {
   const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState('');
@@ -108,8 +114,16 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
 
       {/* Dropdown */}
       <div className="relative">
+        {/*
+          Het id hoort op deze knop en niet op het filterveld in het menu. Dat
+          veld bestaat pas nadat het menu open is - een label kan er dus niet
+          naartoe wijzen zolang het menu dicht is - en deze knop is sowieso wat
+          de gebruiker als eerste bedient. Een knop is een koppelbaar element,
+          dus `htmlFor` werkt hier echt.
+        */}
         <button
           ref={buttonRef}
+          id={id}
           type="button"
           className="btn btn-outline w-full justify-between"
           onClick={() => setIsOpen(!isOpen)}

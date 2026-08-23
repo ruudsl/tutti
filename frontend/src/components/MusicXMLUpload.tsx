@@ -15,9 +15,15 @@ interface MusicXMLUploadProps {
   titleId: string;
   hasExistingData?: boolean;
   onSuccess?: () => void;
+  /**
+   * Id voor het bestandsveld in het sleepvlak, zodat een `<label htmlFor>`
+   * erbuiten er echt naartoe kan wijzen. Optioneel, want niet elke aanroeper
+   * heeft een label nodig.
+   */
+  id?: string;
 }
 
-export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXMLUploadProps) {
+export function MusicXMLUpload({ titleId, hasExistingData, onSuccess, id }: MusicXMLUploadProps) {
   const { t } = useTranslation();
   const [uploadResult, setUploadResult] = useState<{
     success: boolean;
@@ -91,13 +97,37 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
   return (
     <div className="space-y-4">
       {/* Dropzone */}
+      {/*
+        Zonder rol en naam is dit sleepvlak een doodlopende tabstop.
+        react-dropzone geeft het namelijk wél tabIndex 0 én role="presentation",
+        en die twee vloeken: je landt er met de tab-toets op, maar de rol haalt
+        de betekenis er juist af, dus een schermlezer kondigt niets aan. Het
+        bestandsveld erbinnen krijgt tabIndex -1 en wordt dus overgeslagen - de
+        toetsenbordweg liep daardoor nergens naartoe, ook al werkt de muisweg
+        via het label nu wel.
+        Met role="button" is het weer een knop, en de Enter- en spatie-
+        afhandeling die react-dropzone al meelevert opent dan de bestandskiezer.
+        De naam komt uit `aria-label` en niet uit de inhoud van het vlak: die
+        inhoud bevat het verborgen bestandsveld, en dat telt in de naamberekening
+        mee als besturingselement (browsers plakken er "geen bestand gekozen" en
+        dergelijke bij). De gekozen tekst is exact wat er zichtbaar staat, zodat
+        wie het vlak ziet en wie het hoort dezelfde naam gebruikt.
+      */}
       <div
-        {...getRootProps()}
+        {...getRootProps({ role: 'button', 'aria-label': t('metadata.dragMusicXML') })}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
           isDragActive ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'
         } ${uploadMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
       >
-        <input {...getInputProps()} />
+        {/*
+          Het id hoort hier en niet op het sleepvlak eromheen. Dat vlak blijft
+          een <div>, en een <label> kan alleen naar een echt besturingselement
+          wijzen - naar een div wijst hij nergens heen, ook niet met role="button".
+          react-dropzone verbergt dit bestandsveld met een clip-truc en niet met
+          display:none, dus het blijft een echt veld dat de aanwijzer kan
+          ontvangen en dat bij een klik op het label de bestandskiezer opent.
+        */}
+        <input {...getInputProps()} id={id} />
         <div className="flex flex-col items-center gap-2">
           {uploadMutation.isPending ? (
             <>
