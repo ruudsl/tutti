@@ -42,7 +42,17 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
   const locale = i18n.language === 'nl' ? nl : enUS;
 
   useEffect(() => {
-    if (channels && channels.length > 0 && !selectedChannelId) {
+    if (!channels || channels.length === 0) return;
+
+    // Ook opnieuw kiezen als het gekozen kanaal niet meer in de lijst staat.
+    // Alleen op `!selectedChannelId` kijken was te weinig: wisselt een lid van
+    // vereniging, dan komt er een nieuwe kanalenlijst binnen terwijl
+    // selectedChannelId nog het kanaal van de vórige vereniging aanwijst. Dat
+    // is een waarde, dus er werd niets opnieuw gekozen en het scherm bleef de
+    // berichten van dat oude kanaal opvragen en tonen - een gesprek van een
+    // andere vereniging in beeld. Hetzelfde geldt als iemand uit een stemgroep
+    // wordt gehaald: dat kanaal verdwijnt uit de lijst en hoort dan ook dicht.
+    if (!selectedChannelId || !channels.some((channel) => channel.id === selectedChannelId)) {
       setSelectedChannelId(channels[0].id);
     }
   }, [channels, selectedChannelId]);
