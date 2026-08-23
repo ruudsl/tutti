@@ -6,63 +6,7 @@ import { FormField } from '../components/FormField';
 import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon, type IconName } from '../components/Icon';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-interface DataCategory {
-  name: string;
-  count: number;
-  description: string;
-}
-
-interface DataSummary {
-  userId: string;
-  exportDate: string;
-  categories: DataCategory[];
-  totalRecords: number;
-}
-
-async function getDataSummary(): Promise<DataSummary> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/data-summary`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to fetch data summary');
-  return res.json();
-}
-
-async function downloadExport(format: 'json' | 'zip'): Promise<void> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/export?format=${format}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!res.ok) throw new Error('Failed to download export');
-
-  const blob = await res.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = format === 'zip' ? 'gdpr-export.zip' : 'gdpr-export.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
-}
-
-async function requestDeletion(reason?: string): Promise<{ message: string; requestId: string }> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/delete-request`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ reason }),
-  });
-  if (!res.ok) throw new Error('Failed to submit deletion request');
-  return res.json();
-}
+import { getDataSummary, downloadExport, requestDeletion } from '../api/gdpr';
 
 const categoryIcons: Record<string, IconName> = {
   profile: 'user',

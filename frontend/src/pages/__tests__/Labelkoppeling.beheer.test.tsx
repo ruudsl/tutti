@@ -44,8 +44,13 @@ import TicketScanner from '../TicketScanner';
 import TicketTransfer from '../TicketTransfer';
 import { BumaStemraModal } from '../Concerts/BumaStemraModal';
 import * as api from '../../api';
+import * as avgApi from '../../api/gdpr';
 
 vi.mock('../../api');
+// De avg-pagina's liepen op eigen fetch-aanroepen en gaan nu via
+// src/api/gdpr.ts. Die module hangt niet aan de barrel hierboven -
+// src/api.ts schaduwt de map src/api/ - dus hij wordt apart gemockt.
+vi.mock('../../api/gdpr');
 
 vi.mock('../../hooks/useDocumentTitle', () => ({ useDocumentTitle: () => {} }));
 
@@ -222,14 +227,12 @@ describe('concertpagina - groepskop boven de ledenlijst', () => {
 
 describe('gegevensexport - label gekoppeld aan het redenveld', () => {
   it('vindt de reden van verwijdering op zijn labeltekst', async () => {
-    // Deze pagina praat rechtstreeks met fetch, niet via de api-barrel.
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({ userId: 'geb-1', exportDate: '2026-08-22', categories: [], totalRecords: 0 }),
-      })) as never,
-    );
+    vi.mocked(avgApi.getDataSummary).mockResolvedValue({
+      userId: 'geb-1',
+      exportDate: '2026-08-22',
+      categories: [],
+      totalRecords: 0,
+    });
 
     const gebruiker = toon(<DataExport />);
 
@@ -270,44 +273,28 @@ describe('entra-synchronisatie - labels gekoppeld aan hun veld', () => {
 });
 
 describe('avg-beheer - labels gekoppeld aan hun veld', () => {
-  /** De pagina praat rechtstreeks met fetch, niet via de api-barrel. */
-  function zetFetchKlaar() {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        if (String(url).includes('retention-settings')) {
-          return {
-            ok: true,
-            json: async () => ({
-              settings: [{ data_type: 'audit_logs', retention_days: 365, description: 'Wat er bewaard blijft' }],
-            }),
-          };
-        }
-        return {
-          ok: true,
-          json: async () => ({
-            requests: [
-              {
-                id: 'ver-1',
-                user_id: 'geb-1',
-                email: 'anna@example.org',
-                first_name: 'Anna',
-                last_name: 'de Groot',
-                reason: 'Ik stop',
-                status: 'pending',
-                created_at: '2026-08-01T10:00:00Z',
-              },
-            ],
-          }),
-        };
-      }) as never,
-    );
+  /** Zet de twee ophaalfuncties klaar die deze pagina gebruikt. */
+  function zetApiKlaar() {
+    vi.mocked(avgApi.getRetentionSettings).mockResolvedValue({
+      settings: [{ dataType: 'audit_logs', retentionDays: 365, description: 'Wat er bewaard blijft' }],
+    });
+    vi.mocked(avgApi.getDeletionRequests).mockResolvedValue([
+      {
+        id: 'ver-1',
+        userId: 'geb-1',
+        email: 'anna@example.org',
+        name: 'Anna de Groot',
+        reason: 'Ik stop',
+        status: 'pending',
+        requestedAt: '2026-08-01T10:00:00Z',
+      },
+    ]);
   }
 
   it('koppelt de bewaartermijn aan zijn label en hangt de uitleg eraan', async () => {
     // Met de hand gekoppeld: tussen label en veld staat de uitleg, en het veld
     // zit met de eenheid in een eigen omhulsel.
-    zetFetchKlaar();
+    zetApiKlaar();
     const gebruiker = toon(<GdprAdmin />);
 
     await gebruiker.click(await screen.findByRole('button', { name: /Bewaartermijnen/ }));
@@ -319,7 +306,7 @@ describe('avg-beheer - labels gekoppeld aan hun veld', () => {
   });
 
   it('vindt het notitieveld van het verwerkingsvenster op zijn labeltekst', async () => {
-    zetFetchKlaar();
+    zetApiKlaar();
     const gebruiker = toon(<GdprAdmin />);
 
     await gebruiker.click(await screen.findByRole('button', { name: 'Goedkeuren' }));

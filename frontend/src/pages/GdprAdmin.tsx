@@ -7,111 +7,15 @@ import { FormField } from '../components/FormField';
 import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon } from '../components/Icon';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-interface DeletionRequest {
-  id: string;
-  userId: string;
-  email: string;
-  name: string;
-  reason?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
-  requestedAt: string;
-  processedAt?: string;
-  processedBy?: string;
-}
-
-interface RetentionSetting {
-  dataType: string;
-  retentionDays: number;
-  description: string;
-}
-
-interface RetentionSettings {
-  settings: RetentionSetting[];
-  lastCleanup?: string;
-  nextCleanup?: string;
-}
-
-async function fetchDeletionRequests(): Promise<DeletionRequest[]> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/deletion-requests`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to fetch deletion requests');
-  const data = await res.json();
-  return data.requests.map((r: any) => ({
-    id: r.id,
-    userId: r.user_id,
-    email: r.email,
-    name: `${r.first_name} ${r.last_name}`,
-    reason: r.reason,
-    status: r.status,
-    requestedAt: r.created_at,
-    processedAt: r.processed_at,
-    processedBy: r.processed_by_name,
-  }));
-}
-
-async function processDeletionRequest(requestId: string, action: 'approve' | 'reject', notes?: string): Promise<void> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/deletion-requests/${requestId}/process`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ action, notes }),
-  });
-  if (!res.ok) throw new Error('Failed to process deletion request');
-}
-
-async function fetchRetentionSettings(): Promise<RetentionSettings> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/retention-settings`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to fetch retention settings');
-  const data = await res.json();
-  return {
-    settings: data.settings.map((s: any) => ({
-      dataType: s.data_type,
-      retentionDays: s.retention_days,
-      description: s.description || '',
-    })),
-  };
-}
-
-async function updateRetentionSettings(settings: RetentionSetting[]): Promise<void> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/retention-settings`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      settings: settings.map((s) => ({
-        data_type: s.dataType,
-        retention_days: s.retentionDays,
-        auto_delete: s.retentionDays > 0,
-      })),
-    }),
-  });
-  if (!res.ok) throw new Error('Failed to update retention settings');
-}
-
-async function runCleanup(): Promise<{ deleted: Record<string, number> }> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/cleanup`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to run cleanup');
-  const data = await res.json();
-  return { deleted: data.deletedCounts || {} };
-}
+import {
+  getDeletionRequests,
+  processDeletionRequest,
+  getRetentionSettings,
+  updateRetentionSettings,
+  runCleanup,
+  type DeletionRequest,
+  type RetentionSetting,
+} from '../api/gdpr';
 
 export default function GdprAdmin() {
   const { t } = useTranslation();
@@ -126,12 +30,12 @@ export default function GdprAdmin() {
 
   const { data: requests, isLoading: loadingRequests } = useQuery({
     queryKey: ['gdpr-deletion-requests'],
-    queryFn: fetchDeletionRequests,
+    queryFn: getDeletionRequests,
   });
 
   const { data: retentionData, isLoading: loadingRetention } = useQuery({
     queryKey: ['gdpr-retention-settings'],
-    queryFn: fetchRetentionSettings,
+    queryFn: getRetentionSettings,
   });
 
   const processMutation = useMutation({
