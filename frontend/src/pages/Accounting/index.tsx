@@ -198,16 +198,33 @@ export default function Accounting() {
 
   const currentFiscalYear = fiscalYears.find((fy) => fy.isCurrent);
 
+  /**
+   * Het boekjaar waar de gebruiker naar kijkt.
+   *
+   * De keuzelijst in de kop zet `selectedFiscalYear`, en de boekingen, de
+   * budgetten en de uitvoer luisterden daar al naar. De balans en de winst- en
+   * verliesrekening niet: die vroegen altijd het boekjaar met `isCurrent` op.
+   * Wie 2025 koos, kreeg dus de cijfers van 2026 te zien met "2025" in de
+   * keuzelijst ernaast - en de knop "balans uitvoeren" in datzelfde scherm gaf
+   * wél 2025 mee. Het bestand en het scherm noemden dan verschillende bedragen
+   * voor hetzelfde jaar.
+   *
+   * Terugvallen op het lopende boekjaar blijft nodig: zolang er niets gekozen
+   * is staat `selectedFiscalYear` leeg, en dan is het lopende jaar wat de
+   * keuzelijst toont.
+   */
+  const activeFiscalYear = fiscalYears.find((fy) => fy.id === selectedFiscalYear) ?? currentFiscalYear;
+
   const { data: balanceReport } = useQuery({
-    queryKey: ['balance-report', currentFiscalYear?.id],
-    queryFn: () => getBalanceReport(currentFiscalYear?.id),
-    enabled: !!currentFiscalYear && activeTab === 'reports',
+    queryKey: ['balance-report', activeFiscalYear?.id],
+    queryFn: () => getBalanceReport(activeFiscalYear?.id),
+    enabled: !!activeFiscalYear && activeTab === 'reports',
   });
 
   const { data: profitLossReport } = useQuery({
-    queryKey: ['profit-loss-report', currentFiscalYear?.id],
-    queryFn: () => getProfitLossReport(currentFiscalYear?.id),
-    enabled: !!currentFiscalYear && activeTab === 'reports',
+    queryKey: ['profit-loss-report', activeFiscalYear?.id],
+    queryFn: () => getProfitLossReport(activeFiscalYear?.id),
+    enabled: !!activeFiscalYear && activeTab === 'reports',
   });
 
   const initAccountsMutation = useMutation({
@@ -247,7 +264,11 @@ export default function Accounting() {
   const handleExport = async (type: string) => {
     setIsExporting(true);
     try {
-      const fiscalYearId = selectedFiscalYear || currentFiscalYear?.id;
+      // Hetzelfde boekjaar als het scherm, uit dezelfde bron. Dit stond eerder
+      // als `selectedFiscalYear || currentFiscalYear?.id`; dat gaf hetzelfde
+      // antwoord zolang de keuze bij een bestaand boekjaar hoorde, maar zette
+      // een blijven hangen keuze van een verdwenen boekjaar zo in het verzoek.
+      const fiscalYearId = activeFiscalYear?.id;
       switch (type) {
         case 'transactions':
           await exportTransactions(fiscalYearId);
@@ -741,7 +762,11 @@ export default function Accounting() {
       {activeTab === 'reports' && (
         <RapportagesTab
           balanceReport={balanceReport}
-          currentFiscalYear={currentFiscalYear}
+          // Het tabblad gebruikt dit alleen om te bepalen of er een boekjaar is
+          // om over te rapporteren. Dat moet hetzelfde boekjaar zijn als waar
+          // de rapportage hierboven mee opgehaald wordt, anders staat het
+          // tabblad te wachten op cijfers die nooit opgevraagd worden.
+          currentFiscalYear={activeFiscalYear}
           profitLossReport={profitLossReport}
         />
       )}

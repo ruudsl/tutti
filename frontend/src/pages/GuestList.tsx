@@ -1,7 +1,7 @@
 import { currentLocale } from '../utils/locale';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import {
   getGuestList,
@@ -64,6 +64,17 @@ export default function GuestList() {
         ticketsSent: ticketsSentFilter === '' ? undefined : ticketsSentFilter === 'true',
       }),
     enabled: !!concertId,
+    // De zoekterm, het statusfilter en het bladzijdenummer zitten in de
+    // sleutel, dus elke aanslag in het zoekveld begint een nieuwe vraag. Zonder
+    // deze regel staat die vraag op `isLoading`, en dan ruilt de pagina
+    // hieronder het hele scherm in voor een skelet - inclusief het zoekveld
+    // waar de gebruiker net in staat te typen. De aanwijzer verdwijnt mee, dus
+    // van "anna" komt alleen de "a" aan; de rest valt in het niets.
+    //
+    // Met de vorige uitkomst als tussenstand blijft `isLoading` na de eerste
+    // lading onwaar: de lijst blijft staan tot het nieuwe antwoord er is, en
+    // het skelet is weer wat het hoort te zijn - iets voor de allereerste keer.
+    placeholderData: keepPreviousData,
   });
 
   // Fetch ticket types for the concert

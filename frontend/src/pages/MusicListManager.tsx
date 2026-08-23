@@ -98,7 +98,11 @@ export default function MusicListManager() {
 
   // Delete confirmations
   const [deletingList, setDeletingList] = useState<MusicList | null>(null);
-  const [deletingTitle, setDeletingTitle] = useState<MusicTitle | null>(null);
+  // Alleen de titel, niet het hele MusicTitle-object. Het venster toont de
+  // titel en `removeTitleFromList` heeft niets anders nodig; de rest van de
+  // metadata eisen betekende dat de knop stilviel zodra het zoekveld de titel
+  // uit `titles` filterde. Zie de opmerking bij de knop zelf.
+  const [deletingTitle, setDeletingTitle] = useState<{ title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Set initial orchestra from URL or first available
@@ -230,7 +234,7 @@ export default function MusicListManager() {
     }
   };
 
-  const handleRemoveTitle = async (titleObj: MusicTitle) => {
+  const handleRemoveTitle = async (titleObj: { title: string }) => {
     if (!selectedList) return;
     setIsDeleting(true);
     try {
@@ -585,10 +589,19 @@ export default function MusicListManager() {
                                     <Icon name="pencil" size={16} />
                                   </button>
                                 )}
-                                <button
-                                  className="btn btn-danger btn-sm"
-                                  onClick={() => titleData && setDeletingTitle(titleData)}
-                                >
+                                {/* De titel komt uit de lijst zelf (`item.title`),
+                                    niet uit `titleData`. Dat laatste is de
+                                    uitkomst van het zoekveld hiernaast, en die
+                                    bevat deze titel niet meer zodra er gezocht
+                                    of op genre gefilterd wordt. De knop bleef
+                                    dan staan maar deed niets: geen venster, geen
+                                    verzoek, geen foutmelding.
+
+                                    Het potlood hierboven blijft wél aan
+                                    `titleData` hangen, want metadata bewerken
+                                    kan niet zonder die metadata. Eraf halen wel:
+                                    daar is de titel genoeg voor. */}
+                                <button className="btn btn-danger btn-sm" onClick={() => setDeletingTitle(item)}>
                                   {t('lists.remove')}
                                 </button>
                               </div>
@@ -666,7 +679,11 @@ export default function MusicListManager() {
                     ))
                 ) : (
                   <div className="empty-state" style={{ padding: '1rem' }}>
-                    <p>{search ? t('lists.noResults') : t('lists.allOnList')}</p>
+                    {/* Ook het genrefilter telt mee. Keek deze regel alleen
+                        naar `search`, dan las een filter zonder treffers als
+                        "alle titels staan al op de lijst" - en dat klopt niet:
+                        er zijn wel titels, ze vallen alleen buiten het filter. */}
+                    <p>{search || genreFilter ? t('lists.noResults') : t('lists.allOnList')}</p>
                   </div>
                 )}
               </div>
