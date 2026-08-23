@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
+import { useForm, Controller, type UseFormReturn, type FieldErrors } from 'react-hook-form';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
 import { Icon } from '../components/Icon';
 import { useInstruments } from '../hooks/useInstruments';
@@ -12,6 +12,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import { CustomFieldFormSection } from '../components/CustomFields';
 import type { User } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useFormValidation, veldKenmerken, type ValidationError } from '../hooks/useFormValidation';
 import { ROLES } from '../utils/constants';
 import { useDownloadToken } from '../utils/downloadUrl';
 
@@ -29,6 +30,22 @@ interface UserFormData {
   role: string;
   instrumentIds: string[];
   orchestraIds: string[];
+}
+
+/**
+ * De velden in de volgorde waarin ze op het scherm staan.
+ *
+ * react-hook-form geeft zijn fouten in registratievolgorde terug, en die hoeft
+ * niet gelijk te lopen met de leesvolgorde. De cursor hoort naar de bovenste
+ * fout te springen, niet naar de eerst geregistreerde - vandaar dat de volgorde
+ * hier expliciet staat in plaats van uit Object.keys te komen.
+ */
+const veldVolgorde: (keyof UserFormData)[] = ['firstName', 'lastName', 'email', 'password'];
+
+function naarFoutenlijst(fouten: FieldErrors<UserFormData>): ValidationError[] {
+  return veldVolgorde
+    .filter((veld) => fouten[veld])
+    .map((veld) => ({ field: veld, message: String(fouten[veld]?.message ?? '') }));
 }
 
 const defaultValues: UserFormData = {
@@ -56,7 +73,14 @@ export default function Users() {
   const [viewMode, setViewMode] = useState<'table' | 'sections'>('table');
 
   // React Hook Form with validation rules
-  const form = useForm<UserFormData>({ defaultValues });
+  //
+  // shouldFocusError staat uit omdat focusFirstError het springen overneemt:
+  // die zet de cursor in het bovenste foute veld én meldt de fout dringend aan
+  // de schermlezer. Lieten we react-hook-form het daarnaast zelf doen, dan
+  // verplaatsen twee partijen de cursor in dezelfde tel.
+  const form = useForm<UserFormData>({ defaultValues, shouldFocusError: false });
+  const { focusFirstError } = useFormValidation();
+  const naarEersteFout = (fouten: FieldErrors<UserFormData>) => focusFirstError(naarFoutenlijst(fouten));
 
   // TanStack Query hooks
   const { data: users = [], isLoading: usersLoading } = useUsers();
@@ -524,7 +548,7 @@ export default function Users() {
             setShowAddModal(false);
             form.reset(defaultValues);
           }}
-          onSubmit={form.handleSubmit(handleCreate)}
+          onSubmit={form.handleSubmit(handleCreate, naarEersteFout)}
           title={t('users.newMember')}
           submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
@@ -540,7 +564,7 @@ export default function Users() {
             setEditingUser(null);
             form.reset(defaultValues);
           }}
-          onSubmit={form.handleSubmit(handleUpdate)}
+          onSubmit={form.handleSubmit(handleUpdate, naarEersteFout)}
           title={t('users.edit')}
           submitLabel={t('common.save')}
           isSubmitting={updateMutation.isPending}
@@ -589,6 +613,11 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
   // zou hem onder de ondermarge van 1rem laten wegzakken - los van het veld waar
   // hij bij hoort. Vandaar met de hand, mét aria-describedby zodat een
   // schermlezer de melding ook echt bij het veld voorleest.
+  //
+  // aria-invalid en die aria-describedby komen uit veldKenmerken. Ze staan in de
+  // JSX en niet via setAttribute, omdat React alleen kenmerken terugdraait die
+  // het zelf getekend heeft: een aria-invalid dat er los omheen op gezet wordt,
+  // blijft staan nadat de gebruiker het veld verbeterd heeft.
   const veldId = useId();
   const voornaamId = `${veldId}-voornaam`;
   const achternaamId = `${veldId}-achternaam`;
@@ -609,9 +638,9 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
           </label>
           <input
             id={voornaamId}
-            aria-describedby={errors.firstName ? `${voornaamId}-fout` : undefined}
+            {...veldKenmerken('firstName', errors.firstName?.message, `${voornaamId}-fout`)}
             type="text"
-            className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
+            className={`form-control ${errors.firstName ? 'has-error' : ''}`}
             {...register('firstName', {
               required: t('errors.required'),
               minLength: { value: 1, message: t('errors.required') },
@@ -630,9 +659,9 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
           </label>
           <input
             id={achternaamId}
-            aria-describedby={errors.lastName ? `${achternaamId}-fout` : undefined}
+            {...veldKenmerken('lastName', errors.lastName?.message, `${achternaamId}-fout`)}
             type="text"
-            className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
+            className={`form-control ${errors.lastName ? 'has-error' : ''}`}
             {...register('lastName', {
               required: t('errors.required'),
               minLength: { value: 1, message: t('errors.required') },
@@ -653,9 +682,9 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
         </label>
         <input
           id={emailId}
-          aria-describedby={errors.email ? `${emailId}-fout` : undefined}
+          {...veldKenmerken('email', errors.email?.message, `${emailId}-fout`)}
           type="email"
-          className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+          className={`form-control ${errors.email ? 'has-error' : ''}`}
           {...register('email', {
             required: t('errors.required'),
             pattern: {
@@ -677,9 +706,14 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
         </label>
         <input
           id={wachtwoordId}
-          aria-describedby={errors.password ? `${wachtwoordId}-fout` : !isEditing ? `${wachtwoordId}-hulp` : undefined}
+          {...veldKenmerken(
+            'password',
+            errors.password?.message,
+            `${wachtwoordId}-fout`,
+            !isEditing ? `${wachtwoordId}-hulp` : undefined,
+          )}
           type="password"
-          className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+          className={`form-control ${errors.password ? 'has-error' : ''}`}
           {...register('password', {
             required: !isEditing ? t('errors.required') : false,
             minLength: !isEditing ? { value: 8, message: t('errors.passwordTooShort', { min: 8 }) } : undefined,

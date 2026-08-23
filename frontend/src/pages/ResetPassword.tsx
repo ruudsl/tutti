@@ -1,14 +1,31 @@
 import { useState, useEffect, useId } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { validateResetToken, resetPassword } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useFormValidation, veldKenmerken, type ValidationError } from '../hooks/useFormValidation';
 
 interface ResetPasswordFormData {
   password: string;
   confirmPassword: string;
+}
+
+/**
+ * De velden in de volgorde waarin ze op het scherm staan.
+ *
+ * react-hook-form geeft zijn fouten in registratievolgorde terug, en die hoeft
+ * niet gelijk te lopen met de leesvolgorde. De cursor hoort naar de bovenste
+ * fout te springen, niet naar de eerst geregistreerde - vandaar dat de volgorde
+ * hier expliciet staat in plaats van uit Object.keys te komen.
+ */
+const veldVolgorde: (keyof ResetPasswordFormData)[] = ['password', 'confirmPassword'];
+
+function naarFoutenlijst(fouten: FieldErrors<ResetPasswordFormData>): ValidationError[] {
+  return veldVolgorde
+    .filter((veld) => fouten[veld])
+    .map((veld) => ({ field: veld, message: String(fouten[veld]?.message ?? '') }));
 }
 
 export default function ResetPassword() {
@@ -37,7 +54,14 @@ export default function ResetPassword() {
       password: '',
       confirmPassword: '',
     },
+    // Het springen naar het eerste foute veld gaat via focusFirstError, dat er
+    // ook een dringende melding aan de schermlezer bij doet. Laat react-hook-form
+    // het daarnaast zelf doen, dan verplaatsen twee partijen de cursor in
+    // dezelfde tel en is niet meer te volgen wie hem uiteindelijk zette.
+    shouldFocusError: false,
   });
+
+  const { focusFirstError } = useFormValidation();
 
   // Watch password field for confirmation validation
   const password = watch('password');
@@ -150,19 +174,21 @@ export default function ResetPassword() {
         </div>
         <div className="login-body">
           {error && <div className="alert alert-error mb-2">{error}</div>}
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, (fouten) => focusFirstError(naarFoutenlijst(fouten)))}>
             {/* Met de hand gekoppeld: naast label en veld staat hier ook nog
                 een foutmelding, en FormField kloont maar één kind. De melding
-                hangt via aria-describedby aan het veld. */}
+                hangt via aria-describedby aan het veld; die koppeling en
+                aria-invalid komen uit veldKenmerken, zodat een schermlezer niet
+                alleen hoort dát het veld is afgekeurd maar ook waarom. */}
             <div className="form-group">
               <label className="form-label" htmlFor={wachtwoordId}>
                 {t('resetPassword.newPassword')} *
               </label>
               <input
                 id={wachtwoordId}
-                aria-describedby={errors.password ? `${wachtwoordId}-fout` : undefined}
+                {...veldKenmerken('password', errors.password?.message, `${wachtwoordId}-fout`)}
                 type="password"
-                className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                className={`form-control ${errors.password ? 'has-error' : ''}`}
                 {...register('password', {
                   required: t('errors.required'),
                   minLength: { value: 8, message: t('errors.passwordTooShort', { min: 8 }) },
@@ -182,9 +208,9 @@ export default function ResetPassword() {
               </label>
               <input
                 id={herhalingId}
-                aria-describedby={errors.confirmPassword ? `${herhalingId}-fout` : undefined}
+                {...veldKenmerken('confirmPassword', errors.confirmPassword?.message, `${herhalingId}-fout`)}
                 type="password"
-                className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                className={`form-control ${errors.confirmPassword ? 'has-error' : ''}`}
                 {...register('confirmPassword', {
                   required: t('errors.required'),
                   validate: (value) => value === password || t('errors.passwordMismatch'),

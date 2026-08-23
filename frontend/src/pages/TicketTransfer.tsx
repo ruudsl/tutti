@@ -11,6 +11,7 @@ import {
   getTransferHistory,
 } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useFormValidation, veldKenmerken, type ValidationError } from '../hooks/useFormValidation';
 import { Modal, FormModal } from '../components/Modal';
 import { SkeletonTable } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
@@ -26,6 +27,7 @@ export default function TicketTransferPage() {
   useDocumentTitle('pageTitle.ticketTransfer');
 
   const queryClient = useQueryClient();
+  const { focusFirstError } = useFormValidation();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('transfer');
@@ -107,28 +109,38 @@ export default function TicketTransferPage() {
     });
   };
 
-  const validateForm = (): boolean => {
+  /**
+   * Keurt het formulier en geeft de fouten terug in schermvolgorde.
+   *
+   * Teruggeven in plaats van alleen een ja/nee, omdat focusFirstError de
+   * meldingen nodig heeft: die zet de cursor in het bovenste foute veld en
+   * meldt dringend wát er mis is. Met alleen een boolean weet de aanroeper wel
+   * dat er iets fout is, maar niet waar - en dat is precies wat iemand die het
+   * scherm niet ziet moet horen.
+   */
+  const validateForm = (): ValidationError[] => {
     const errors = {
       recipientEmail: '',
       recipientName: '',
     };
-    let isValid = true;
 
     if (!formData.recipientEmail.trim()) {
       errors.recipientEmail = t('ticketTransfer.validation.emailRequired');
-      isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.recipientEmail)) {
       errors.recipientEmail = t('ticketTransfer.validation.emailInvalid');
-      isValid = false;
     }
 
     if (!formData.recipientName.trim()) {
       errors.recipientName = t('ticketTransfer.validation.nameRequired');
-      isValid = false;
     }
 
     setFormErrors(errors);
-    return isValid;
+
+    // Volgorde zoals de velden op het scherm staan, zodat de cursor naar de
+    // bovenste fout springt.
+    return (['recipientEmail', 'recipientName'] as const)
+      .filter((veld) => errors[veld])
+      .map((veld) => ({ field: veld, message: errors[veld] }));
   };
 
   const openTransferModal = (ticket: TransferableTicket) => {
@@ -139,9 +151,12 @@ export default function TicketTransferPage() {
 
   const handleTransferSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
+    const fouten = validateForm();
+    if (fouten.length === 0) {
       setShowConfirmModal(true);
+      return;
     }
+    focusFirstError(fouten);
   };
 
   const confirmTransfer = () => {
@@ -527,22 +542,26 @@ export default function TicketTransferPage() {
 
           {/* Met de hand gekoppeld: naast label en veld staat hier ook nog een
               foutmelding, en FormField kloont maar één kind. De melding hangt
-              via aria-describedby aan het veld. */}
+              via aria-describedby aan het veld; die koppeling en aria-invalid
+              komen uit veldKenmerken, zodat een schermlezer niet alleen hoort
+              dát het veld is afgekeurd maar ook waarom. veldKenmerken zet ook
+              het name-kenmerk, want daarop zoekt focusFirstError het veld op -
+              een veld met alleen een door useId gemaakt id werd niet gevonden. */}
           <div className="form-group">
             <label className="form-label" htmlFor={emailId}>
               {t('ticketTransfer.recipientEmail')} <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input
               id={emailId}
-              aria-describedby={formErrors.recipientEmail ? `${emailId}-fout` : undefined}
+              {...veldKenmerken('recipientEmail', formErrors.recipientEmail || undefined, `${emailId}-fout`)}
               type="email"
-              className={`form-control ${formErrors.recipientEmail ? 'is-invalid' : ''}`}
+              className={`form-control ${formErrors.recipientEmail ? 'has-error' : ''}`}
               value={formData.recipientEmail}
               onChange={(e) => setFormData({ ...formData, recipientEmail: e.target.value })}
               placeholder={t('ticketTransfer.recipientEmailPlaceholder')}
             />
             {formErrors.recipientEmail && (
-              <div id={`${emailId}-fout`} className="invalid-feedback">
+              <div id={`${emailId}-fout`} className="form-error">
                 {formErrors.recipientEmail}
               </div>
             )}
@@ -554,15 +573,15 @@ export default function TicketTransferPage() {
             </label>
             <input
               id={naamId}
-              aria-describedby={formErrors.recipientName ? `${naamId}-fout` : undefined}
+              {...veldKenmerken('recipientName', formErrors.recipientName || undefined, `${naamId}-fout`)}
               type="text"
-              className={`form-control ${formErrors.recipientName ? 'is-invalid' : ''}`}
+              className={`form-control ${formErrors.recipientName ? 'has-error' : ''}`}
               value={formData.recipientName}
               onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
               placeholder={t('ticketTransfer.recipientNamePlaceholder')}
             />
             {formErrors.recipientName && (
-              <div id={`${naamId}-fout`} className="invalid-feedback">
+              <div id={`${naamId}-fout`} className="form-error">
                 {formErrors.recipientName}
               </div>
             )}

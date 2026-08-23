@@ -1,9 +1,59 @@
 import { useCallback, useRef } from 'react';
 import { useAriaLive } from '../components/AriaLiveRegion';
 
-interface ValidationError {
+export interface ValidationError {
   field: string;
   message: string;
+}
+
+/** Kenmerken die een veld ook voor een schermlezer als afgekeurd markeren. */
+export interface VeldKenmerken {
+  name: string;
+  'aria-invalid': true | undefined;
+  'aria-describedby': string | undefined;
+}
+
+/**
+ * Geeft de kenmerken waarmee een veld afgekeurd in de toegankelijkheidsboom
+ * belandt, klaar om in JSX uit te spreiden.
+ *
+ * Waarom naast setFieldError nog deze kant? Omdat setFieldError de DOM
+ * rechtstreeks beschrijft en React daar overheen tekent. React onthoudt per
+ * element welke kenmerkwaarde het zelf gezet heeft en slaat een schrijfactie
+ * over zodra die waarde niet verandert. Een aria-invalid dat alleen met
+ * setAttribute is neergezet staat dus niet in die boekhouding: React haalt hem
+ * er nooit meer af, en het veld blijft voor een schermlezer afgekeurd nadat de
+ * gebruiker het al lang verbeterd heeft. Hetzelfde geldt voor de klasse
+ * has-error, die bovendien meteen sneuvelt zodra React className een keer
+ * herschrijft.
+ *
+ * Daarom tekent het formulier de foutstatus zelf mee - vanuit react-hook-form
+ * of een eigen useState - en doet focusFirstError daarnaast wat JSX niet kan:
+ * de cursor verplaatsen en de fout dringend melden.
+ *
+ * `name` hoort bij deze kenmerken omdat findFieldElement daarop zoekt. Zonder
+ * name vindt focusFirstError het veld niet en springt de cursor nergens heen;
+ * dat is bij een veld dat alleen een door useId gemaakt id draagt precies wat
+ * er gebeurde.
+ *
+ * @param veld       Naam van het veld, dezelfde die in focusFirstError gebruikt wordt.
+ * @param melding    De foutmelding, of undefined wanneer het veld in orde is.
+ * @param foutId     Het id van het element waar die melding in staat.
+ * @param hulpId     Het id van een hulptekst die bij een goedgekeurd veld hoort.
+ */
+export function veldKenmerken(
+  veld: string,
+  melding: string | undefined,
+  foutId: string,
+  hulpId?: string,
+): VeldKenmerken {
+  return {
+    name: veld,
+    'aria-invalid': melding ? true : undefined,
+    // Een veld dat afgekeurd is hoort ook te vertellen wát er mis is: zonder
+    // deze verwijzing hoort een schermlezer wel "ongeldig", maar niet waarom.
+    'aria-describedby': melding ? foutId : hulpId,
+  };
 }
 
 interface UseFormValidationOptions {
@@ -38,32 +88,37 @@ function findFieldElement(field: string): HTMLElement | null {
  * 2. Announce the error to screen readers via ARIA live regions
  * 3. Optionally scroll to bring the error into view
  *
+ * Let op wie wat bezit. `errors` hierboven is een ref, geen state: het aanpassen
+ * ervan tekent niets opnieuw. De foutenlijst waar het formulier op tekent hoort
+ * dus bij het formulier zelf te blijven (react-hook-form of useState), en deze
+ * hook doet de twee dingen die het tekenen niet kan: de cursor verplaatsen en
+ * de fout dringend melden. Voor het tekenen levert hij veldKenmerken.
+ *
  * @example
  * ```tsx
- * function MyForm() {
- *   const { focusFirstError, setFieldError, clearErrors, errors } = useFormValidation();
+ * function MijnFormulier() {
+ *   const { focusFirstError, veldKenmerken } = useFormValidation();
+ *   const [fouten, setFouten] = useState<Record<string, string>>({});
  *
- *   const handleSubmit = (e) => {
+ *   const verzend = (e) => {
  *     e.preventDefault();
- *     clearErrors();
- *
- *     const validationErrors = validateForm(formData);
- *     if (validationErrors.length > 0) {
- *       focusFirstError(validationErrors);
+ *     const gevonden = valideer(formulierData);
+ *     setFouten(Object.fromEntries(gevonden.map((f) => [f.field, f.message])));
+ *     if (gevonden.length > 0) {
+ *       focusFirstError(gevonden);
  *       return;
  *     }
- *
- *     // Submit form...
+ *     // Opslaan...
  *   };
  *
  *   return (
- *     <form onSubmit={handleSubmit}>
+ *     <form onSubmit={verzend}>
  *       <input
- *         name="email"
- *         aria-invalid={!!errors.email}
- *         aria-describedby={errors.email ? 'email-error' : undefined}
+ *         id="email"
+ *         {...veldKenmerken('email', fouten.email, 'email-fout')}
+ *         className={`form-control ${fouten.email ? 'has-error' : ''}`}
  *       />
- *       {errors.email && <span id="email-error" className="form-error">{errors.email}</span>}
+ *       {fouten.email && <span id="email-fout" className="form-error">{fouten.email}</span>}
  *     </form>
  *   );
  * }
@@ -95,6 +150,13 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
 
       if (element) {
         // Set aria-invalid on the element
+        //
+        // Bewust geen aria-describedby hier: dat kenmerk hoort bij het tekenen
+        // en wordt door veldKenmerken gezet. Wie het hier met setAttribute zou
+        // neerzetten en in clearErrors weer weghaalt, wist ook de verwijzing
+        // die React zelf had getekend - en React schrijft die niet terug zolang
+        // de prop niet verandert. Het veld zou dan permanent zonder
+        // foutmelding-verwijzing achterblijven.
         element.setAttribute('aria-invalid', 'true');
         element.classList.add('has-error');
 
@@ -102,7 +164,16 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
         element.focus({ preventScroll: !scrollToError });
 
         // Scroll into view if needed
-        if (scrollToError) {
+        //
+        // De controle op de functie is geen overdaad. Zolang geen enkele pagina
+        // deze hook aanriep viel het niet op, maar in een omgeving zonder
+        // scrollIntoView - jsdom, en oudere ingebouwde webweergaven - gooit deze
+        // regel. Die uitzondering breekt niet alleen het scrollen af maar de
+        // hele verzendafhandeling eromheen, waardoor react-hook-form zijn
+        // foutenlijst niet meer wegschrijft en de gebruiker helemaal geen
+        // foutmelding te zien krijgt. Precies het tegenovergestelde van wat
+        // deze hook moet doen.
+        if (scrollToError && typeof element.scrollIntoView === 'function') {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
@@ -178,6 +249,9 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
     clearErrors,
     hasError,
     getError,
+    // Zelfde functie als de losse export, zodat een formulier met één aanroep
+    // van deze hook zowel het springen als het tekenen kan regelen.
+    veldKenmerken,
     errors: errorsRef.current,
   };
 }

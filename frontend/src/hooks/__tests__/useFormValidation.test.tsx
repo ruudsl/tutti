@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, screen } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { AriaLiveProvider } from '../../components/AriaLiveRegion';
-import { useFormValidation } from '../useFormValidation';
+import { useFormValidation, veldKenmerken } from '../useFormValidation';
 
 /** Zet een invoerveld in het document en geeft het terug. */
 function veld(kenmerken: Record<string, string>) {
@@ -131,6 +131,25 @@ describe('useFormValidation - naar de eerste fout springen', () => {
     });
 
     expect(email.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+  });
+
+  it('klapt niet in een omgeving die scrollIntoView niet kent', () => {
+    // Niet elke omgeving heeft die functie: jsdom niet, en oudere ingebouwde
+    // webweergaven ook niet. Gooit deze regel, dan breekt niet alleen het
+    // scrollen af maar de hele verzendafhandeling eromheen - en dan krijgt de
+    // gebruiker helemaal geen foutmelding te zien.
+    const email = veld({ name: 'email' });
+    // @ts-expect-error - juist het ontbreken van de functie is wat hier telt.
+    delete Element.prototype.scrollIntoView;
+    const { result } = renderHook(() => useFormValidation());
+
+    expect(() => {
+      act(() => {
+        result.current.focusFirstError([{ field: 'email', message: 'Fout' }]);
+      });
+    }).not.toThrow();
+    expect(email.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(email);
   });
 
   it('scrollt niet wanneer dat is uitgezet', () => {
@@ -280,5 +299,60 @@ describe('useFormValidation - fouten bijhouden', () => {
 
     expect(result.current.hasError('email')).toBe(false);
     expect(result.current.hasError('naam')).toBe(true);
+  });
+});
+
+describe('veldKenmerken - de foutstatus in de toegankelijkheidsboom', () => {
+  it('markeert een afgekeurd veld en wijst naar de melding', () => {
+    // Deze twee horen bij elkaar: aria-invalid zegt dát het veld is afgekeurd,
+    // aria-describedby zegt waarom. Zonder de tweede hoort een schermlezer
+    // alleen "ongeldig" en blijft de melding op het scherm los tekstwerk.
+    expect(veldKenmerken('email', 'Vul een e-mailadres in', 'email-fout')).toEqual({
+      name: 'email',
+      'aria-invalid': true,
+      'aria-describedby': 'email-fout',
+    });
+  });
+
+  it('laat een goedgekeurd veld ongemarkeerd', () => {
+    // undefined en niet false: React laat het kenmerk dan helemaal weg. Een
+    // aria-invalid="false" zou een schermlezer bij elk veld laten melden dat het
+    // geldig is, en dat is ruis.
+    expect(veldKenmerken('email', undefined, 'email-fout')).toEqual({
+      name: 'email',
+      'aria-invalid': undefined,
+      'aria-describedby': undefined,
+    });
+  });
+
+  it('houdt de hulptekst vast zolang het veld in orde is', () => {
+    expect(veldKenmerken('wachtwoord', undefined, 'wachtwoord-fout', 'wachtwoord-hulp')['aria-describedby']).toBe(
+      'wachtwoord-hulp',
+    );
+  });
+
+  it('laat de foutmelding voorgaan op de hulptekst', () => {
+    // Beide voorlezen zou de gebruiker bij een fout eerst de tip te horen geven
+    // die hij net niet gevolgd heeft; de melding is op dat moment het nieuws.
+    expect(veldKenmerken('wachtwoord', 'Te kort', 'wachtwoord-fout', 'wachtwoord-hulp')['aria-describedby']).toBe(
+      'wachtwoord-fout',
+    );
+  });
+
+  it('geeft het name-kenmerk mee waarop focusFirstError het veld terugvindt', () => {
+    // Zonder name valt een veld dat alleen een door useId gemaakt id draagt
+    // (":r3:") buiten het bereik van findFieldElement, en springt de cursor bij
+    // een fout nergens heen.
+    const input = document.createElement('input');
+    const kenmerken = veldKenmerken('recipientEmail', 'Verplicht', 'email-fout');
+    input.setAttribute('name', kenmerken.name);
+    document.body.appendChild(input);
+
+    const { result } = renderHook(() => useFormValidation());
+    act(() => {
+      result.current.focusFirstError([{ field: 'recipientEmail', message: 'Verplicht' }]);
+    });
+
+    expect(document.activeElement).toBe(input);
   });
 });
