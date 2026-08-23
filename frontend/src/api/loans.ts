@@ -90,3 +90,36 @@ export const getTitleLoanHistory = async (titleId: string): Promise<TitleLoanHis
   const { data } = await api.get(`/loans/title/${titleId}/history`);
   return data;
 };
+
+/**
+ * De tellers boven de uitleenlijst en de titels die nog uitgeleend kunnen
+ * worden.
+ *
+ * Deze twee stonden als kale fetch in Loans.tsx, met een eigen token uit
+ * localStorage. Beide routes vragen bovendien om de rol muziekcommissie of
+ * beheerder; wie die niet heeft krijgt een 403, en dat is een antwoord dat je
+ * niet zomaar door res.json() wilt halen.
+ */
+export interface LoanStats {
+  total: number;
+  active: number;
+  overdue: number;
+  returned: number;
+}
+
+export interface LoanableTitle {
+  id: string;
+  title: string;
+  arranger: string | null;
+  active_loans: number;
+}
+
+export const getLoanStats = async (): Promise<LoanStats> => {
+  const { data } = await api.get('/loans/stats');
+  return data;
+};
+
+export const getLoanableTitles = async (search?: string): Promise<LoanableTitle[]> => {
+  const { data } = await api.get('/loans/available-titles', { params: { search } });
+  return Array.isArray(data) ? data : [];
+};

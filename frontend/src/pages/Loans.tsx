@@ -9,9 +9,13 @@ import {
   returnLoan,
   deleteLoan,
   getTitleLoanHistory,
+  getLoanStats,
+  getLoanableTitles,
   type Loan,
   type TitleLoanHistory,
   type LoanHistoryEntry,
+  type LoanStats,
+  type LoanableTitle,
 } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
@@ -21,27 +25,11 @@ import { FormField } from '../components/FormField';
 import { Icon } from '../components/Icon';
 import LoanReceiptPrinter from '../components/LoanReceiptPrinter';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
 const STATUS_COLORS: Record<string, string> = {
   active: 'badge-info',
   overdue: 'badge-danger',
   returned: 'badge-success',
 };
-
-interface LoanStats {
-  total: number;
-  active: number;
-  overdue: number;
-  returned: number;
-}
-
-interface TitleOption {
-  id: string;
-  title: string;
-  arranger: string | null;
-  active_loans: number;
-}
 
 export default function Loans() {
   const { t } = useTranslation();
@@ -53,7 +41,7 @@ export default function Loans() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showNewLoanModal, setShowNewLoanModal] = useState(false);
   const [titleSearch, setTitleSearch] = useState('');
-  const [selectedTitle, setSelectedTitle] = useState<TitleOption | null>(null);
+  const [selectedTitle, setSelectedTitle] = useState<LoanableTitle | null>(null);
   const [borrowerName, setBorrowerName] = useState('');
   const [borrowerEmail, setBorrowerEmail] = useState('');
   const [borrowerOrganization, setBorrowerOrganization] = useState('');
@@ -77,25 +65,13 @@ export default function Loans() {
   // Fetch stats
   const { data: stats } = useQuery<LoanStats>({
     queryKey: ['loan-stats'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/loans/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.json();
-    },
+    queryFn: () => getLoanStats(),
   });
 
   // Search titles
-  const { data: titleOptions = [] } = useQuery<TitleOption[]>({
+  const { data: titleOptions = [] } = useQuery<LoanableTitle[]>({
     queryKey: ['available-titles', titleSearch],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/loans/available-titles?search=${encodeURIComponent(titleSearch)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.json();
-    },
+    queryFn: () => getLoanableTitles(titleSearch),
     enabled: showNewLoanModal,
   });
 

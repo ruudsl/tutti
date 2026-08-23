@@ -582,20 +582,80 @@ export const batchExportByTitle = async (title: string, arranger?: string): Prom
   window.URL.revokeObjectURL(url);
 };
 
+/**
+ * De bestandsnaam uit een Content-Disposition-kopregel.
+ *
+ * Deze functie stond al in src/api/music.ts, maar die module wordt niet
+ * bereikt: `import ... from '../api'` komt bij dit bestand uit, niet bij de map
+ * ernaast. De reparatie draaide daardoor nergens. Hier staat hij nu ook, tot
+ * de twee lagen zijn samengevoegd.
+ *
+ * Express stuurt bij een naam met niet-ASCII tekens twee vormen mee: `filename`
+ * met een vraagteken op de plek van elk bijzonder teken, en `filename*` met de
+ * echte naam in UTF-8 (RFC 5987). Wie alleen naar `filename` keek, bood
+ * "Fr?hlingsstimmen.pdf" aan - een naam die Windows niet eens accepteert.
+ * `filename*` wint daarom, met `filename` als terugval.
+ */
+const leesBestandsnaam = (contentDisposition: string | undefined, standaard = 'muziekstuk.pdf'): string => {
+  if (!contentDisposition) return standaard;
+
+  const gecodeerd = contentDisposition.match(/filename\*=\s*[^']*'[^']*'([^;]+)/i);
+  if (gecodeerd) {
+    try {
+      return decodeURIComponent(gecodeerd[1].trim());
+    } catch {
+      // Een half gecodeerde naam mag de download niet tegenhouden; val terug
+      // op de gewone vorm hieronder.
+    }
+  }
+
+  const gewoon = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/i);
+  if (gewoon) return gewoon[1] || gewoon[2];
+
+  return standaard;
+};
+
 export const downloadMusicPiece = async (id: string): Promise<void> => {
   const response = await api.get(`/music-pieces/${id}/download`, {
     responseType: 'blob',
   });
 
-  // Get filename from Content-Disposition header or use default
-  const contentDisposition = response.headers['content-disposition'];
-  let filename = 'muziekstuk.pdf';
-  if (contentDisposition) {
-    const match = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/);
-    if (match) filename = match[1] || match[2];
-  }
+  const filename = leesBestandsnaam(response.headers['content-disposition']);
 
   // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+/**
+ * De pdf van een stuk als blob, voor de ingebouwde bladmuziekweergave.
+ *
+ * `downloadMusicPiece` hiernaast start een download; deze geeft alleen de
+ * inhoud terug, zodat de aanroeper er zelf een blob-adres van kan maken. Stond
+ * als kale fetch in MyMusic.tsx.
+ */
+export const getMusicPieceBlob = async (id: string): Promise<Blob> => {
+  const response = await api.get(`/music-pieces/${id}/download`, { responseType: 'blob' });
+  return response.data;
+};
+
+/**
+ * Alle stukken van een muzieklijst in één zip.
+ *
+ * Stond als kale fetch in MyMusic.tsx, met een eigen regex voor de
+ * bestandsnaam die `filename*` niet kende. Hier loopt hij via dezelfde lezer
+ * als de andere downloads.
+ */
+export const downloadMusicListZip = async (listId: string): Promise<void> => {
+  const response = await api.get(`/music-lists/${listId}/download-zip`, { responseType: 'blob' });
+
+  const filename = leesBestandsnaam(response.headers['content-disposition'], 'muziek.zip');
   const url = window.URL.createObjectURL(new Blob([response.data]));
   const link = document.createElement('a');
   link.href = url;
@@ -740,13 +800,17 @@ export const getGenres = async (): Promise<Genre[]> => {
   return data;
 };
 
-export const createGenre = async (name: string): Promise<{ id: string }> => {
-  const { data } = await api.post('/genres', { name });
+// De hoofdgenre-parameter stond alleen in src/api/genres.ts, en die module
+// wordt niet bereikt. De aanroepers geven hem op dit moment nog niet mee, dus
+// er ging geen gegeven verloren - maar zodra de twee lagen samengaan moeten ze
+// hetzelfde doen, anders verdwijnt de mogelijkheid alsnog.
+export const createGenre = async (name: string, parentId?: string): Promise<{ id: string }> => {
+  const { data } = await api.post('/genres', { name, parentId });
   return data;
 };
 
-export const updateGenre = async (id: string, name: string): Promise<void> => {
-  await api.put(`/genres/${id}`, { name });
+export const updateGenre = async (id: string, name: string, parentId?: string | null): Promise<void> => {
+  await api.put(`/genres/${id}`, { name, parentId });
 };
 
 export const deleteGenre = async (id: string): Promise<void> => {
@@ -919,11 +983,56 @@ export const deleteLoan = async (id: string): Promise<void> => {
   await api.delete(`/loans/${id}`);
 };
 
+/**
+ * De tellers boven de uitleenlijst en de titels die nog uitgeleend kunnen
+ * worden.
+ *
+ * Deze twee stonden als kale fetch in Loans.tsx, met een eigen token uit
+ * localStorage. Beide routes vragen bovendien om de rol muziekcommissie of
+ * beheerder; wie die niet heeft krijgt een 403, en dat is een antwoord dat je
+ * niet zomaar door res.json() wilt halen.
+ */
+export interface LoanStats {
+  total: number;
+  active: number;
+  overdue: number;
+  returned: number;
+}
+
+export interface LoanableTitle {
+  id: string;
+  title: string;
+  arranger: string | null;
+  active_loans: number;
+}
+
+export const getLoanStats = async (): Promise<LoanStats> => {
+  const { data } = await api.get('/loans/stats');
+  return data;
+};
+
+export const getLoanableTitles = async (search?: string): Promise<LoanableTitle[]> => {
+  const { data } = await api.get('/loans/available-titles', { params: { search } });
+  return Array.isArray(data) ? data : [];
+};
+
 // Activity Log (Statistieken)
 export interface ActivityStats {
   topPieces: { id: string; title: string; arranger: string | null; count: number }[];
   recentActivity: { date: string; downloads: number; views: number }[];
   userActivity: { id: string; name: string; downloads: number; views: number }[];
+  // `totals` en `period` ontbraken hier, terwijl de server ze wél stuurt
+  // (backend/src/routes/activity.ts, GET /stats). Het dashboard had ze nodig
+  // en haalde deze route daarom met een kale fetch op, waar alles `any` is en
+  // een verkeerde veldnaam dus niemand opvalt.
+  totals: {
+    total_activities: number;
+    active_users: number;
+    total_downloads: number;
+    total_views: number;
+  };
+  /** De gekozen periode in dagen; standaard 30. */
+  period: number;
 }
 
 export const getActivityStats = async (period?: string): Promise<ActivityStats> => {
@@ -2197,6 +2306,32 @@ export const getRecentActivity = async (
     entityName: regel.entity_name ?? undefined,
     createdAt: regel.created_at,
   }));
+};
+
+/**
+ * Een regel uit de activiteitenfeed, zoals de server hem stuurt: met de
+ * kolomnamen uit de database. Deze stond als los type in Statistics.tsx, dat
+ * de route met een kale fetch ophaalde. Hier hoort hij, naast de functie die
+ * hem oplevert.
+ */
+export interface ActivityFeedItem {
+  id: string;
+  action_type: string;
+  entity_type: string;
+  entity_id: string;
+  created_at: string;
+  user_name: string;
+  entity_name: string | null;
+}
+
+/**
+ * De ruwe feed. `getRecentActivity` hierboven gebruikt dezelfde route maar zet
+ * de velden om naar camelCase en houdt er minder over; wie de hele regel wil,
+ * inclusief wie de handeling deed, heeft deze nodig.
+ */
+export const getActivityFeed = async (limit: number = 20): Promise<ActivityFeedItem[]> => {
+  const { data } = await api.get('/activity/feed', { params: { limit } });
+  return Array.isArray(data) ? data : [];
 };
 
 // ==================== SEATING (ORKEST OPSTELLING) ====================

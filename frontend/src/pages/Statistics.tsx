@@ -4,31 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-interface ActivityStats {
-  topPieces: { id: string; title: string; arranger: string | null; count: number }[];
-  recentActivity: { date: string; downloads: number; views: number }[];
-  userActivity: { id: string; name: string; downloads: number; views: number }[];
-  totals: {
-    total_activities: number;
-    active_users: number;
-    total_downloads: number;
-    total_views: number;
-  };
-  period: number;
-}
-
-interface ActivityFeedItem {
-  id: string;
-  action_type: string;
-  entity_type: string;
-  entity_id: string;
-  created_at: string;
-  user_name: string;
-  entity_name: string | null;
-}
+import { getActivityStats, getActivityFeed, type ActivityStats, type ActivityFeedItem } from '../api';
 
 /** Lightweight vertical bar chart for activity per day */
 function ActivityBarChart({
@@ -287,25 +263,13 @@ export default function Statistics() {
   // Fetch statistics
   const { data: stats, isLoading: statsLoading } = useQuery<ActivityStats>({
     queryKey: ['activity-stats', period],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/activity/stats?period=${period}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.json();
-    },
+    queryFn: () => getActivityStats(period),
   });
 
   // Fetch activity feed
   const { data: feed = [], isLoading: feedLoading } = useQuery<ActivityFeedItem[]>({
     queryKey: ['activity-feed'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/activity/feed?limit=20`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.json();
-    },
+    queryFn: () => getActivityFeed(20),
   });
 
   const formatDateTime = (dateStr: string) => {

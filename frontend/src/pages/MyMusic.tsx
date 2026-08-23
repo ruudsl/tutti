@@ -2,7 +2,14 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity } from '../api';
+import {
+  getMyMusicLists,
+  getMusicList,
+  downloadMusicPiece,
+  downloadMusicListZip,
+  getMusicPieceBlob,
+  logActivity,
+} from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -13,8 +20,6 @@ import { ReportIssueModal } from '../components/ReportIssueModal';
 import { PdfViewer } from '../components/PdfViewer';
 import { cacheListPdfs, isPdfCached, getCachedPdf } from '../lib/pdfCache';
 import { Icon } from '../components/Icon';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 interface TitleGroup {
   title: string;
@@ -163,12 +168,10 @@ export default function MyMusic() {
       if (cachedResponse) {
         return cachedResponse.blob();
       }
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/music-pieces/${viewingPiece.id}/download`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error('Failed to load PDF');
-      return res.blob();
+      // De cache hierboven blijft de eerste bron; alleen het ophalen erna
+      // liep buiten de api-laag om, en dus ook buiten de afhandeling van een
+      // verlopen sessie.
+      return getMusicPieceBlob(viewingPiece.id);
     };
 
     loadPdf()
@@ -245,20 +248,7 @@ export default function MyMusic() {
     if (!listId) return;
     setDownloadingAll(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/music-lists/${listId}/download-zip`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!response.ok) throw new Error('Download failed');
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const contentDisposition = response.headers.get('Content-Disposition');
-      const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
-      a.download = filenameMatch ? filenameMatch[1] : 'muziek.zip';
-      a.href = url;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadMusicListZip(listId);
     } catch (error) {
       console.error('Error downloading all:', error);
       showError(t('errors.generic'));

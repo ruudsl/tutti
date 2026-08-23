@@ -13,8 +13,7 @@
 
 import { useEffect, useState } from 'react';
 import { STORAGE_KEYS } from './constants';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import api from '../api/client';
 
 /** Cache slightly under the server-side expiry of 5 minutes. */
 const TOKEN_CACHE_MS = 4 * 60 * 1000;
@@ -36,18 +35,19 @@ function getFreshCachedToken(): string | null {
 }
 
 async function requestDownloadToken(): Promise<string> {
+  // De controle op een aanwezige token blijft staan: zonder token heeft een
+  // aanvraag geen zin, en zo blijft de melding hier hetzelfde als voorheen.
   const authToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
   if (!authToken) {
     throw new Error('Not authenticated');
   }
-  const response = await fetch(`${API_BASE}/download-token`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${authToken}` },
-  });
-  if (!response.ok) {
-    throw new Error('Failed to obtain download token');
-  }
-  const data = (await response.json()) as { token: string };
+  // Dit was een kale fetch met de token er met de hand bij. Daarmee ging deze
+  // aanvraag langs client.ts heen, en dus langs de afhandeling van een 401.
+  // Juist hier viel dat op een vervelende manier uit: useDownloadToken slikt
+  // een fout bewust in ("callers render their fallback"), dus een verlopen
+  // sessie liet alle pasfoto's stilletjes terugvallen op initialen in plaats
+  // van de gebruiker naar het inlogscherm te sturen.
+  const { data } = await api.post<{ token: string }>('/download-token');
   return data.token;
 }
 

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { showSuccess, showError, toast } from '../utils/toast';
 import { Icon } from './Icon';
 import { isIndexedDBAvailable } from '../lib/offlineStorage';
+import { getOfflineTickets, syncOfflineScans } from '../api/ticket-scanning';
+import { validateTicket } from '../api/tickets';
 
 export interface OfflineScannerProps {
   concertId: string;
@@ -162,14 +164,7 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
 
     setIsDownloading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/concerts/${concertId}/tickets/offline-sync`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to download tickets');
-
-      const data = await response.json();
+      const data = await getOfflineTickets(concertId);
 
       if (!dbRef.current) throw new Error('Database not initialized');
 
@@ -272,29 +267,36 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
 
     if (isOnline) {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`/api/tickets/validate`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ qrCode: cleanCode, concertId }),
-        });
-
-        const data = await response.json();
-        result = { valid: data.valid, status: data.status, ticket: data.ticket, message: data.message };
-
-        if (data.valid) {
-          await fetch(`/api/tickets/scan`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ qrCode: cleanCode }),
-          });
-        }
+        // Dit deed twee aanroepen: '/tickets/validate' om te controleren en
+        // '/tickets/scan' om af te stempelen. Geen van beide bestaat aan de
+        // serverkant. De route die er wél is, POST /tickets/:code/validate,
+        // doet allebei in één keer - controleren en meteen als gebruikt
+        // markeren - dus die tweede aanroep is niet alleen overbodig, hij was
+        // er nooit.
+        //
+        // Daar kwam bij dat `response.ok` niet gecontroleerd werd: het
+        // antwoord van de 404 werd uitgelezen alsof het een scanuitslag was,
+        // en de persoon aan de deur kreeg een lége foutmelding. Er werd ook
+        // geen fout gegooid, dus de terugval hieronder sloeg over - terwijl
+        // die er juist is voor een wegvallend netwerk.
+        const data = await validateTicket(cleanCode, concertId);
+        result = {
+          valid: data.valid,
+          // De server kent meer uitkomsten dan dit scherm toont; wat hier niet
+          // bij past valt terug op "niet gevonden", zoals voorheen ook gebeurde
+          // voor alles wat geen 'valid' of 'used' was.
+          status: data.status === 'valid' || data.status === 'used' ? data.status : 'not_found',
+          ticket: data.ticket
+            ? {
+                qrCode: data.ticket.code,
+                buyerName: data.ticket.buyerName,
+                ticketType: data.ticket.ticketType,
+                status: data.ticket.usedAt ? 'used' : 'valid',
+                usedAt: data.ticket.usedAt,
+              }
+            : undefined,
+          message: data.message,
+        };
       } catch {
         result = validateTicketOffline(cleanCode);
         markTicketUsedLocally(cleanCode);
@@ -326,17 +328,7 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
 
     setIsSyncing(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/concerts/${concertId}/tickets/sync-offline-scans`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ scans: pendingScans }),
-      });
-
-      if (!response.ok) throw new Error('Sync failed');
+      await syncOfflineScans(concertId, pendingScans);
 
       if (dbRef.current) {
         const tx = dbRef.current.transaction(SCANS_STORE, 'readwrite');

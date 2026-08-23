@@ -20,6 +20,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 
 /**
+ * De tokenaanvraag liep als kale `fetch`, en dat bootste dit bestand ook na.
+ * Sinds hij via de gedeelde axios-instantie gaat, hoort de nabootsing daar te
+ * zitten. Het object komt uit `vi.hoisted` zodat het dezelfde identiteit houdt
+ * over de `vi.resetModules()` in `verseModule()` heen - anders kijkt elke test
+ * naar een andere nepfunctie dan de module gebruikt.
+ *
+ * Dat de Authorization-kop erop komt, wordt niet meer hier getoetst: dat is nu
+ * het werk van de request-interceptor in client.ts, en daar staan eigen tests
+ * voor in src/__tests__/api-interceptors.test.ts.
+ */
+const { nepClient } = vi.hoisted(() => ({ nepClient: { post: vi.fn() } }));
+vi.mock('../../api/client', () => ({ default: nepClient, api: nepClient }));
+
+/**
  * Laadt de module opnieuw in.
  *
  * De cache staat in modulevariabelen; zonder deze stap lekt het token van de
@@ -30,12 +44,15 @@ async function verseModule() {
   return import('../downloadUrl');
 }
 
-/** Een fetch die telkens hetzelfde token teruggeeft. */
-function nepFetch(token = 'kort-token') {
-  return vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ token }),
-  });
+/** Een aanvraag die telkens hetzelfde token teruggeeft. */
+function nepPost(token = 'kort-token') {
+  return vi.fn().mockResolvedValue({ data: { token } });
+}
+
+/** Zet de nepaanvraag klaar en geeft hem terug, zodat je erop kunt toetsen. */
+function zetPost<T extends { (...args: never[]): unknown }>(post: T): T {
+  nepClient.post = post as unknown as typeof nepClient.post;
+  return post;
 }
 
 beforeEach(() => {
@@ -54,63 +71,57 @@ afterEach(() => {
 
 describe('getDownloadToken', () => {
   it('vraagt het token op met het gewone token als bewijs', async () => {
-    const fetch = nepFetch();
-    vi.stubGlobal('fetch', fetch);
+    const post = zetPost(nepPost());
     const { getDownloadToken } = await verseModule();
 
     await expect(getDownloadToken()).resolves.toBe('kort-token');
 
-    expect(fetch).toHaveBeenCalledTimes(1);
-    const [url, opties] = fetch.mock.calls[0];
-    expect(url).toBe('/api/download-token');
-    expect(opties.method).toBe('POST');
-    expect(opties.headers.Authorization).toBe('Bearer jwt-van-de-gebruiker');
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post.mock.calls[0][0]).toBe('/download-token');
   });
 
   it('weigert zonder ingelogde gebruiker', async () => {
     // Anders gaat er een POST zonder bewijs de deur uit en krijgt de gebruiker
     // een onbegrijpelijke fout in plaats van het inlogscherm.
     localStorage.removeItem('token');
-    const fetch = nepFetch();
-    vi.stubGlobal('fetch', fetch);
+    const post = zetPost(nepPost());
     const { getDownloadToken } = await verseModule();
 
     await expect(getDownloadToken()).rejects.toThrow('Not authenticated');
-    expect(fetch).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
   });
 
   it('gebruikt het token uit de cache bij een tweede aanvraag', async () => {
     // Dit is de hele reden dat de cache bestaat: een ledenlijst met veertig
     // pasfoto's mag geen veertig POST's veroorzaken.
-    const fetch = nepFetch();
-    vi.stubGlobal('fetch', fetch);
+    const post = zetPost(nepPost());
     const { getDownloadToken } = await verseModule();
 
     await getDownloadToken();
     await getDownloadToken();
     await getDownloadToken();
 
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledTimes(1);
   });
 
   it('laat gelijktijdige aanvragers één aanvraag delen', async () => {
     // Veertig afbeeldingen die tegelijk renderen vragen tegelijk om een token.
     // Zonder gedeelde aanvraag gaan er veertig POST's tegelijk uit.
-    let losmaken: (waarde: { ok: boolean; json: () => Promise<{ token: string }> }) => void = () => {};
-    const fetch = vi.fn(
+    let losmaken: (waarde: { data: { token: string } }) => void = () => {};
+    const post = vi.fn(
       () =>
         new Promise((resolve) => {
           losmaken = resolve;
         }),
     );
-    vi.stubGlobal('fetch', fetch);
+    zetPost(post);
     const { getDownloadToken } = await verseModule();
 
     const drie = Promise.all([getDownloadToken(), getDownloadToken(), getDownloadToken()]);
-    losmaken({ ok: true, json: async () => ({ token: 'gedeeld-token' }) });
+    losmaken({ data: { token: 'gedeeld-token' } });
 
     await expect(drie).resolves.toEqual(['gedeeld-token', 'gedeeld-token', 'gedeeld-token']);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledTimes(1);
   });
 
   it('haalt een nieuw token op zodra het oude bijna verlopen is', async () => {
@@ -118,50 +129,54 @@ describe('getDownloadToken', () => {
     // aan. Rekt de cache verder op, dan worden alle afbeeldingen op een scherm
     // stille 401's - lege vlakken zonder foutmelding.
     vi.useFakeTimers();
-    const fetch = nepFetch();
-    vi.stubGlobal('fetch', fetch);
+    const post = zetPost(nepPost());
     const { getDownloadToken } = await verseModule();
 
     await getDownloadToken();
     vi.advanceTimersByTime(3 * 60 * 1000);
     await getDownloadToken();
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledTimes(1);
 
     vi.advanceTimersByTime(2 * 60 * 1000);
     await getDownloadToken();
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(post).toHaveBeenCalledTimes(2);
   });
 
   it('meldt een weigering van de server als fout', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+    // Een 401 komt nu als afwijzing binnen in plaats van als antwoord met
+    // ok:false; de gedeelde interceptor handelt hem af en gooit door.
+    const afwijzing = Object.assign(new Error('Request failed with status code 401'), {
+      response: { status: 401 },
+    });
+    zetPost(vi.fn().mockRejectedValue(afwijzing));
     const { getDownloadToken } = await verseModule();
 
-    await expect(getDownloadToken()).rejects.toThrow('Failed to obtain download token');
+    await expect(getDownloadToken()).rejects.toThrow();
   });
 
   it('probeert het na een mislukte aanvraag opnieuw', async () => {
     // De mislukte aanvraag mag niet als "er loopt al iets" blijven staan; dan
     // wacht elke volgende afbeelding op een aanvraag die nooit meer komt.
-    const fetch = vi
+    const post = vi
       .fn()
       .mockRejectedValueOnce(new Error('netwerk weg'))
-      .mockResolvedValue({ ok: true, json: async () => ({ token: 'tweede-poging' }) });
-    vi.stubGlobal('fetch', fetch);
+      .mockResolvedValue({ data: { token: 'tweede-poging' } });
+    zetPost(post);
     const { getDownloadToken } = await verseModule();
 
     await expect(getDownloadToken()).rejects.toThrow('netwerk weg');
     await expect(getDownloadToken()).resolves.toBe('tweede-poging');
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(post).toHaveBeenCalledTimes(2);
   });
 
   it('bewaart een mislukte aanvraag niet als geldig token', async () => {
-    const fetch = vi.fn().mockRejectedValue(new Error('netwerk weg'));
-    vi.stubGlobal('fetch', fetch);
+    const post = vi.fn().mockRejectedValue(new Error('netwerk weg'));
+    zetPost(post);
     const { getDownloadToken } = await verseModule();
 
     await expect(getDownloadToken()).rejects.toThrow();
     await expect(getDownloadToken()).rejects.toThrow();
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(post).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -171,7 +186,7 @@ describe('getDownloadToken', () => {
 
 describe('withDownloadToken', () => {
   it('hangt het token achter een adres zonder vraagteken', async () => {
-    vi.stubGlobal('fetch', nepFetch());
+    zetPost(nepPost());
     const { withDownloadToken } = await verseModule();
 
     await expect(withDownloadToken('/api/pdf-tools/download/stuk.pdf')).resolves.toBe(
@@ -182,7 +197,7 @@ describe('withDownloadToken', () => {
   it('hangt het token met een &-teken achter een adres dat al vragen stelt', async () => {
     // Met een tweede vraagteken raakt de hele parameterreeks zoek en krijgt de
     // gebruiker het verkeerde bestand of een 404.
-    vi.stubGlobal('fetch', nepFetch());
+    zetPost(nepPost());
     const { withDownloadToken } = await verseModule();
 
     await expect(withDownloadToken('/api/export?soort=pdf')).resolves.toBe('/api/export?soort=pdf&token=kort-token');
@@ -191,7 +206,7 @@ describe('withDownloadToken', () => {
   it('maakt tekens in het token veilig voor een adres', async () => {
     // Een token met een + of een / erin verandert zonder codering van waarde
     // zodra de server hem uitleest.
-    vi.stubGlobal('fetch', nepFetch('a+b/c=d&e'));
+    zetPost(nepPost('a+b/c=d&e'));
     const { withDownloadToken } = await verseModule();
 
     const adres = await withDownloadToken('/api/bestand');
@@ -201,14 +216,13 @@ describe('withDownloadToken', () => {
   });
 
   it('doet geen tweede aanvraag voor een tweede adres', async () => {
-    const fetch = nepFetch();
-    vi.stubGlobal('fetch', fetch);
+    const post = zetPost(nepPost());
     const { withDownloadToken } = await verseModule();
 
     await withDownloadToken('/api/een');
     await withDownloadToken('/api/twee');
 
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledTimes(1);
   });
 
   it('zet het token achter een anker in plaats van ervoor', async () => {
@@ -216,7 +230,7 @@ describe('withDownloadToken', () => {
     // een pdf-lezer) komt de parameter achter het anker terecht en leest de
     // server hem niet. Geen aanroeper doet dat nu, maar wie het probeert
     // krijgt een 401 zonder duidelijke oorzaak.
-    vi.stubGlobal('fetch', nepFetch());
+    zetPost(nepPost());
     const { withDownloadToken } = await verseModule();
 
     await expect(withDownloadToken('/api/bestand.pdf#page=3')).resolves.toBe(
@@ -231,15 +245,14 @@ describe('withDownloadToken', () => {
 
 describe('clearDownloadTokenCache', () => {
   it('dwingt een nieuwe aanvraag af', async () => {
-    const fetch = nepFetch();
-    vi.stubGlobal('fetch', fetch);
+    const post = zetPost(nepPost());
     const { getDownloadToken, clearDownloadTokenCache } = await verseModule();
 
     await getDownloadToken();
     clearDownloadTokenCache();
     await getDownloadToken();
 
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(post).toHaveBeenCalledTimes(2);
   });
 
   it('laat een aanvraag die tijdens het uitloggen loopt niet alsnog in de cache belanden', async () => {
@@ -249,8 +262,8 @@ describe('clearDownloadTokenCache', () => {
     // in de cache - vier minuten lang. Logt de volgende binnen die tijd in,
     // dan haalt zijn ledenlijst de pasfoto's op met het token van zijn
     // voorganger, en aan de serverkant is dat niet van echt te onderscheiden.
-    let losmaken: (waarde: { ok: boolean; json: () => Promise<{ token: string }> }) => void = () => {};
-    const fetch = vi
+    let losmaken: (waarde: { data: { token: string } }) => void = () => {};
+    const post = vi
       .fn()
       .mockImplementationOnce(
         () =>
@@ -258,17 +271,17 @@ describe('clearDownloadTokenCache', () => {
             losmaken = resolve;
           }),
       )
-      .mockResolvedValue({ ok: true, json: async () => ({ token: 'token-van-de-nieuwe' }) });
-    vi.stubGlobal('fetch', fetch);
+      .mockResolvedValue({ data: { token: 'token-van-de-nieuwe' } });
+    zetPost(post);
     const { getDownloadToken, clearDownloadTokenCache } = await verseModule();
 
     const lopend = getDownloadToken();
     clearDownloadTokenCache();
-    losmaken({ ok: true, json: async () => ({ token: 'token-van-de-vorige' }) });
+    losmaken({ data: { token: 'token-van-de-vorige' } });
     await lopend;
 
     await expect(getDownloadToken()).resolves.toBe('token-van-de-nieuwe');
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(post).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -280,7 +293,7 @@ describe('useDownloadToken', () => {
   it('begint met niets en levert het token zodra het binnen is', async () => {
     // Tot die tijd horen aanroepers hun terugval te tonen (initialen in plaats
     // van een pasfoto), niet een kapot afbeeldingsicoon.
-    vi.stubGlobal('fetch', nepFetch());
+    zetPost(nepPost());
     const { useDownloadToken } = await verseModule();
 
     const { result } = renderHook(() => useDownloadToken());
@@ -292,7 +305,7 @@ describe('useDownloadToken', () => {
   it('heeft het token meteen als het al in de cache staat', async () => {
     // Anders knipperen bij elke paginawissel alle pasfoto's een keer weg,
     // omdat elke <img> een nieuwe src krijgt.
-    vi.stubGlobal('fetch', nepFetch());
+    zetPost(nepPost());
     const { useDownloadToken, getDownloadToken } = await verseModule();
     await getDownloadToken();
 
@@ -304,7 +317,7 @@ describe('useDownloadToken', () => {
   it('blijft op niets staan als het ophalen mislukt', async () => {
     // Een mislukte tokenaanvraag mag geen foutscherm opleveren; de pagina moet
     // gewoon zonder pasfoto's door.
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('netwerk weg')));
+    zetPost(vi.fn().mockRejectedValue(new Error('netwerk weg')));
     const { useDownloadToken } = await verseModule();
 
     const { result } = renderHook(() => useDownloadToken());
@@ -316,8 +329,7 @@ describe('useDownloadToken', () => {
   });
 
   it('doet één aanvraag voor twee tegelijk getoonde onderdelen', async () => {
-    const fetch = nepFetch();
-    vi.stubGlobal('fetch', fetch);
+    const post = zetPost(nepPost());
     const { useDownloadToken } = await verseModule();
 
     const eerste = renderHook(() => useDownloadToken());
@@ -325,13 +337,13 @@ describe('useDownloadToken', () => {
 
     await waitFor(() => expect(eerste.result.current).toBe('kort-token'));
     await waitFor(() => expect(tweede.result.current).toBe('kort-token'));
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledTimes(1);
   });
 
   it('zet niets meer klaar nadat het onderdeel uit beeld is', async () => {
     // React klaagt anders over een toestandswijziging op een verdwenen
     // onderdeel, en bij een lijst die snel scrollt gebeurt dat voortdurend.
-    let losmaken: (waarde: { ok: boolean; json: () => Promise<{ token: string }> }) => void = () => {};
+    let losmaken: (waarde: { data: { token: string } }) => void = () => {};
     vi.stubGlobal(
       'fetch',
       vi.fn(
@@ -348,7 +360,7 @@ describe('useDownloadToken', () => {
     unmount();
 
     await act(async () => {
-      losmaken({ ok: true, json: async () => ({ token: 'te-laat' }) });
+      losmaken({ data: { token: 'te-laat' } });
       await Promise.resolve();
     });
 
