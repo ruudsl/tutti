@@ -138,16 +138,21 @@ export default function SeatSelector({
   // Handle seat click
   const handleSeatClick = useCallback(
     (seat: VenueSeat) => {
-      if (seat.status === 'sold' || seat.status === 'blocked' || seat.status === 'reserved') {
-        return;
-      }
-
       const isSelected = selectedSeats.includes(seat.id);
 
       if (isSelected) {
-        // Deselect seat
+        // Loslaten mag altijd, ook als de stoel intussen verkocht, gereserveerd
+        // of geblokkeerd is. Twee bezoekers konden dezelfde stoel kiezen; de
+        // server weigert dat nu, en dan komt een stoel die hier al gekozen was
+        // terug als verkocht. Stond de statusbewaking vóór deze tak, dan zat
+        // die stoel muurvast in de keuze: noch de plattegrond noch het kruisje
+        // in de samenvatting kreeg hem er nog uit, terwijl hij wel in het
+        // totaalbedrag meetelde.
         onSeatSelect(selectedSeats.filter((id) => id !== seat.id));
       } else {
+        if (seat.status === 'sold' || seat.status === 'blocked' || seat.status === 'reserved') {
+          return;
+        }
         // Check max seats limit
         if (selectedSeats.length >= maxSeats) {
           return;

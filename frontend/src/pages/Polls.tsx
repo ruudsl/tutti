@@ -31,6 +31,7 @@ import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
 import { useConfirm } from '../hooks/useConfirm';
+import { useDebounce } from '../hooks/useDebounce';
 
 const STATUS_ICONS: Record<PollStatus, IconName> = {
   draft: 'fileText',
@@ -68,12 +69,23 @@ export default function Polls() {
 
   const canCreate = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
-  const { data: polls = [], isLoading } = useQuery({
-    queryKey: ['polls', filterStatus, searchTerm],
+  // Zonder ontdubbeling vuurt elke toetsaanslag in het zoekveld een eigen
+  // verzoek af: `searchTerm` zat rechtstreeks in de queryKey. "concert"
+  // intypen kostte er zeven. Ontdubbeld blijft alleen de term over waar de
+  // gebruiker bij stilvalt. Dezelfde reparatie staat op de concertenpagina.
+  const gedebouncedeZoekterm = useDebounce(searchTerm, 300);
+
+  const {
+    data: polls = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['polls', filterStatus, gedebouncedeZoekterm],
     queryFn: () =>
       getPolls({
         status: filterStatus || undefined,
-        search: searchTerm || undefined,
+        search: gedebouncedeZoekterm || undefined,
       }),
   });
 
@@ -168,6 +180,20 @@ export default function Polls() {
       {/* Polls list */}
       {isLoading ? (
         <SkeletonTable rows={5} columns={5} />
+      ) : isError ? (
+        // Een mislukte aanvraag gaf hier de lege staat: "er zijn geen
+        // peilingen". Dat is niet van een echt lege lijst te onderscheiden, en
+        // de gebruiker heeft geen enkele reden om het opnieuw te proberen.
+        <div className="card bg-base-200 p-8 text-center space-y-4">
+          <div className="alert alert-danger justify-center">
+            <Icon name="warning" size={16} />
+            <span>{t('common.error')}</span>
+          </div>
+          <button className="btn btn-secondary gap-2 mx-auto" onClick={() => refetch()}>
+            <Icon name="refresh" size={16} />
+            {t('common.retry')}
+          </button>
+        </div>
       ) : filteredPolls.length === 0 ? (
         <div className="card bg-base-200 p-8 text-center">
           <Icon name="clipboard" size={48} className="mx-auto opacity-50 mb-4" />

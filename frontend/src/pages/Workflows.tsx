@@ -70,7 +70,12 @@ export default function Workflows() {
     actions: [{ actionType: 'send_notification', actionOrder: 0, config: {} }],
   });
 
-  const { data: workflows = [], isLoading } = useQuery({
+  const {
+    data: workflows = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['workflows'],
     queryFn: getWorkflows,
   });
@@ -155,6 +160,28 @@ export default function Workflows() {
       <div className="page-container">
         <h1>{t('workflows.title')}</h1>
         <SkeletonTable rows={5} columns={4} />
+      </div>
+    );
+  }
+
+  /*
+    Zonder deze tak valt een storing samen met een lege lijst: `useQuery` geeft
+    bij een mislukt verzoek de standaardwaarde terug, en de pagina meldde dan
+    "nog geen workflows gedefinieerd". Een beheerder concludeert daaruit dat
+    zijn automatiseringen weg zijn, terwijl ze er gewoon staan.
+  */
+  if (isError) {
+    return (
+      <div className="page-container">
+        <h1>{t('workflows.title')}</h1>
+        <div className="alert alert-error mb-4">
+          <Icon name="warning" className="w-5 h-5" />
+          <span>{t('common.error')}</span>
+        </div>
+        <button className="btn btn-secondary" onClick={() => refetch()}>
+          <Icon name="refresh" className="w-4 h-4 mr-2" />
+          {t('common.retry')}
+        </button>
       </div>
     );
   }

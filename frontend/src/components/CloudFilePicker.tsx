@@ -48,6 +48,27 @@ interface CloudFilePickerProps {
   onImported?: (result: CloudImportResult) => void;
 }
 
+/**
+ * Is dit antwoord bruikbaar als configuratie?
+ *
+ * Het antwoord van /cloud-import/config ging hier ongezien naar `setConfig`,
+ * waarna de weergave `config.onedrive.enabled` las. Komt er iets anders binnen
+ * dan het afgesproken object - een leeg object, een blok dat null is, of een
+ * HTML-pagina met status 200 omdat er een portaal of proxy tussen zat - dan
+ * gooide dat een TypeError tijdens het tekenen, en viel niet alleen de knop
+ * maar het hele scherm eromheen weg.
+ *
+ * ModulesContext.tsx vangt in dit project precies hetzelfde geval al af; die
+ * ervaring hoort hier ook te gelden. Een onbruikbaar antwoord betekent: geen
+ * cloudknoppen, verder niets aan de hand.
+ */
+function isBruikbareConfig(waarde: unknown): waarde is CloudImportConfig {
+  if (typeof waarde !== 'object' || waarde === null || Array.isArray(waarde)) return false;
+  const kandidaat = waarde as Partial<CloudImportConfig>;
+  const blokKlopt = (blok: unknown) => typeof blok === 'object' && blok !== null;
+  return blokKlopt(kandidaat.onedrive) && blokKlopt(kandidaat.googleDrive);
+}
+
 export function CloudFilePicker({ listId, onImported }: CloudFilePickerProps) {
   const { t } = useTranslation();
   const [config, setConfig] = useState<CloudImportConfig | null>(null);
@@ -56,7 +77,7 @@ export function CloudFilePicker({ listId, onImported }: CloudFilePickerProps) {
 
   useEffect(() => {
     getCloudImportConfig()
-      .then(setConfig)
+      .then((antwoord) => setConfig(isBruikbareConfig(antwoord) ? antwoord : null))
       .catch(() => setConfig(null));
   }, []);
 
@@ -103,23 +124,32 @@ export function CloudFilePicker({ listId, onImported }: CloudFilePickerProps) {
   );
 
   if (!config) return null;
-  const anyEnabled = config.onedrive.enabled || config.googleDrive.enabled;
-  if (!anyEnabled) return null;
+
+  // Een knop hing aan `enabled`, maar het venster erachter aan
+  // `enabled && clientId`, en `openPicker` van Google keert bij een ontbrekende
+  // clientId of apiKey stilzwijgend terug. Stond een dienst aan zonder
+  // sleutels, dan verscheen de knop wel en gebeurde er bij klikken niets: geen
+  // venster, geen melding. Een knop die niets doet is erger dan een knop die er
+  // niet is, want de gebruiker blijft klikken. Dezelfde voorwaarde bepaalt nu
+  // of hij er staat en of hij werkt.
+  const oneDriveBruikbaar = config.onedrive.enabled && !!config.onedrive.clientId;
+  const googleBruikbaar = config.googleDrive.enabled && !!config.googleDrive.clientId && !!config.googleDrive.apiKey;
+  if (!oneDriveBruikbaar && !googleBruikbaar) return null;
 
   return (
     <div className="cloud-file-picker">
       <div className="flex gap-1 flex-wrap">
-        {config.onedrive.enabled && (
+        {oneDriveBruikbaar && (
           <button type="button" className="btn btn-outline" onClick={() => setOneDriveOpen(true)} disabled={importing}>
             <Icon name="cloud" size={18} /> {t('cloudImport.onedrive', 'Importeer uit OneDrive')}
           </button>
         )}
-        {config.googleDrive.enabled && (
+        {googleBruikbaar && (
           <GoogleDriveButton config={config.googleDrive} disabled={importing} onPick={handleGoogleImport} />
         )}
       </div>
 
-      {oneDriveOpen && config.onedrive.enabled && config.onedrive.clientId && (
+      {oneDriveOpen && oneDriveBruikbaar && config.onedrive.clientId && (
         <OneDrivePickerModal
           clientId={config.onedrive.clientId}
           tenantId={config.onedrive.tenantId}

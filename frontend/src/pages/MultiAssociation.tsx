@@ -1,5 +1,5 @@
 import { currentLocale } from '../utils/locale';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -334,6 +334,9 @@ function AssociationFormModal({
   isLoading: boolean;
 }) {
   const { t } = useTranslation();
+  // Eigen voorvoegsel per venster, zodat het label bij zijn eigen veld hoort
+  // ook als er ooit twee formulieren tegelijk op het scherm staan.
+  const veldId = useId();
   const [formData, setFormData] = useState({
     name: association?.name || '',
     displayName: association?.displayName || '',
@@ -361,8 +364,11 @@ function AssociationFormModal({
       <div className="space-y-4 max-h-[60vh] overflow-y-auto">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.name')} *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-name`}>
+              {t('multiAssociation.form.name')} *
+            </label>
             <input
+              id={`${veldId}-name`}
               type="text"
               value={formData.name}
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
@@ -371,8 +377,11 @@ function AssociationFormModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.slug')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-slug`}>
+              {t('multiAssociation.form.slug')}
+            </label>
             <input
+              id={`${veldId}-slug`}
               type="text"
               value={formData.slug}
               onChange={(e) =>
@@ -385,10 +394,11 @@ function AssociationFormModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-displayName`}>
             {t('multiAssociation.form.displayName')}
           </label>
           <input
+            id={`${veldId}-displayName`}
             type="text"
             value={formData.displayName}
             onChange={(e) => setFormData((prev) => ({ ...prev, displayName: e.target.value }))}
@@ -398,8 +408,11 @@ function AssociationFormModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.website')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-website`}>
+              {t('multiAssociation.form.website')}
+            </label>
             <input
+              id={`${veldId}-website`}
               type="url"
               value={formData.website}
               onChange={(e) => setFormData((prev) => ({ ...prev, website: e.target.value }))}
@@ -407,8 +420,11 @@ function AssociationFormModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.phone')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-phone`}>
+              {t('multiAssociation.form.phone')}
+            </label>
             <input
+              id={`${veldId}-phone`}
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
@@ -419,8 +435,11 @@ function AssociationFormModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.email')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-email`}>
+              {t('multiAssociation.form.email')}
+            </label>
             <input
+              id={`${veldId}-email`}
               type="email"
               value={formData.email}
               onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
@@ -428,10 +447,11 @@ function AssociationFormModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-billingEmail`}>
               {t('multiAssociation.form.billingEmail')}
             </label>
             <input
+              id={`${veldId}-billingEmail`}
               type="email"
               value={formData.billingEmail}
               onChange={(e) => setFormData((prev) => ({ ...prev, billingEmail: e.target.value }))}
@@ -441,8 +461,11 @@ function AssociationFormModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.address')}</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-address`}>
+            {t('multiAssociation.form.address')}
+          </label>
           <input
+            id={`${veldId}-address`}
             type="text"
             value={formData.address}
             onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
@@ -452,10 +475,11 @@ function AssociationFormModal({
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-postalCode`}>
               {t('multiAssociation.form.postalCode')}
             </label>
             <input
+              id={`${veldId}-postalCode`}
               type="text"
               value={formData.postalCode}
               onChange={(e) => setFormData((prev) => ({ ...prev, postalCode: e.target.value }))}
@@ -463,8 +487,11 @@ function AssociationFormModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.city')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-city`}>
+              {t('multiAssociation.form.city')}
+            </label>
             <input
+              id={`${veldId}-city`}
               type="text"
               value={formData.city}
               onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
@@ -472,8 +499,11 @@ function AssociationFormModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.country')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-country`}>
+              {t('multiAssociation.form.country')}
+            </label>
             <input
+              id={`${veldId}-country`}
               type="text"
               value={formData.country}
               onChange={(e) => setFormData((prev) => ({ ...prev, country: e.target.value }))}
@@ -484,10 +514,11 @@ function AssociationFormModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-kvkNumber`}>
               {t('multiAssociation.form.kvkNumber')}
             </label>
             <input
+              id={`${veldId}-kvkNumber`}
               type="text"
               value={formData.kvkNumber}
               onChange={(e) => setFormData((prev) => ({ ...prev, kvkNumber: e.target.value }))}
@@ -495,8 +526,11 @@ function AssociationFormModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('multiAssociation.form.iban')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-iban`}>
+              {t('multiAssociation.form.iban')}
+            </label>
             <input
+              id={`${veldId}-iban`}
               type="text"
               value={formData.iban}
               onChange={(e) => setFormData((prev) => ({ ...prev, iban: e.target.value }))}
@@ -521,6 +555,9 @@ function SubscriptionModal({
   isLoading: boolean;
 }) {
   const { t } = useTranslation();
+  // Eigen voorvoegsel per venster, zodat het label bij zijn eigen veld hoort
+  // ook als er ooit twee formulieren tegelijk op het scherm staan.
+  const veldId = useId();
   const [formData, setFormData] = useState({
     subscriptionTier: association.subscriptionTier || 'free',
     subscriptionExpires: association.subscriptionExpires?.slice(0, 10) || '',
@@ -540,10 +577,11 @@ function SubscriptionModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-subscriptionTier`}>
             {t('multiAssociation.subscription.tier')}
           </label>
           <select
+            id={`${veldId}-subscriptionTier`}
             value={formData.subscriptionTier}
             onChange={(e) => setFormData((prev) => ({ ...prev, subscriptionTier: e.target.value }))}
             className="w-full px-3 py-2 border rounded-lg"
@@ -557,10 +595,11 @@ function SubscriptionModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-subscriptionExpires`}>
             {t('multiAssociation.subscription.expires')}
           </label>
           <input
+            id={`${veldId}-subscriptionExpires`}
             type="date"
             value={formData.subscriptionExpires}
             onChange={(e) => setFormData((prev) => ({ ...prev, subscriptionExpires: e.target.value }))}
@@ -570,10 +609,11 @@ function SubscriptionModal({
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-maxMembers`}>
               {t('multiAssociation.subscription.maxMembers')}
             </label>
             <input
+              id={`${veldId}-maxMembers`}
               type="number"
               value={formData.maxMembers}
               onChange={(e) => setFormData((prev) => ({ ...prev, maxMembers: parseInt(e.target.value) }))}
@@ -582,10 +622,11 @@ function SubscriptionModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-maxOrchestras`}>
               {t('multiAssociation.subscription.maxOrchestras')}
             </label>
             <input
+              id={`${veldId}-maxOrchestras`}
               type="number"
               value={formData.maxOrchestras}
               onChange={(e) => setFormData((prev) => ({ ...prev, maxOrchestras: parseInt(e.target.value) }))}
@@ -594,10 +635,11 @@ function SubscriptionModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${veldId}-maxStorageMb`}>
               {t('multiAssociation.subscription.maxStorage')}
             </label>
             <input
+              id={`${veldId}-maxStorageMb`}
               type="number"
               value={formData.maxStorageMb}
               onChange={(e) => setFormData((prev) => ({ ...prev, maxStorageMb: parseInt(e.target.value) }))}

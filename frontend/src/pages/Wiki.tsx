@@ -191,7 +191,22 @@ export default function Wiki() {
       <div className="page-header flex justify-between items-center mb-4">
         <h1>{t('wiki.title')}</h1>
         {canEdit && (
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+          <button
+            className="btn btn-primary"
+            // `resetForm` hoorde hier al te staan. `formData` is één toestand
+            // die zowel het nieuw- als het bewerkformulier vult, en alleen het
+            // nieuwformulier maakte hem bij het sluiten weer leeg. Wie een
+            // pagina bewerkte en dat scherm sloot - met annuleren, met het
+            // kruisje of door op te slaan - hield de titel, de slug en de hele
+            // inhoud van die pagina in de toestand staan. De volgende klik op
+            // "pagina toevoegen" opende dan een "nieuwe" pagina die al helemaal
+            // ingevuld was met de vorige. Zie de bewijstest in
+            // __tests__/Wiki.test.tsx.
+            onClick={() => {
+              resetForm();
+              setShowCreateModal(true);
+            }}
+          >
             <Icon name="plus" className="w-4 h-4 mr-2" />
             {t('wiki.addPage')}
           </button>

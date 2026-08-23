@@ -61,7 +61,12 @@ export default function EmailCampaigns() {
   const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const { data: campaigns = [], isLoading } = useQuery({
+  const {
+    data: campaigns = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['email-campaigns', filterStatus],
     queryFn: () => getEmailCampaigns(filterStatus || undefined),
   });
@@ -151,6 +156,20 @@ export default function EmailCampaigns() {
       {/* Campaign list */}
       {isLoading ? (
         <SkeletonTable rows={5} columns={5} />
+      ) : isError ? (
+        /*
+          Een mislukte aanvraag zag er eerder precies zo uit als een lege lijst:
+          `campaigns` blijft in beide gevallen leeg en de pagina meldde 'nog
+          geen campagnes'. Wie dat leest terwijl de server onbereikbaar is,
+          denkt dat zijn campagne weg is en maakt hem opnieuw aan.
+        */
+        <div className="card bg-base-200 p-8 text-center">
+          <Icon name="warning" size={48} className="mx-auto opacity-50 mb-4" />
+          <p className="text-base-content/70 mb-4">{t('errors.generic')}</p>
+          <button className="btn btn-outline btn-sm mx-auto" onClick={() => refetch()}>
+            {t('common.retry')}
+          </button>
+        </div>
       ) : filteredCampaigns.length === 0 ? (
         <div className="card bg-base-200 p-8 text-center">
           <Icon name="send" size={48} className="mx-auto opacity-50 mb-4" />
@@ -256,13 +275,39 @@ function CampaignDetailModal({
   onSchedule: () => void;
 }) {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   const [showRecipientsDialog, setShowRecipientsDialog] = useState(false);
 
-  const { data: recipientsPreview } = useQuery({
+  const isDraft = campaign.status === 'draft';
+
+  const {
+    data: recipientsPreview,
+    isPending: recipientsLoading,
+    isError: recipientsFailed,
+  } = useQuery({
     queryKey: ['campaign-recipients-preview', campaign.id],
     queryFn: () => previewRecipients(campaign.id),
-    enabled: campaign.status === 'draft',
+    enabled: isDraft,
   });
+
+  /**
+   * Versturen kan alleen als vaststaat naar wie.
+   *
+   * Het voorbeeld van de ontvangers stond hieronder achter
+   * `recipientsPreview && ...`: zolang het aan het laden was of niet opgehaald
+   * kon worden, stond er over de ontvangers helemaal niets op het scherm - en
+   * de knop 'nu versturen' was al die tijd gewoon indrukbaar. Je kon dus een
+   * mailing de deur uit doen zonder ooit gezien te hebben naar wie hij ging, en
+   * een verstuurde mailing komt niet terug.
+   *
+   * Een concept zonder ontvangers is net zo goed reden om de knop op slot te
+   * houden: aan de serverkant bleek een lege ontvangerslijst de campagne naar
+   * élk actief lid te sturen terwijl dit scherm netjes nul ontvangers toonde.
+   * Dat is aan die kant gerepareerd, maar een verzendknop die volgens het
+   * scherm naar niemand stuurt hoort sowieso niet ingedrukt te kunnen worden.
+   */
+  const recipientCount = recipientsPreview?.count;
+  const canSend = !isDraft || (recipientCount !== undefined && recipientCount > 0);
 
   const scheduleMutation = useMutation({
     mutationFn: () => scheduleCampaign(campaign.id),
@@ -312,7 +357,19 @@ function CampaignDetailModal({
     },
   });
 
-  const canEdit = campaign.status === 'draft';
+  const canEdit = isDraft;
+
+  /** Verzenden is onomkeerbaar, dus er gaat een bevestiging met het aantal aan vooraf. */
+  const confirmAndSend = async () => {
+    const confirmed = await confirmDialog({
+      title: t('emailCampaigns.sendNow'),
+      message: t('emailCampaigns.confirmSend', { count: recipientCount ?? campaign.totalRecipients }),
+      confirmLabel: t('emailCampaigns.sendNow'),
+    });
+    if (confirmed) {
+      sendMutation.mutate();
+    }
+  };
 
   return (
     <>
@@ -350,26 +407,36 @@ function CampaignDetailModal({
           <EmailAttachmentsSection campaignId={campaign.id} canEdit={canEdit} />
 
           {/* Recipients Preview (for drafts) */}
-          {campaign.status === 'draft' && recipientsPreview && (
+          {isDraft && (
             <div>
               <div className="page-header">
                 <h4 className="text-sm font-semibold text-base-content/70">
-                  {t('emailCampaigns.recipientsPreview', { count: recipientsPreview.count })}
+                  {recipientsPreview
+                    ? t('emailCampaigns.recipientsPreview', { count: recipientsPreview.count })
+                    : t('emailCampaigns.recipients')}
                 </h4>
               </div>
               <div className="bg-base-200 p-4 rounded-lg max-h-40 overflow-y-auto">
-                <div className="flex flex-wrap gap-2">
-                  {recipientsPreview.recipients.slice(0, 20).map((r) => (
-                    <span key={r.id} className="badge badge-ghost">
-                      {r.name}
-                    </span>
-                  ))}
-                  {recipientsPreview.count > 20 && (
-                    <span className="badge badge-outline">
-                      +{recipientsPreview.count - 20} {t('emailCampaigns.more')}
-                    </span>
-                  )}
-                </div>
+                {recipientsLoading ? (
+                  <p className="text-sm text-base-content/70">{t('common.loading')}</p>
+                ) : recipientsFailed || !recipientsPreview ? (
+                  <p className="text-sm text-warning">{t('emailCampaigns.recipientsUnknown')}</p>
+                ) : recipientsPreview.count === 0 ? (
+                  <p className="text-sm text-warning">{t('emailCampaigns.recipientsNone')}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {recipientsPreview.recipients.slice(0, 20).map((r) => (
+                      <span key={r.id} className="badge badge-ghost">
+                        {r.name}
+                      </span>
+                    ))}
+                    {recipientsPreview.count > 20 && (
+                      <span className="badge badge-outline">
+                        +{recipientsPreview.count - 20} {t('emailCampaigns.more')}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -444,12 +511,12 @@ function CampaignDetailModal({
 
           {/* Actions */}
           <div className="border-t border-base-300 pt-4 flex flex-wrap gap-2">
-            {campaign.status === 'draft' && (
+            {isDraft && (
               <>
                 <button
                   className="btn btn-primary gap-2"
-                  onClick={() => sendMutation.mutate()}
-                  disabled={sendMutation.isPending || scheduleMutation.isPending}
+                  onClick={confirmAndSend}
+                  disabled={sendMutation.isPending || scheduleMutation.isPending || !canSend}
                 >
                   {sendMutation.isPending ? (
                     <span className="loading loading-spinner loading-sm" />
@@ -461,7 +528,7 @@ function CampaignDetailModal({
                 <button
                   className="btn btn-outline gap-2"
                   onClick={() => scheduleMutation.mutate()}
-                  disabled={scheduleMutation.isPending || sendMutation.isPending}
+                  disabled={scheduleMutation.isPending || sendMutation.isPending || !canSend}
                 >
                   {scheduleMutation.isPending ? (
                     <span className="loading loading-spinner loading-sm" />
@@ -478,11 +545,7 @@ function CampaignDetailModal({
             )}
             {campaign.status === 'scheduled' && (
               <>
-                <button
-                  className="btn btn-primary gap-2"
-                  onClick={() => sendMutation.mutate()}
-                  disabled={sendMutation.isPending}
-                >
+                <button className="btn btn-primary gap-2" onClick={confirmAndSend} disabled={sendMutation.isPending}>
                   {sendMutation.isPending ? (
                     <span className="loading loading-spinner loading-sm" />
                   ) : (

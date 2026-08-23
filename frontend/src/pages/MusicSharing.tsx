@@ -4,6 +4,7 @@ import { Icon, type IconName } from '../components/Icon';
 import { FormModal } from '../components/FormModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useAuth } from '../context/AuthContext';
 import { showError, showSuccess } from '../utils/toast';
 import { youtubeInsluitUrl, youtubeVideoId, isVeiligeLink } from '../utils/videoInsluiten';
 import { currentLocale } from '../utils/locale';
@@ -298,6 +299,12 @@ function CatalogusTitelModal({ titleId, onClose }: { titleId: string; onClose: (
                   <span className="text-muted">{stand(partij)}</span>
                 ) : (
                   <button
+                    // Zonder `type` is een knop in een formulier een
+                    // verstuurknop. Deze staat in het formulier van FormModal,
+                    // waarvan het versturen het venster sluit: de aanvraag ging
+                    // wel weg, maar het venster klapte dicht voordat de melding
+                    // kwam en voordat de stand bij de partij verscheen.
+                    type="button"
                     className="btn btn-secondary btn-sm"
                     disabled={vraagAan.isPending}
                     onClick={() =>
@@ -441,6 +448,7 @@ function VerzoekenTab() {
 /** Oproepen: wie zoekt wat, en wat is erop geantwoord. */
 function OproepenTab() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [status, setStatus] = useState('open');
   const { data: oproepen, isLoading } = useOproepen(status);
   const plaats = usePlaatsOproep();
@@ -448,6 +456,9 @@ function OproepenTab() {
   const verwijder = useVerwijderOproep();
   const [nieuw, setNieuw] = useState(false);
   const [geopend, setGeopend] = useState<Oproep | null>(null);
+
+  /** Gaan wij over deze oproep? Zonder eigen vereniging: nooit. */
+  const eigenOproep = (oproep: Oproep) => !!user?.associationId && oproep.associationId === user.associationId;
 
   return (
     <div className="space-y-3">
@@ -500,17 +511,28 @@ function OproepenTab() {
                   <button className="btn btn-secondary btn-sm" onClick={() => setGeopend(oproep)}>
                     <Icon name="message" /> {t('musicSharing.wanted.replies', { aantal: oproep.replyCount })}
                   </button>
-                  {oproep.status === 'open' && (
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => werkBij.mutate({ id: oproep.id, status: 'resolved' })}
-                    >
-                      {t('musicSharing.wanted.markResolved')}
-                    </button>
+                  {/*
+                    De lijst bevat ook de oproepen van gekoppelde verenigingen -
+                    daar is hij voor. Beheren doe je alleen je eigen oproep: de
+                    server houdt PATCH en DELETE tegen op de vereniging en geeft
+                    anders een 404, dus zo'n knop bij een ander deed niets en
+                    wekte alleen de indruk dat je erover ging.
+                  */}
+                  {eigenOproep(oproep) && (
+                    <>
+                      {oproep.status === 'open' && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => werkBij.mutate({ id: oproep.id, status: 'resolved' })}
+                        >
+                          {t('musicSharing.wanted.markResolved')}
+                        </button>
+                      )}
+                      <button className="btn btn-secondary btn-sm" onClick={() => verwijder.mutate(oproep.id)}>
+                        {t('common.delete')}
+                      </button>
+                    </>
                   )}
-                  <button className="btn btn-secondary btn-sm" onClick={() => verwijder.mutate(oproep.id)}>
-                    {t('common.delete')}
-                  </button>
                 </div>
               </div>
             </li>
