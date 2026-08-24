@@ -227,10 +227,21 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Deliverables
 
-- [ ] Privacy Impact Assessment (PIA) — _nog op te stellen; checklist staat in `docs/GDPR.md`_
+- [x] Privacy Impact Assessment (PIA) — _`docs/PIA.md`: de technische helft ingevuld en onderbouwd; de beoordelingshelft staat als vragenlijst in §9 en hoort bij het bestuur, niet bij de software_
+  - Een PIA heeft twee helften. De feitelijke — welke gegevens, wie ziet ze, waar gaan ze heen, hoe lang blijven ze, wat gebeurt er bij inzage en wissen — is uit de code af te leiden en staat er nu in, met bestandsnamen en regelnummers. De beoordeling — noodzaak, evenredigheid, grondslag, restrisico — kan software niet maken
+  - **De inzage-export dekt 10 van de 70 tabellen** die gegevens over een lid bevatten. Aanwezigheid, kaartaankopen, stemmen op peilingen, chatberichten en opgegeven beschikbaarheid ontbreken. `docs/GDPR.md` beschrijft bovendien een ZIP met acht losse bestanden; wat de code maakt is één JSON zonder die inhoud
+  - **Een lid dat ooit een chatbericht heeft gestuurd, is niet definitief te verwijderen.** `chat_messages`, `annotation_stamps` en `sync_queue` hebben een foreign key zonder `ON DELETE`-clausule; SQLite leest dat als `NO ACTION` en weigert de verwijdering. Uitgeprobeerd tegen een kopie van een echte database: `FOREIGN KEY constraint failed`
+  - **`instrument_history` bewaart naam en ip-adres na een harde verwijdering.** Het is de enige tabel met een `user_id` zonder foreign key naar `users`, en hij bewaart daarnaast `user_name` en `ip_address`. Ook uitgeprobeerd: de rij blijft staan met beide velden erin
+  - **62 van de 70 tabellen kennen geen bewaartermijn.** De opruimtaak dekt er acht, precies de acht die `GDPR.md` noemt
+  - Deze vier staan er als bevinding, niet als reparatie: ze veranderen wat een export en een verwijdering betékenen, en dat is een keuze van het bestuur voordat de code hem vastlegt
+  - Onderweg rechtgezet: mijn eerste analyse las de foreign keys uit de broncode en miste de inline gedeclareerde. Vijf tabellen leken persoonsgegevens te bewaren na verwijdering; het bleek er één. De cijfers hierboven komen uit `PRAGMA foreign_key_list` op de draaiende database
+- [ ] PIA: de beoordelingshelft — _§9 van `docs/PIA.md` is een vragenlijst, geen ingevuld oordeel. Noodzaak, evenredigheid, grondslag per verwerking, welke koppelingen werkelijk aanstaan, wie super-admin is en welke restrisico's het bestuur accepteert: dat kan software niet vaststellen. Zolang die vragen open staan is er een onderbouwing en nog geen PIA_
 - [x] Data Processing Agreement (DPA) template
 - [x] Leden data export functie (GDPR Art. 20) — _werkte tot 19-08-2026 niet: de route stond onder `/:id` en was daardoor onbereikbaar, en de query eronder vroeg kolommen op die niet in `activity_log` bestaan. Beide gerepareerd en geverifieerd tegen een draaiende server_
-- [x] Account verwijdering met cascade (GDPR Art. 17)
+  - **Werkt, maar dekt niet alles.** De onderbouwing voor de PIA laat zien dat de export 10 van de 70 tabellen met gegevens over dat lid meeneemt. Aanwezigheid, kaartaankopen, stemmen op peilingen, chatberichten en beschikbaarheid ontbreken. Wat er wél in hoort is een keuze van het bestuur — zie `docs/PIA.md` §5
+- [x] Account verwijdering met cascade (GDPR Art. 17) — _57 van de 70 tabellen cascaden mee, 9 anonimiseren de verwijzing zoals bedoeld_
+  - **Loopt stuk bij een lid met een chatbericht.** `chat_messages`, `annotation_stamps` en `sync_queue` hebben een foreign key zonder `ON DELETE`-clausule; met foreign keys aan weigert SQLite dan de verwijdering. Uitgeprobeerd tegen een kopie van een echte database: `FOREIGN KEY constraint failed`. Zie `docs/PIA.md` §6
+  - **`instrument_history` blijft staan, mét naam en ip-adres.** Enige tabel met een `user_id` zonder foreign key naar `users`
 - [x] Bewaartermijnen configuratie per data type
 - [x] Privacy policy template
 
