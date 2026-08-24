@@ -95,6 +95,24 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
       // Only process if connected to a device or in fullscreen (PDF viewer mode)
       if (!state.isConnected && !document.fullscreenElement) return;
 
+      // Typt de gebruiker? Dan is de toets van hem en niet van het pedaal.
+      // Zonder deze uitzondering slokt een gekoppeld pedaal spatie, Enter en
+      // Backspace op uit elk invoerveld in de app - de gebruiker typt dan een
+      // aantekening zonder spaties terwijl de bladmuziek onder zijn handen
+      // doorbladert.
+      const doel = e.target;
+      if (
+        doel instanceof HTMLInputElement ||
+        doel instanceof HTMLTextAreaElement ||
+        doel instanceof HTMLSelectElement ||
+        // `isContentEditable` is in jsdom niet ingevuld; het kenmerk zelf wel,
+        // en `closest` vangt meteen de tekst binnen een bewerkbaar blok mee.
+        (doel instanceof HTMLElement &&
+          (doel.isContentEditable || doel.closest('[contenteditable]:not([contenteditable="false"])') !== null))
+      ) {
+        return;
+      }
+
       if (PAGE_NEXT_KEYS.includes(e.key)) {
         e.preventDefault();
         optionsRef.current.onPageNext?.();

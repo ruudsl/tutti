@@ -62,7 +62,18 @@ export function MfaSettings() {
       await navigator.clipboard.writeText(recoveryCodes.join('\n'));
       showSuccess(t('mfa.recoveryCodesCopied'));
     } catch {
-      showError(t('mfa.errorEnable'));
+      // GEREPAREERD. Hier stond `t('mfa.errorEnable')`: mislukte het kopiëren
+      // naar het klembord, dan las het lid dat het inschakelen van MFA was
+      // mislukt. Dat was net wél gelukt - de herstelcodes stonden in beeld -
+      // en wie die melding gelooft gaat een probleem zoeken dat er niet is en
+      // klikt de codes weg zonder ze te bewaren. Terwijl dat juist de enige
+      // keer is dat ze te zien zijn.
+      //
+      // Het klembord is ook niet altijd beschikbaar: zonder beveiligde
+      // verbinding bestaat `navigator.clipboard` niet eens. Een neutrale
+      // melding zegt wat er is: het kopiëren ging niet, de codes staan er nog
+      // en zijn met de hand te selecteren.
+      showError(t('errors.generic'));
     }
   };
 

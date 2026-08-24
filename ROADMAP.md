@@ -267,9 +267,9 @@ Gemeten 23-08-2026, over de **hele** backend respectievelijk frontend:
 |          | statements              | branches | functions | lines |
 | -------- | ----------------------- | -------- | --------- | ----- |
 | Backend  | **83,4%** (19227/23058) | 75,7%    | 84,4%     | 83,6% |
-| Frontend | **35,1%** (8412/23987)  | 23,4%    | 30,2%     | 36,0% |
+| Frontend | **81,6%** (19821/24294) | 72,9%    | 76,2%     | 82,4% |
 
-- CI-drempels: backend 82 / 74 / 83 / 82, frontend 34 / 23 / 29 / 35 (statements / branches / functions / lines). Die staan bewust onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
+- CI-drempels: backend 82 / 74 / 83 / 82, frontend 80 / 71 / 74 / 80 (statements / branches / functions / lines). Die staan bewust onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
 - Het frontendcijfer is op 23-08-2026 licht gedaald (van 35,4 naar 35,1) doordat `src/api.ts` is opgeheven. Dat is geen terugval: die 4.149 regels waren 44% gedekt tegen een codebasegemiddelde van 35, en wie boven het gemiddelde gedekte code weghaalt verlaagt het gemiddelde. Dezelfde behoefte wordt nog steeds getest — `src/api` staat als geheel op 87%
 - De backend ging in drie PR's (#160, #161, #162, #163) van 46,4% naar 64,4%; het aantal tests van 2.895 naar 4.629 over 173 bestanden. De frontend van ~273 naar 774 tests over 32 bestanden
 - Onderweg zijn er ruim veertig echte fouten gevonden en gerepareerd, elk met een test die zonder de reparatie rood is. De zwaarste: de nepbetaalprovider draaide gewoon door in productie (en meldde een terugbetaling als geslaagd), uitloggen wiste IndexedDB niet (op een gedeelde tablet zag de volgende gebruiker de gegevens van de vorige vereniging, inclusief de synchronisatiewachtrij), SQL-injectie via `?lang=`, een Telegram-bottoken in de logregels, elk CIDR-bereik in de IP-witlijst kwam stilzwijgend met niets overeen, `connection.ts` stopte na één mislukte rollback stilletjes met naar schijf schrijven, een SEPA-incasso werd als overboeking aangemaakt, en elke verenigingsbeheerder was platformbeheerder
@@ -303,12 +303,14 @@ Gemeten 23-08-2026, over de **hele** backend respectievelijk frontend:
 
 ### Deliverables
 
-- [~] Unit tests: >80% coverage — _backend **83,4%**, frontend 35,1%_
+- [x] Unit tests: >80% coverage — _backend **83,4%**, frontend **81,6%**_ (statements; lines 83,6% en 82,4%)
   - **De 50 uur die hiervoor begroot staat is niet realistisch.** De backend is in drie PR's van 12,9% naar 64,4% gegaan; dat alleen al was meer werk dan de hele post. De frontend staat nog vrijwel op nul
   - De api-laag en de hooks zijn nu grotendeels gedekt. Wat resteert zijn de pagina's, en dat is bewust nog niet aangeraakt: `Accounting.tsx` is 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655. Tests schrijven tegen zo'n bestand betekent ze vastzetten aan een structuur die toch moet wijken — opknippen hoort eerst
   - **De backend is op 23-08-2026 over de 80% gegaan: 64,7% -> 83,4%**, in een ronde met tien parallelle agenten over twintig bronbestanden. 1.466 tests erbij (4.785 -> 6.251), 205 testbestanden. Onderweg zijn er **40 echte fouten** gevonden; 75 tests zijn aantoonbaar rood zonder de reparatie
   - Wat die ronde over de fouten zegt: bijna geen enkele was subtiel. `GET /export/accounts` gaf altijd een 500 omdat er een parameter te veel meeging; `create_task` werkte in geen enkele workflow omdat de motor een status zette die de CHECK niet toelaat; een lid als passagier aanmelden gaf altijd een 500 op een NOT NULL-kolom. Ze konden blijven staan omdat geen enkele test die route ooit aanriep
-  - De frontend haalt 80% niet zolang de pagina's staan zoals ze staan. Dat is een apart werkpakket, geen restpunt van dit
+  - **De frontend is op 23-08-2026 over de 80% gegaan: 36,6% -> 81,6%**, in drie golven van tien parallelle agenten over ruim honderd bronbestanden. 2.850 tests erbij (3.339 -> 6.189), 276 testbestanden
+  - Branches (72,9%) en functions (76,2%) blijven onder de 80. Dat is eerlijk zo gelaten: de resterende vertakkingen zijn grotendeels `?? null`-terugvallen en stijltakken, en daar een test op zetten bewaakt niets
+  - Twee bestanden zijn bewust ongedekt gebleven: `sw-custom.ts` (113 statements) draait als service worker in een eigen levenscyclus, en `src/index.ts` en `migrations/cli.ts` aan de serverkant zijn opstartbestanden. Die testen vraagt om een eigen aanpak, niet om een dekkingsronde
 - [x] Integration tests voor tenant isolatie
 - [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job): `e2e/smoke.spec.ts` plus twee flowbestanden_
   - `e2e/repetities.spec.ts`: een beheerder plant een repetitie, een lid meldt zich aan en weer af, en een lid krijgt de beheerknoppen niet te zien

@@ -437,7 +437,12 @@ function ResponsiveTableComponent<T>({
 
   // Mobile card view
   if (isMobile) {
-    const cardColumns = columns.filter((col) => col.showInCard !== false);
+    // Uit visibleColumns en niet uit columns: die eerste heeft hideOnMobile er
+    // al uit gefilterd. Op columns filteren liet een kolom die uitdrukkelijk
+    // niet op een klein scherm hoort alsnog in de kaart staan - en juist die
+    // kaart is wat een lid op zijn telefoon ziet. De vlag werd dus wel
+    // gehoorzaamd in de tabel, waar hij op zo'n scherm niet eens getoond wordt.
+    const cardColumns = visibleColumns.filter((col) => col.showInCard !== false);
 
     return (
       <div className={`responsive-table-cards ${className}`} style={style}>

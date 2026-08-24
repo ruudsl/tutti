@@ -73,9 +73,25 @@ export default function Orchestras() {
     onError: (error) => showError(getErrorMessage(error)),
   });
 
+  // De zes handlers hieronder vingen de afwijzing van mutateAsync niet op.
+  // Elke mutatie meldt een fout al zelf met showError (zie useOrchestras en de
+  // onError-takken hierboven), maar mutateAsync gooit hem daarna nog eens door.
+  // FormModal en ConfirmDialog gooien het resultaat van onSubmit respectievelijk
+  // onConfirm weg, dus die afwijzing kwam nergens meer aan: elke mislukte
+  // opslag- of verwijderpoging liet een onafgehandelde belofte achter, die de
+  // browser meldt als "Uncaught (in promise)" en die een foutenmelder als een
+  // onbekende storing rapporteert - terwijl de gebruiker de nette melding al
+  // gezien had.
+  //
+  // De vangst doet daarom niets anders dan stoppen: de fout is gemeld, en het
+  // venster blijft open zodat de invoer niet verloren gaat.
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createMutation.mutateAsync(formName);
+    try {
+      await createMutation.mutateAsync(formName);
+    } catch {
+      return;
+    }
     setShowAddModal(false);
     setFormName('');
   };
@@ -84,7 +100,11 @@ export default function Orchestras() {
     e.preventDefault();
     if (!editingOrchestra) return;
 
-    await updateMutation.mutateAsync({ id: editingOrchestra.id, name: formName });
+    try {
+      await updateMutation.mutateAsync({ id: editingOrchestra.id, name: formName });
+    } catch {
+      return;
+    }
 
     // Refresh selected orchestra if it was updated
     if (selectedOrchestraId === editingOrchestra.id) {
@@ -98,7 +118,11 @@ export default function Orchestras() {
   const handleDelete = async () => {
     if (!deletingOrchestra) return;
 
-    await deleteMutation.mutateAsync(deletingOrchestra.id);
+    try {
+      await deleteMutation.mutateAsync(deletingOrchestra.id);
+    } catch {
+      return;
+    }
 
     if (selectedOrchestraId === deletingOrchestra.id) {
       setSelectedOrchestraId(null);
@@ -111,10 +135,14 @@ export default function Orchestras() {
     e.preventDefault();
     if (!selectedOrchestraId) return;
 
-    await createListMutation.mutateAsync({
-      name: listFormName,
-      orchestraId: selectedOrchestraId,
-    });
+    try {
+      await createListMutation.mutateAsync({
+        name: listFormName,
+        orchestraId: selectedOrchestraId,
+      });
+    } catch {
+      return;
+    }
 
     setShowAddListModal(false);
     setListFormName('');
@@ -124,14 +152,22 @@ export default function Orchestras() {
     e.preventDefault();
     if (!editingList) return;
 
-    await updateListMutation.mutateAsync({ id: editingList.id, name: listFormName });
+    try {
+      await updateListMutation.mutateAsync({ id: editingList.id, name: listFormName });
+    } catch {
+      return;
+    }
     setEditingList(null);
     setListFormName('');
   };
 
   const handleDeleteList = async () => {
     if (!deletingList) return;
-    await deleteListMutation.mutateAsync(deletingList.id);
+    try {
+      await deleteListMutation.mutateAsync(deletingList.id);
+    } catch {
+      return;
+    }
     setDeletingList(null);
   };
 

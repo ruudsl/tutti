@@ -102,7 +102,15 @@ export function useWebSocket() {
 
   const connect = useCallback(() => {
     const token = localStorage.getItem('token');
-    if (!token || !isAuthenticated || socketRef.current?.connected) return;
+    // Op `socketRef.current` bewaken, niet op `.connected`. Tussen io() en het
+    // connect-antwoord van de server staat `connected` nog op false, en wie in
+    // dat gat opnieuw verbindt kreeg een tweede socket die de eerste uit de ref
+    // duwde. Die eerste werd daarna nooit meer afgesloten: hij bleef berichten
+    // afleveren - dus elk bericht dubbel - en het opruimen kon hem niet meer
+    // vinden. Opnieuw verbinden na disconnect() kan gewoon, want die zet de ref
+    // terug op null; het herstellen van een weggevallen verbinding doet
+    // socket.io zelf, via reconnection.
+    if (!token || !isAuthenticated || socketRef.current) return;
 
     const socket = io(SOCKET_URL, {
       auth: { token },

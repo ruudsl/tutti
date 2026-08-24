@@ -147,7 +147,13 @@ export default function Tours() {
                   </div>
                 )}
 
-                <div className="card-actions justify-end mt-2">
+                {/*
+                  De hele kaart opent het detailvenster. Zonder de rem
+                  hieronder deed één klik op "Aanmelden" twee dingen: hij
+                  meldde aan én opende het venster, zodat de bevestiging
+                  meteen achter een dialoog verdween.
+                */}
+                <div className="card-actions justify-end mt-2" onClick={(e) => e.stopPropagation()}>
                   {tour.status === 'planning' || tour.status === 'confirmed' ? (
                     <button
                       className="btn btn-primary btn-sm"

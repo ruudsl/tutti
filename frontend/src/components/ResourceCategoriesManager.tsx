@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon, IconName } from './Icon';
@@ -69,6 +69,12 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
     queryFn: getResourceCategories,
   });
 
+  // De volgorde zoals hij op het scherm staat. Deze staat hier, boven de
+  // sleep-afhandelaars, omdat `handleDragEnd` hem in zijn afhankelijkheden
+  // noemt; verderop gedeclareerd zou dat bij het renderen op een niet
+  // geïnitialiseerde binding stuiten.
+  const sortedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+
   const deleteMutation = useMutation({
     mutationFn: deleteResourceCategory,
     onSuccess: () => {
@@ -98,12 +104,28 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
     setDragOverIndex(index);
   }, []);
 
+  /**
+   * GEREPAREERD. Hier stond `categories` waar `sortedCategories` hoort.
+   *
+   * `dragOverIndex` is de plek waar de beheerder loslaat, geteld in de lijst
+   * die hij vóór zich ziet - en dat is de gesorteerde lijst. De oude code zocht
+   * de sleepende categorie op in `categories`, de volgorde waarin de server hem
+   * toevallig teruggaf, en vergeleek die index met een index uit een andere
+   * volgorde. Zolang de server al op `sortOrder` sorteert vallen die samen en
+   * merkt niemand iets; zodra dat niet zo is, wijzen dezelfde getallen naar
+   * verschillende categorieën.
+   *
+   * Het ergste geval maakt geen rommel maar doet niets: als de sleepende
+   * categorie in de serverlijst toevallig al op de losgelaten index staat,
+   * concludeerde de oude code "die staat al goed" en verstuurde hij niets. De
+   * beheerder sleept, ziet de regel terugspringen en krijgt geen melding.
+   */
   const handleDragEnd = useCallback(() => {
     if (draggedItem && dragOverIndex !== null) {
-      const currentIndex = categories.findIndex((c) => c.id === draggedItem.id);
+      const currentIndex = sortedCategories.findIndex((c) => c.id === draggedItem.id);
       if (currentIndex !== dragOverIndex && currentIndex !== -1) {
         // Create new order
-        const newOrder = [...categories];
+        const newOrder = [...sortedCategories];
         newOrder.splice(currentIndex, 1);
         newOrder.splice(dragOverIndex, 0, draggedItem);
         const categoryIds = newOrder.map((c) => c.id);
@@ -112,9 +134,7 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
     }
     setDraggedItem(null);
     setDragOverIndex(null);
-  }, [draggedItem, dragOverIndex, categories, reorderMutation]);
-
-  const sortedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [draggedItem, dragOverIndex, sortedCategories, reorderMutation]);
 
   return (
     <Modal onClose={onClose} title={t('resources.categories.manage')} size="large">
@@ -245,6 +265,11 @@ interface CategoryFormModalProps {
 
 function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalProps) {
   const { t } = useTranslation();
+  // De opschriften stonden náást hun veld zonder eraan gekoppeld te zijn: een
+  // schermlezer las een invoerveld zonder naam voor, en het aanklikken van het
+  // opschrift zette de aandacht niet in het veld.
+  const naamId = useId();
+  const omschrijvingId = useId();
   const [formData, setFormData] = useState({
     name: category?.name || '',
     description: category?.description || '',
@@ -295,10 +320,11 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
     <Modal onClose={onClose} title={category ? t('resources.categories.edit') : t('resources.categories.add')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="form-control">
-          <label className="label">
+          <label className="label" htmlFor={naamId}>
             <span className="label-text font-medium">{t('common.name')} *</span>
           </label>
           <input
+            id={naamId}
             type="text"
             className="input input-bordered"
             value={formData.name}
@@ -309,10 +335,11 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
 
         {!category && (
           <div className="form-control">
-            <label className="label">
+            <label className="label" htmlFor={omschrijvingId}>
               <span className="label-text font-medium">{t('common.description')}</span>
             </label>
             <textarea
+              id={omschrijvingId}
               className="textarea textarea-bordered"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}

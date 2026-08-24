@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface PrefetchOptions {
@@ -37,27 +37,51 @@ export function usePrefetch(path: string, prefetch: () => void | Promise<void>, 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prefetchedRef = useRef(false);
 
-  const onMouseEnter = useCallback(() => {
-    if (prefetchedRef.current) return;
-
-    timeoutRef.current = setTimeout(() => {
-      prefetchedRef.current = true;
-      prefetch();
-    }, delay);
-  }, [prefetch, delay]);
-
-  const onMouseLeave = useCallback(() => {
+  /**
+   * Zet een lopende wachttijd stop.
+   *
+   * Stond alleen in onMouseLeave. Daardoor bleef de wachttijd doorlopen bij
+   * klikken en bij nadruk: die laadden meteen, maar de teller die het aanwijzen
+   * had gezet tikte gewoon door en laadde hetzelfde nog een keer. De callback
+   * van setTimeout kijkt niet naar prefetchedRef - hij zet die vlag zelf - dus
+   * de tweede aanroep werd door niets tegengehouden.
+   *
+   * Een link aanwijzen en er binnen de wachttijd op klikken is de gewoonste
+   * gang van zaken met een muis, en dat was dus precies het geval waarin er
+   * twee keer geladen werd.
+   */
+  const stopWachttijd = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
   }, []);
 
+  // Een wachttijd die nog loopt wanneer de link verdwijnt, laadt na het
+  // opruimen alsnog. Dat is werk voor een pagina die niet meer bestaat.
+  useEffect(() => stopWachttijd, [stopWachttijd]);
+
+  const onMouseEnter = useCallback(() => {
+    if (prefetchedRef.current) return;
+
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
+      prefetchedRef.current = true;
+      prefetch();
+    }, delay);
+  }, [prefetch, delay]);
+
+  const onMouseLeave = useCallback(() => {
+    stopWachttijd();
+  }, [stopWachttijd]);
+
   const onClick = useCallback(
     (e: React.MouseEvent) => {
       if (!shouldNavigate) return;
 
       e.preventDefault();
+
+      stopWachttijd();
 
       // Trigger prefetch immediately if not already done
       if (!prefetchedRef.current) {
@@ -67,14 +91,15 @@ export function usePrefetch(path: string, prefetch: () => void | Promise<void>, 
 
       navigate(path);
     },
-    [path, navigate, prefetch, shouldNavigate],
+    [path, navigate, prefetch, shouldNavigate, stopWachttijd],
   );
 
   const onFocus = useCallback(() => {
+    stopWachttijd();
     if (prefetchedRef.current) return;
     prefetchedRef.current = true;
     prefetch();
-  }, [prefetch]);
+  }, [prefetch, stopWachttijd]);
 
   return {
     onMouseEnter,

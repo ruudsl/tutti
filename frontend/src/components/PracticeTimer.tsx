@@ -101,6 +101,12 @@ export function PracticeTimer({ musicPieceName, onSessionEnd, compact = false }:
 
   const handlePause = useCallback(() => {
     setIsRunning(false);
+    // Het starttijdstip moet los, anders telt de pauze straks mee: het effect
+    // hierboven laat `startTimeRef` met rust zolang het gevuld is, en berekent
+    // de verstreken tijd bij het hervatten weer vanaf dat oude tijdstip. Bij
+    // het hervatten wordt het opnieuw gezet, met de tot nu toe geoefende tijd
+    // erin verrekend.
+    startTimeRef.current = null;
     if (isHapticSupported()) {
       triggerHaptic('light');
     }

@@ -71,10 +71,25 @@ export default function PrivacySettings() {
     setHasUnsavedChanges(true);
   };
 
+  /**
+   * GEREPAREERD. Hier ging het veld-id van een aangepast veld verloren.
+   *
+   * Voor de vaste velden is `fieldName` genoeg, maar een vereniging kan eigen
+   * velden bijmaken, en die heten hier `custom_<sleutel>`. De server bewaart
+   * de keuze dan wel, maar zoekt hem bij het teruglezen op via
+   * `custom_field_id`; komt dat leeg binnen, dan vindt hij de zojuist bewaarde
+   * regel nooit meer terug en toont hij weer de oude stand. Erger nog: het
+   * bijwerken zet een eerder wél goed gelegde koppeling op leeg.
+   *
+   * Het lid zag 'opgeslagen', geloofde dat zijn gegeven afgeschermd was, en
+   * het was het niet. De server geeft het id gewoon mee in `getMyPrivacySettings`;
+   * het hoefde alleen teruggestuurd te worden.
+   */
   const handleSave = () => {
     const settingsList = Object.entries(changes).map(([fieldName, visibility]) => ({
       fieldName,
       visibility,
+      customFieldId: settings?.[fieldName]?.customFieldId,
     }));
     updateMutation.mutate(settingsList);
   };

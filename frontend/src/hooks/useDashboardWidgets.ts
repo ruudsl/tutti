@@ -116,18 +116,41 @@ export function useDashboardWidgets() {
     [widgets, saveWidgets],
   );
 
-  // Reorder widgets
+  /**
+   * Verplaatst een widget van de ene plek naar de andere.
+   *
+   * De indexen komen van het scherm, en dat sleept in de lijst die het toont:
+   * gesorteerd op `order` en zonder de widgets van uitgezette modules. Dit
+   * knipte en plakte in `widgets`, en die lijst staat in de volgorde van
+   * DEFAULT_WIDGETS - met de weggelaten widgets er nog tussen, en na het
+   * inlezen van opgeslagen voorkeuren ook in een andere volgorde dan de
+   * volgnummers aangeven. Zodra die twee lijsten uit elkaar liepen verplaatste
+   * een sleepactie een andere widget dan de gebruiker vasthad, soms een
+   * onzichtbare - dan gebeurde er in beeld niets.
+   *
+   * Er wordt nu geknipt in de getoonde lijst. De plekken die de zichtbare
+   * widgets innemen blijven bezet; alleen wie op welke plek staat verandert.
+   * Zo houden de widgets van een uitgezette module hun eigen volgnummer, en
+   * komt de indeling van de gebruiker terug zodra die module weer aan gaat.
+   */
   const reorderWidgets = useCallback(
     (dragIndex: number, hoverIndex: number) => {
-      const newWidgets = [...widgets];
-      const [removed] = newWidgets.splice(dragIndex, 1);
-      newWidgets.splice(hoverIndex, 0, removed);
+      const getoond = [...visibleWidgets].sort((a, b) => a.order - b.order);
 
-      // Update order values
-      const reordered = newWidgets.map((w, i) => ({ ...w, order: i }));
-      saveWidgets(reordered);
+      if (dragIndex < 0 || dragIndex >= getoond.length || hoverIndex < 0 || hoverIndex >= getoond.length) {
+        return;
+      }
+
+      const plekken = getoond.map((w) => w.order);
+      const [verplaatst] = getoond.splice(dragIndex, 1);
+      getoond.splice(hoverIndex, 0, verplaatst);
+
+      const nieuweVolgnummers = new Map(getoond.map((w, i) => [w.id, plekken[i]]));
+      saveWidgets(
+        widgets.map((w) => (nieuweVolgnummers.has(w.id) ? { ...w, order: nieuweVolgnummers.get(w.id)! } : w)),
+      );
     },
-    [widgets, saveWidgets],
+    [widgets, visibleWidgets, saveWidgets],
   );
 
   // Update widget size
