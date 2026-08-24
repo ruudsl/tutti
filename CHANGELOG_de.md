@@ -2,6 +2,96 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.15.0] - 2026-08-23
+
+Eine große Wartungsrunde. Die Testabdeckung stieg serverseitig von 12,9 % auf 83,4 % und auf der Bildschirmseite von 6,9 % auf 81,6 %, und dabei kamen weit über hundert echte Fehler zum Vorschein. Fast keiner davon machte einen Test rot: Es waren Funktionen, die stillschweigend nichts taten, Daten, die über die Vereinsgrenze hinweg sichtbar wurden, und Meldungen, die das Gegenteil dessen sagten, was geschehen war.
+
+### Hinzugefügt
+
+- **Noten zwischen Vereinen teilen** — Verknüpfungscodes, ein gemeinsamer Katalog, Teilen pro Titel, Anfragen nach Dateien und Aufrufe. Mit eigenem Bildschirm.
+- **Jeder Verein sein eigener Anmeldelink** — Die Anmeldung über Microsoft hing am zuerst angelegten Verein; jeder Verein hat jetzt seinen eigenen Weg hinein.
+- **Partnerschaften tun jetzt etwas** — Anfragen ist möglich, und eine angenommene Partnerschaft hat Folgen, statt nur ein Eintrag zu sein.
+- **Die Sichtbarkeitseinstellungen tun jetzt etwas** — Was ein Mitglied unter Datenschutz abschaltet, ist tatsächlich nicht mehr zu sehen.
+- **Eine Probe mit einem Projekt verknüpfen** — Die Schaltfläche gab es, aber serverseitig fehlte das Gegenstück; jetzt funktioniert sie.
+- **Offline scannen an der Tür** — Die beiden fehlenden Routen sind da, ein Scanner ohne Verbindung funktioniert also wirklich.
+- **Sieben Routen, die der Bildschirm aufrief, die es aber nicht gab.**
+- **Ein gemeinsamer Seitenaufbau** — Alle Seiten nutzen denselben Kopf, mit Gestaltung für Formulare und Reiter, die vorher schlicht fehlte.
+
+### Geändert
+
+- **Eine api-Schicht statt zwei** — `src/api.ts` überdeckte den Ordner `src/api/` daneben, wodurch dieser Ordner jahrelang unerreichbar war. Diese Datei mit 4.149 Zeilen ist aufgelöst; alles läuft jetzt über einen Weg, samt Behandlung einer abgelaufenen Sitzung.
+- **Alle CSV-Exporte laufen über ein gemeinsames Hilfsmittel**, mit Schutz gegen Formeln und gegen verrutschende Spalten.
+- **Abo-Grenzen sind echte Grenzen** — `max_members` und `max_orchestras` wurden festgehalten, aber nirgends durchgesetzt.
+
+### Behoben
+
+#### Daten, die nicht Ihnen gehörten
+
+- Ein Vereinsadministrator konnte eine Sicherung der gesamten Installation herunterladen, und das Manifest konnte außerhalb des Upload-Ordners schreiben.
+- Jeder Administrator sah das Protokoll _aller_ Vereine; der Sektions-Chat eines anderen Vereins blieb nach dem Wechsel stehen; und eine zwischengespeicherte Antwort konnte bei einem anderen Mitglied landen.
+- Jedes Mitglied konnte eine Vorschau jeder PDF abrufen, auch von Noten ohne Zugriffsrecht.
+- Ein neues Mitglied konnte im Orchester eines anderen Vereins landen, und eine Aufgabe konnte jemandem aus einem anderen Verein zugewiesen werden.
+- Kategorien, Aufgabenlisten, Kommentare, Meldungen und das Zielorchester einer Umfrage ließen sich alle fünf über die Vereinsgrenze hinweg wählen.
+- Das Abmelden löschte den Offline-Speicher nicht. Auf einem geteilten Tablet sah die nächste Person die Daten des vorherigen Vereins, samt der noch nicht gesendeten Synchronisationswarteschlange. Die Schaltfläche „alles löschen“ ließ denselben Speicher ebenfalls stehen und meldete trotzdem, er sei geleert.
+
+#### Dinge, die nie funktioniert haben
+
+- Der Versand einer E-Mail-Kampagne schlug immer fehl. Eine leere Empfängerliste bedeutete zudem _alle_, während die Vorschau null Empfänger zeigte.
+- Ein Mitglied als Mitfahrer für eine Fahrt anzumelden führte immer zu einem Fehler.
+- Aufgaben aus einem Workflow anzulegen funktionierte in keinem einzigen Workflow, aus zwei voneinander unabhängigen Gründen zugleich.
+- Der DSGVO-Export und die Löschung nach Artikel 17 und 20 waren nicht erreichbar.
+- Der öffentliche Kalender, der Infobildschirm, das Übertragen einer Karte, Rabatte im Kartenverkauf und die Anwesenheitsübersicht pro Orchester waren alle fünf defekt.
+- Die Bereinigung und die Wochenzusammenfassung liefen nicht mehr.
+- Die Bühnenaufstellung eines Konzerts ließ sich überhaupt nicht bedienen: Ein Mitglied auf einen Platz zu setzen war weder mit Maus noch mit Tastatur möglich.
+- Alle Kanäle in den Benachrichtigungseinstellungen abzuschalten bewirkte nichts.
+
+#### Falsche Beträge und Zahlen
+
+- Ein SEPA-Lastschriftauftrag wurde als Überweisung angelegt und zahlte aus, statt einzuziehen.
+- Der Rechnungsbetrag lag neun Prozent über dem tatsächlich gezahlten.
+- Die Auswertungen ignorierten das gewählte Geschäftsjahr: Wer 2025 wählte, sah die Bilanz von 2026, während die exportierte Datei sehr wohl 2025 enthielt.
+- Die Verkaufszeit von Karten verschob sich mit der Zeitzone.
+- Zwölf Funktionen in der Buchhaltung waren defekt, und acht Abfragen verwiesen auf Spalten, die es nicht gibt.
+
+#### Meldungen, die nicht stimmten
+
+- Eine Nachrichtenübersicht ließ für gewöhnliche Mitglieder jeden heute veröffentlichten Beitrag weg, bis Mitternacht. Über einen direkten Link war er lesbar, daher fiel es nicht auf.
+- Auf sieben Seiten sah eine fehlgeschlagene Abfrage genauso aus wie eine leere Liste — samt der Einladung, den ersten Eintrag anzulegen.
+- Eine Spond-Synchronisation während einer Störung löschte alle Verknüpfungen und meldete Erfolg. Danach sagte die Anwendung weiterhin „du bist angemeldet“, während in Spond nichts geschah.
+- Der Anmeldebildschirm bot eine Reparaturschaltfläche für die E-Mail-Weiterleitung an, die gar nicht gelingen konnte.
+- Bei einer Störung ließ der Kartenscanner das grüne Häkchen des _vorherigen_ Gastes stehen.
+- Ein Microsoft-Konto ohne Anzeigenamen setzte die gesamte Mitgliedersynchronisation zurück und zerstörte bildschirmseitig die Suche.
+
+#### Barrierefreiheit
+
+- 274 Formularbeschriftungen waren nicht mit ihrem Feld verknüpft. Für einen Screenreader waren das namenlose Felder; ein Klick auf die Beschriftung bewirkte nichts. Drei stehen noch offen, jede mit Begründung.
+- Ein abgelehntes Feld ist jetzt auch für einen Screenreader abgelehnt, und die Ablagefläche für Dateien lässt sich per Tastatur bedienen.
+- Fest eingetragene weiße Flächen, die im dunklen Thema unlesbar waren, sind verschwunden.
+- Die Kontaktauswahl war per Tastatur nicht erreichbar.
+- Über 250 fehlende Übersetzungsschlüssel ergänzt, mit einem Wächtertest, der den nächsten findet.
+
+#### Außerdem
+
+- Dateinamen mit Akzent oder Umlaut überstehen jetzt die Kopfzeile; vorher gab das einen Fehler.
+- Ein Brotkrümel verwies auf eine Seite, die es nicht gibt, und landete damit auf „nicht gefunden“.
+- Ein Fehler auf einer Seite blieb auf jeder danach geöffneten Seite stehen.
+- Jeder Tastenanschlag in einem Suchfeld löste auf drei Seiten eine eigene Abfrage aus; und das Suchfeld der Gästeliste verschwand unter dem Cursor.
+- Ein Streaming-Link wurde ohne Prüfung gespeichert und als anklickbarer Verweis dargestellt.
+- Das Stimmgerät ließ das Mikrofon nach einer Fehlermeldung eingeschaltet.
+- Eine PDF ohne Seiten zeigte „0 / 0“ und einen leeren Bildschirm; die Anmerkungsebene saß bei Vergrößerung falsch; und das Verlassen eines Instruments hinterließ eine Lücke in der Stimmen-Nummerierung.
+- Die Ratenbegrenzung legte während der Entwicklung den ganzen Bildschirm lahm.
+- Jedes Dialogfenster stand durch eine Seitenanimation schief.
+
+### Technisch
+
+- **Testabdeckung**: Backend 12,9 % → 83,4 %, Frontend 6,9 % → 81,6 % (Statements). 6.251 bzw. 6.189 Tests über 180 bzw. 276 Dateien. Die CI-Schwellen liegen knapp darunter, damit ein Rückfall auffällt.
+- **Die früheren Zahlen stimmten nicht**: Ohne `include` in den Messeinstellungen zählten nur Dateien, die ein Test zufällig lud. Dateien, die kein Test berührte, fielen aus dem Nenner heraus, statt als null zu zählen.
+- **Die großen Seiten wurden aufgeteilt**, jede zuvor mit einem Charakterisierungstest als Sicherheitsnetz.
+- **Docker-Images** werden bei jedem Merge nach `main` veröffentlicht, und eine Staging-Bereitstellung steht bereit, die nach erfolgreicher CI von selbst läuft und einen Rauchtest durchführt.
+- **Zwei Wächtertests** fangen eine ganze Fehlerklasse ab statt eines Einzelfalls: ein wörtlicher Pfad unterhalb eines Parameterpfads (das kam fünfmal vor) und Standardwerte in Änderungsschemata.
+- Die Backend-Suite läuft parallel: von 19m35s auf 7m52s.
+- Meldungen aus Code Scanning und Secret Scanning abgearbeitet; SQL-Injection über einen Sprachparameter und ein Bot-Token in den Logzeilen behoben.
+
 ## [1.14.0] - 2026-08-18
 
 ### Hinzugefügt

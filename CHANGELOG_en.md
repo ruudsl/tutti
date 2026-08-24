@@ -2,6 +2,96 @@
 
 All notable changes to this application are documented here.
 
+## [1.15.0] - 2026-08-23
+
+A large maintenance round. Test coverage went from 12.9% to 83.4% on the server side and from 6.9% to 81.6% on the screen side, and well over a hundred real bugs surfaced along the way. Almost none of them turned a test red: they were features that silently did nothing, data leaking across the association boundary, and messages saying the opposite of what had happened.
+
+### Added
+
+- **Sharing music between associations** — Link codes, a shared catalogue, sharing per title, requests for files and calls for help. With a screen of its own.
+- **Every association its own sign-in link** — Signing in through Microsoft was stuck on whichever association had been created first; each one now has its own way in.
+- **Partnerships now do something** — Requesting one works, and an accepted partnership has consequences instead of being a mere listing.
+- **The visibility settings now do something** — What a member switches off under privacy is genuinely no longer visible.
+- **Linking a rehearsal to a project** — The button existed but had no counterpart on the server; it works now.
+- **Offline scanning at the door** — The two missing routes are in place, so a scanner without a connection actually works.
+- **Seven routes the screen called that did not exist.**
+- **A shared page layout** — Every page now uses the same header, with styling for forms and tabs that simply was not there.
+
+### Changed
+
+- **One api layer instead of two** — `src/api.ts` shadowed the `src/api/` directory beside it, leaving that directory unreachable for years. That 4,149-line file is gone; everything now runs through one path, including expired-session handling.
+- **All CSV exports run through one helper**, with protection against formulas and against shifting columns.
+- **Subscription limits are real limits** — `max_members` and `max_orchestras` were recorded but never enforced.
+
+### Fixed
+
+#### Data that was not yours
+
+- An association admin could download a backup of the entire installation, and the manifest could write outside the upload directory.
+- Every admin saw the audit log of _all_ associations; another association's section chat stayed on screen after switching; and a cached response could reach a different member.
+- Any member could request a preview of any pdf, including sheet music they had no access to.
+- A new member could end up in another association's orchestra, and a task could be assigned to someone from another association.
+- Categories, task lists, comments, notifications and a poll's target orchestra could all five be chosen across the association boundary.
+- Signing out did not clear offline storage. On a shared tablet the next user saw the previous association's data, including the unsent sync queue. The "clear everything" button left that same storage in place, and still reported it cleared.
+
+#### Things that had never worked
+
+- Sending an e-mail campaign always failed. An empty recipient list also meant _everyone_, while the preview screen showed zero recipients.
+- Signing a member up as a passenger for transport always errored.
+- Creating tasks from a workflow worked in no workflow at all, for two independent reasons at once.
+- The GDPR export and the article 17 and 20 deletion were unreachable.
+- The public calendar, the info screen, transferring a ticket, discounts at the box office and the per-orchestra attendance report were all five broken.
+- Cleanup and the weekly summary had stopped running.
+- The concert stage layout could not be operated at all: seating a member was impossible with mouse or keyboard.
+- Switching off every channel in the notification preferences did nothing.
+
+#### Wrong amounts and figures
+
+- A SEPA direct debit was created as a transfer, paying out instead of collecting.
+- The invoice total came out nine percent higher than what had been paid.
+- Reports ignored the selected fiscal year: choosing 2025 showed the 2026 balance sheet, while the exported file did contain 2025.
+- Ticket sales times shifted with the time zone.
+- Twelve accounting functions were broken, and eight queries referred to columns that do not exist.
+
+#### Messages that did not match
+
+- A posts overview left out every post published today for ordinary members, until midnight. A direct link did show it, so it went unnoticed.
+- On seven pages a failed request looked exactly like an empty list — including the invitation to create the first item.
+- A Spond sync during an outage wiped every link and reported success. After that the app still said "you are signed up" while nothing had happened in Spond.
+- The onboarding screen offered a repair button for e-mail forwarding that could not possibly succeed.
+- On an error the ticket scanner kept the previous visitor's green tick on screen.
+- A Microsoft account without a display name rolled back the entire member sync, and broke search on the screen side.
+
+#### Accessibility
+
+- 274 form labels were not linked to their field. To a screen reader those were nameless fields; clicking the label did nothing. Three remain, each for a stated reason.
+- A rejected field is now rejected for a screen reader too, and the file drop zone can be operated by keyboard.
+- Hard-coded white surfaces that were unreadable in the dark theme are gone.
+- The contact picker could not be reached by keyboard.
+- Over 250 missing translation keys filled in, with a guard test that finds the next one.
+
+#### Also
+
+- Download names with an accent or umlaut now survive the header; previously that caused an error.
+- A breadcrumb pointed at a page that does not exist, and so landed on "not found".
+- An error on one page stayed visible on every page opened afterwards.
+- Every keystroke in a search box triggered its own request, on three pages; and the guest list's search box vanished from under the cursor.
+- A streaming link was saved without validation and rendered as a clickable link.
+- The tuner left the microphone running after an error message.
+- A pdf without pages showed "0 / 0" and a blank screen; the annotation layer sat wrong when zoomed; and leaving an instrument left a gap in the part numbering.
+- The rate limiter flattened the whole screen during development.
+- Every dialog sat askew because of a page animation.
+
+### Technical
+
+- **Test coverage**: backend 12.9% → 83.4%, frontend 6.9% → 81.6% (statements). 6,251 and 6,189 tests, across 180 and 276 files respectively. The CI thresholds sit just below, so a regression stands out.
+- **The earlier figures were wrong**: without `include` in the measurement settings, only files a test happened to load were counted. Files no test touched dropped out of the denominator instead of counting as zero.
+- **The large pages have been split up**, each with a characterisation test as a safety net first.
+- **Docker images** are published on every merge to `main`, and a staging deployment is ready that runs automatically after CI passes and performs a smoke test.
+- **Two guard tests** catch a whole class of bugs rather than one case: a literal path underneath a parameter path (that had happened five times), and default values in update schemas.
+- The backend suite runs in parallel: from 19m35s to 7m52s.
+- Code scanning and secret scanning findings worked through; SQL injection via a language parameter and a bot token in the log lines resolved.
+
 ## [1.14.0] - 2026-08-18
 
 ### Added

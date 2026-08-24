@@ -2,6 +2,96 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.15.0] - 2026-08-23
+
+Een grote onderhoudsronde. De testdekking ging van 12,9% naar 83,4% aan de serverkant en van 6,9% naar 81,6% aan de kant van het scherm, en onderweg kwamen ruim honderd echte fouten boven water. Bijna geen daarvan maakte een test rood: het waren functies die stil niets deden, gegevens die over de verenigingsgrens heen lekten, en meldingen die het tegenovergestelde zeiden van wat er gebeurde.
+
+### Toegevoegd
+
+- **Muziek delen tussen verenigingen** — Koppelcodes, een gedeelde catalogus, delen per titel, verzoeken om bestanden en oproepen. Met een eigen scherm.
+- **Elke vereniging haar eigen inloglink** — Inloggen via Microsoft zat vast op de vereniging die als eerste was aangemaakt; nu heeft elke vereniging haar eigen weg naar binnen.
+- **Partnerschappen doen nu iets** — Aanvragen kan, en een aanvaard partnerschap heeft gevolgen in plaats van alleen een vermelding te zijn.
+- **De zichtbaarheidsinstellingen doen nu iets** — Wat een lid onder privacy uitzet, is daadwerkelijk niet meer te zien.
+- **Een repetitie aan een project koppelen** — Die knop bestond wel maar had aan de serverkant geen tegenhanger; nu werkt hij.
+- **Offline scannen aan de deur** — De twee ontbrekende routes zijn er, dus een scanner zonder verbinding werkt nu echt.
+- **Zeven routes die het scherm aanriep maar die niet bestonden.**
+- **Een gedeelde paginaopbouw** — Alle pagina's staan op dezelfde kop, met opmaak voor formulieren en tabbladen die er eerder niet was.
+
+### Gewijzigd
+
+- **Eén api-laag in plaats van twee** — `src/api.ts` schaduwde de map `src/api/` ernaast, waardoor die map jarenlang onbereikbaar was. Dat bestand van 4.149 regels is opgeheven; alles loopt nu via één weg, mét de afhandeling van een verlopen sessie.
+- **Alle CSV-exports lopen via één hulpje**, met bescherming tegen formules en tegen kolommen die verschuiven.
+- **Abonnementsgrenzen zijn echte grenzen** — `max_members` en `max_orchestras` werden vastgelegd maar nergens gehandhaafd.
+
+### Opgelost
+
+#### Gegevens die niet van jou waren
+
+- Een verenigingsbeheerder kon een reservekopie van de hele installatie downloaden, en het manifest kon buiten de uploadmap schrijven.
+- Elke beheerder zag het logboek van álle verenigingen; de sectiechat van een andere vereniging bleef in beeld na het wisselen; en een gecachet antwoord kon van het ene lid bij het andere terechtkomen.
+- Elk lid kon een voorbeeld opvragen van elke pdf, ook van bladmuziek waar het geen toegang toe had.
+- Een nieuw lid kon in het orkest van een andere vereniging belanden, en een taak kon aan iemand van een andere vereniging worden toegewezen.
+- Categorieën, takenlijsten, reacties, meldingen en het doelorkest van een peiling konden alle vijf over de verenigingsgrens heen gekozen worden.
+- Uitloggen wiste de offline opslag niet. Op een gedeelde tablet zag de volgende gebruiker de gegevens van de vorige vereniging, inclusief de nog niet verstuurde synchronisatiewachtrij. De knop "alles wissen" liet diezelfde opslag ook staan, en meldde toch dat hij gewist was.
+
+#### Dingen die nooit hebben gewerkt
+
+- Het versturen van een e-mailcampagne liep altijd stuk. Een lege ontvangerslijst betekende bovendien _iedereen_, terwijl het voorbeeldscherm nul ontvangers toonde.
+- Een lid als passagier aanmelden bij vervoer gaf altijd een storing.
+- Taken aanmaken vanuit een workflow werkte in geen enkele workflow, om twee onafhankelijke redenen tegelijk.
+- De AVG-export en de verwijdering uit artikel 17 en 20 waren onbereikbaar.
+- De openbare agenda, het infoscherm, het overdragen van een kaartje, kortingen bij de kaartverkoop en het opkomstoverzicht per orkest waren alle vijf stuk.
+- De opschoning en de wekelijkse samenvatting draaiden niet meer.
+- De concertpodiumindeling was helemaal niet te bedienen: een lid op een stoel zetten kon met muis noch toetsenbord.
+- Alle kanalen uitzetten bij de meldingsvoorkeuren deed niets.
+
+#### Verkeerde bedragen en getallen
+
+- Een SEPA-incasso werd als overboeking aangemaakt, en betaalde in plaats van te innen.
+- Het factuurbedrag kwam negen procent hoger uit dan wat er betaald was.
+- De rapportages negeerden het gekozen boekjaar: wie 2025 koos zag de balans van 2026, terwijl het uitgevoerde bestand wél 2025 bevatte.
+- De verkooptijd van kaarten verschoof met de tijdzone.
+- Twaalf functies in de boekhouding waren kapot, en acht queries verwezen naar kolommen die niet bestaan.
+
+#### Meldingen die niet klopten
+
+- Een berichtenoverzicht liet elk bericht van vandaag weg voor gewone leden, tot middernacht. Via een directe link was het wél te lezen, dus het viel niet op.
+- Een mislukte aanroep zag er op zeven pagina's precies zo uit als een lege lijst — inclusief de uitnodiging om het eerste item aan te maken.
+- Een Spond-synchronisatie tijdens een storing wiste alle koppelingen en meldde succes. Daarna zei de app nog "je bent aangemeld" terwijl er in Spond niets gebeurde.
+- Het aanmeldscherm bood een herstelknop voor e-mail doorsturen die niet kón slagen.
+- De kaartscanner liet bij een storing het groene vinkje van de vórige bezoeker staan.
+- Een naamloos Microsoft-account draaide de hele ledensynchronisatie terug, en sloopte aan de schermkant de zoekfunctie.
+
+#### Toegankelijkheid
+
+- 274 formulierlabels waren niet aan hun veld gekoppeld. Voor een schermlezer waren dat naamloze velden; klikken op het label deed niets. Er staan er nu nog drie open, allemaal met een reden.
+- Een afgekeurd veld is nu ook voor een schermlezer afgekeurd, en het sleepvlak voor bestanden is met het toetsenbord te bedienen.
+- Vaste witte vlakken die in het donkere thema onleesbaar waren, zijn weg.
+- De contactkiezer was met een toetsenbord niet te bereiken.
+- Ruim 250 ontbrekende vertaalsleutels aangevuld, met een waaktest die de volgende vindt.
+
+#### Verder
+
+- Downloadnamen met een accent of umlaut overleven de kopregel nu; eerder gaf dat een storing.
+- Een broodkruimel wees naar een pagina die niet bestaat, en kwam dus uit op "niet gevonden".
+- Een fout op één pagina bleef staan op elke volgende pagina die je daarna opende.
+- Elke toetsaanslag in een zoekveld gaf een apart verzoek, op drie pagina's; en het zoekveld van de gastenlijst verdween onder de cursor vandaan.
+- Een streaminglink werd zonder controle opgeslagen en als klikbare verwijzing neergezet.
+- Het stemapparaat liet de microfoon aanstaan na een foutmelding.
+- Een pdf zonder pagina's toonde "0 / 0" en een leeg scherm; de aantekeningenlaag lag bij ingezoomd beeld verkeerd; en een instrument verlaten liet een gat in de partijnummering.
+- De snelheidsbegrenzer sloeg tijdens het ontwikkelen het hele scherm plat.
+- Elk venster stond scheef door een pagina-animatie.
+
+### Technisch
+
+- **Testdekking**: backend 12,9% → 83,4%, frontend 6,9% → 81,6% (statements). 6.251 en 6.189 tests, over 180 respectievelijk 276 bestanden. De drempels in CI staan er net onder, zodat een terugval opvalt.
+- **De eerdere cijfers klopten niet**: zonder `include` in de meetinstellingen telden alleen bestanden mee die een test toevallig inlaadde. Bestanden die geen enkele test aanraakte verdwenen uit de noemer in plaats van als nul mee te tellen.
+- **De grote pagina's zijn opgeknipt**, elk met een karakteriseringstest als vangnet vooraf.
+- **Docker-images** worden bij elke merge naar `main` gepubliceerd, en er staat een staging-uitrol klaar die na een geslaagde CI vanzelf draait en een rookproef doet.
+- **Twee waaktests** vangen een hele klasse fouten af in plaats van één geval: een letterlijk pad onder een parameterpad (dat kwam vijf keer voor), en standaardwaarden in wijzigingsschema's.
+- De backendsuite draait parallel: van 19m35s naar 7m52s.
+- Meldingen uit code scanning en secret scanning nagelopen; SQL-injectie via een taalparameter en een bottoken in de logregels verholpen.
+
 ## [1.14.0] - 2026-08-18
 
 ### Toegevoegd
