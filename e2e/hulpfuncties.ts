@@ -187,6 +187,37 @@ export async function verwijderLidOpEmail(request: APIRequestContext, token: str
   }
 }
 
+/** Een concert zoals de lijst hem teruggeeft. */
+export interface Concert {
+  id: string;
+  name: string;
+  date: string;
+}
+
+/**
+ * Verwijder alle concerten met deze naam, als ze er zijn.
+ *
+ * Dezelfde opzet als `verwijderRepetitiesOpLocatie`: de concerttest kiest een
+ * naam die geen enkele andere test gebruikt, dus dit raakt alleen wat van die
+ * test is. Zo kunnen de bestanden naast elkaar draaien zonder elkaars rijen te
+ * wissen.
+ */
+export async function verwijderConcertenMetNaam(
+  request: APIRequestContext,
+  token: string,
+  naam: string,
+): Promise<void> {
+  const antwoord = await request.get('/api/concerts', { headers: authKop(token) });
+  expect(antwoord.ok(), 'concerten ophalen mislukte').toBe(true);
+  const body = await antwoord.json();
+  const concerten = ((body.data as Concert[]) || []).filter((c) => c.name === naam);
+
+  for (const concert of concerten) {
+    const verwijderd = await request.delete(`/api/concerts/${concert.id}`, { headers: authKop(token) });
+    expect(verwijderd.ok(), `opruimen van concert ${concert.id} mislukte`).toBe(true);
+  }
+}
+
 /**
  * De datum zoals de repetitielijst hem toont: dag-maand-jaar zonder voorloopnul.
  *

@@ -312,11 +312,12 @@ Gemeten 23-08-2026, over de **hele** backend respectievelijk frontend:
   - Branches (72,9%) en functions (76,2%) blijven onder de 80. Dat is eerlijk zo gelaten: de resterende vertakkingen zijn grotendeels `?? null`-terugvallen en stijltakken, en daar een test op zetten bewaakt niets
   - Twee bestanden zijn bewust ongedekt gebleven: `sw-custom.ts` (113 statements) draait als service worker in een eigen levenscyclus, en `src/index.ts` en `migrations/cli.ts` aan de serverkant zijn opstartbestanden. Die testen vraagt om een eigen aanpak, niet om een dekkingsronde
 - [x] Integration tests voor tenant isolatie
-- [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job): `e2e/smoke.spec.ts` plus twee flowbestanden_
+- [x] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job): `e2e/smoke.spec.ts` plus drie flowbestanden, 17 tests_
   - `e2e/repetities.spec.ts`: een beheerder plant een repetitie, een lid meldt zich aan en weer af, en een lid krijgt de beheerknoppen niet te zien
   - `e2e/leden.spec.ts`: een beheerder voegt een lid toe en koppelt het aan een orkest, en een lid komt niet op de ledenbeheerpagina
   - De seed (`backend/src/scripts/seed-e2e.ts`) zet daar repetities en een tweede orkest voor klaar, met vaste id's
-  - Nog niet gedekt: concerten met een programma. De knoppen in de concerttabel zijn pictogrammen zonder toegankelijke naam, dus een test zou ze op positie moeten aanwijzen. Eerst die knoppen een naam geven
+  - `e2e/concerten.spec.ts`: een beheerder maakt een concert aan, vult het programma en vindt beide terug na opnieuw laden; een gewoon lid komt niet op de pagina
+  - Die laatste kon lang niet, en niet omdat hij vergeten was: de drie actieknoppen per concertrij droegen alleen een pictogram zonder toegankelijke naam. Een test kon ze alleen op positie aanwijzen, en zo'n verwijzing breekt bij de eerste kolomwijziging. Ze dragen nu een `aria-label` met de naam van het concert erin - ook winst voor een schermlezer, die anders drie keer "knop" hoorde bij elke rij. `Concerts.knopnamen.test.tsx` bewaakt dat ze die naam houden
 - [x] Dependabot of Renovate configuratie
 - [x] SAST scanning (CodeQL of Semgrep)
 - [x] Automated staging deployments — _`.github/workflows/deploy-staging.yml`: rolt uit zodra CI op `main` slaagt, wacht tot de omgeving antwoordt en draait daarna `scripts/smoke-test.mjs`_
