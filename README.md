@@ -172,12 +172,13 @@ See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for self-hosting options.
 
 ### Integration & Compliance
 
-| Document                                      | Description                        |
-| --------------------------------------------- | ---------------------------------- |
-| [INTEGRATIONS.md](docs/INTEGRATIONS.md)       | Third-party integrations           |
-| [GDPR.md](docs/GDPR.md)                       | GDPR compliance guide              |
-| [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | Email template reference           |
-| [PRINT_TEMPLATES.md](docs/PRINT_TEMPLATES.md) | Print templates (tickets, posters) |
+| Document                                      | Description                                |
+| --------------------------------------------- | ------------------------------------------ |
+| [INTEGRATIONS.md](docs/INTEGRATIONS.md)       | Third-party integrations                   |
+| [GDPR.md](docs/GDPR.md)                       | GDPR compliance guide                      |
+| [PIA.md](docs/PIA.md)                         | Privacy impact assessment (technical half) |
+| [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | Email template reference                   |
+| [PRINT_TEMPLATES.md](docs/PRINT_TEMPLATES.md) | Print templates (tickets, posters)         |
 
 ### Architecture Decisions
 

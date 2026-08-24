@@ -2,6 +2,11 @@
 
 This document describes how Harmonie handles personal data in compliance with the General Data Protection Regulation (GDPR/AVG).
 
+> This document describes how it is **meant** to work. For what the code
+> actually does — measured against the schema and verified against a running
+> database — see [PIA.md](PIA.md). Where the two differ, PIA.md says so; the
+> data export in particular covers less than the section below describes.
+
 ## Table of Contents
 
 1. [Data Collected and Purpose](#data-collected-and-purpose)
