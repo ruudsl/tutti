@@ -36,11 +36,29 @@ describe('moduleregistry', () => {
     }
   });
 
-  it('geeft elke module minstens een API-pad en een navigatiepad', () => {
+  /**
+   * Modules die geen eigen pagina hebben, en dus geen navigatiepad.
+   *
+   * De regel is: een module verbergt een stuk navigatie. Spond is de
+   * uitzondering - die koppeling staat als kaart op het repetitiescherm en
+   * heeft geen eigen menu-item. Er valt dus niets uit de navigatie te halen;
+   * de frontend haalt de kaart zelf weg op de modulestand.
+   *
+   * Deze lijst staat er zodat het een bewuste uitzondering blijft. Wie een
+   * module toevoegt zonder navigatiepad moet hem hier noemen, en dan is de
+   * vraag "waar wordt dit dan wel verborgen?" niet te ontlopen.
+   */
+  const MODULES_ZONDER_PAGINA = new Set(['spond']);
+
+  it('geeft elke module minstens een API-pad', () => {
     for (const module of MODULES) {
       expect(module.apiPrefixes.length, module.key).toBeGreaterThan(0);
-      expect(module.navPaths.length, module.key).toBeGreaterThan(0);
     }
+  });
+
+  it('geeft elke module een navigatiepad, behalve de modules zonder eigen pagina', () => {
+    const zonderPad = MODULES.filter((m) => m.navPaths.length === 0).map((m) => m.key);
+    expect(zonderPad.sort()).toEqual([...MODULES_ZONDER_PAGINA].sort());
   });
 
   it('kent geen twee modules die hetzelfde navigatiepad claimen', () => {
@@ -88,7 +106,13 @@ describe('elke module is ook aan de API-kant afgeschermd', () => {
 
     // tickets.ts zet de guard in de router zelf, omdat die router aan /api hangt
     // en paden onder twee voorvoegsels bedient.
-    const guardedElsewhere = new Set(['ticketing']);
+    //
+    // spond.ts doet dat ook, maar om een andere reden: twee van de dertien
+    // routes daar zijn geen koppeling maar kern - "ben ik aanwezig" en "zet
+    // mij op aanwezig". Die staan alleen in dat bestand omdat ze ooit samen
+    // met de synchronisatie zijn geschreven. Een guard op de mount zou het
+    // uitzetten van de module elk lid zijn eigen aanwezigheid afnemen.
+    const guardedElsewhere = new Set(['ticketing', 'spond']);
 
     const unguarded = MODULES.filter((m) => !guarded.has(m.key) && !guardedElsewhere.has(m.key)).map((m) => m.key);
 

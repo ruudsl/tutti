@@ -93,6 +93,7 @@ kleine menu; wie een onderdeel gebruikt, zet het in twee klikken aan onder
 |                 | `resources`    | Ruimtes reserveren      | `/resources`                                                                         |
 |                 | `tasks`        | Taken                   | `/tasks`                                                                             |
 |                 | `workflows`    | Workflow-automatisering | `/workflows`                                                                         |
+|                 | `spond`        | Spond-koppeling         | _geen menu-item_ — de kaart op het repetitiescherm                                   |
 | `communication` | `posts`        | Nieuwsberichten         | `/posts`                                                                             |
 |                 | `mailings`     | Mailings                | `/email-campaigns`                                                                   |
 |                 | `polls`        | Peilingen               | `/polls`                                                                             |
@@ -102,6 +103,32 @@ kleine menu; wie een onderdeel gebruikt, zet het in twee klikken aan onder
 |                 | `issues`       | Meldingen               | `/issues`                                                                            |
 | `finance`       | `accounting`   | Boekhouding             | `/accounting`                                                                        |
 |                 | `ticketing`    | Kaartverkoop            | `/my-tickets`, `/ticket-sales`, `/ticket-scanner`, `/payment-settings`               |
+
+### Spond is de uitzondering
+
+Elke module hierboven verbergt een of meer menu-items. Spond niet: die
+koppeling heeft geen eigen pagina maar staat als kaart op het repetitiescherm,
+zichtbaar voor beheerders. Uitzetten haalt die kaart weg en sluit `/api/spond`
+af; er valt niets uit de navigatie te halen.
+
+Twee routes in `backend/src/routes/spond.ts` blijven bewust open, ook als de
+module uit staat:
+
+| Route                                          | Wat het is                          |
+| ---------------------------------------------- | ----------------------------------- |
+| `PUT /spond/attendance/:rehearsalId`           | Een lid zet zichzelf op aanwezig    |
+| `GET /spond/attendance/:rehearsalId/my-status` | Een lid vraagt zijn eigen status op |
+
+Die heten wel `/spond/...`, maar het is kernfunctionaliteit die daar alleen
+staat omdat ze ooit samen met de synchronisatie is geschreven. Zou de module ze
+meenemen, dan raakt elk lid zijn eigen aanwezigheid kwijt zodra een beheerder
+Spond uitzet. Wat wél van de module afhangt is het knopje "ook naar Spond
+sturen": staat de module uit, dan is er geen koppeling om naartoe te sturen.
+
+Bij verenigingen die Spond al gebruikten staat de module aan. De migratie
+`20260824000001_spond_module_aanzetten` zet daarvoor een expliciete rij; zonder
+die stap zou de koppeling verdwijnen bij iedereen die hem vandaag gebruikt,
+want een module zonder rij krijgt de standaard, en die is uit.
 
 Het beheerscherm zet de modules onder deze groepen, in de volgorde hierboven:
 van wat een vereniging wekelijks aanraakt naar wat er een paar keer per jaar bij

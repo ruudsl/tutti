@@ -21,6 +21,7 @@ import db from '../../database/connection';
 import spondRoutes from '../../routes/spond';
 import { errorHandler } from '../../middleware/errorHandler';
 import { createTestEnvironment } from '../testUtils';
+import { setModuleEnabled } from '../../modules/service';
 import { decryptPassword } from '../../services/spond';
 
 /**
@@ -56,6 +57,10 @@ function spondAntwoordt(status = 200, body: unknown = { loginToken: 'test-token'
 
 beforeEach(() => {
   const omgeving = createTestEnvironment();
+  // De Spond-koppeling is sinds 24-08-2026 een module, en die staat standaard
+  // uit. Zonder deze regel antwoorden de routes hieronder met 404 - terecht,
+  // maar dat is niet wat dit bestand onderzoekt.
+  setModuleEnabled(omgeving.association.id, 'spond', true, omgeving.adminUser.id);
   adminToken = omgeving.adminToken;
   associationId = omgeving.association.id;
   db.prepare('DELETE FROM spond_config WHERE association_id = ?').run(associationId);

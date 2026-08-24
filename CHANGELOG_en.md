@@ -2,6 +2,14 @@
 
 All notable changes to this application are documented here.
 
+## [1.17.0] - 2026-08-24
+
+### Added
+
+- **The Spond integration is now a module.** Under **Admin → Modules** it sits under _Planning_ and can be switched on or off like the other nineteen parts. Associations that don't use Spond — the large majority — no longer see the integration on the rehearsals screen.
+  - Anyone using Spond today notices nothing: the module is on for those associations. Switching it off hides the integration and deletes nothing — the settings, the linked members and the fetched rehearsals stay put and come back unchanged when it is switched on again.
+  - What does _not_ go with the module is your own attendance. Marking yourself present or absent for a rehearsal keeps working with Spond off; only pushing it through to Spond falls away, because there is no integration to push to.
+
 ## [1.16.0] - 2026-08-24
 
 A performance round that found two long-standing problems along the way. The application is now more than three times lighter on first open, the service worker was doing nothing at all, and the browser tab showed a technical key instead of a title on nearly every page.

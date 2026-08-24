@@ -52,6 +52,21 @@ vi.mock('../../api');
 // test te verzetten zijn.
 let ingelogdeGebruiker: User | null = null;
 
+// De Spond-koppeling is sinds 24-08-2026 een module. De pagina vraagt de stand
+// op; zonder deze mock valt hij om op "useModules moet binnen een
+// ModulesProvider worden gebruikt". `spondModuleAan` is per test te zetten.
+const spondModuleAan = true;
+
+vi.mock('../../context/ModulesContext', () => ({
+  useModules: () => ({
+    enabled: spondModuleAan ? ['spond'] : [],
+    loading: false,
+    loaded: true,
+    isEnabled: (sleutel: string) => (sleutel === 'spond' ? spondModuleAan : true),
+    refresh: vi.fn(),
+  }),
+}));
+
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ user: ingelogdeGebruiker }),
 }));

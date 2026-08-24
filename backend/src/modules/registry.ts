@@ -223,6 +223,20 @@ export const MODULES: ModuleDefinition[] = [
     navPaths: ['/season-planner'],
   },
   {
+    key: 'spond',
+    category: 'planning',
+    title: 'Spond-koppeling',
+    description:
+      'Repetities en aanwezigheid uitwisselen met Spond, inclusief het koppelen van leden aan hun Spond-account. Zet dit uit als de vereniging geen Spond gebruikt; wat al is opgehaald blijft gewoon staan.',
+    defaultEnabled: false,
+    apiPrefixes: ['/spond'],
+    // Spond heeft geen eigen pagina - de koppeling staat als kaart op het
+    // repetitiescherm. Er is dus geen navigatiepad om te verbergen; de
+    // frontend haalt de kaart weg op de modulestand. Zie MODULES_ZONDER_PAGINA
+    // in __tests__/modules/registry.test.ts.
+    navPaths: [],
+  },
+  {
     key: 'attendance',
     category: 'music',
     title: 'Aanwezigheidsanalyse',

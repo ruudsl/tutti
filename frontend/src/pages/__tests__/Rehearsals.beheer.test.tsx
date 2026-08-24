@@ -22,7 +22,7 @@
  */
 
 import '@testing-library/jest-dom';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -35,6 +35,21 @@ import type { Rehearsal, RehearsalDetail, User } from '../../types';
 vi.mock('../../api');
 
 let ingelogdeGebruiker: User | null = null;
+
+// De Spond-koppeling is sinds 24-08-2026 een module. De pagina vraagt de stand
+// op; zonder deze mock valt hij om op "useModules moet binnen een
+// ModulesProvider worden gebruikt". `spondModuleAan` is per test te zetten.
+let spondModuleAan = true;
+
+vi.mock('../../context/ModulesContext', () => ({
+  useModules: () => ({
+    enabled: spondModuleAan ? ['spond'] : [],
+    loading: false,
+    loaded: true,
+    isEnabled: (sleutel: string) => (sleutel === 'spond' ? spondModuleAan : true),
+    refresh: vi.fn(),
+  }),
+}));
 
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ user: ingelogdeGebruiker }),
@@ -536,6 +551,49 @@ describe('een reeks terugkerende repetities', () => {
     const kaartje = kaart('rehearsals.recurring.title');
 
     expect(within(kaartje).getByRole('button', { name: 'rehearsals.recurring.create' })).toBeDisabled();
+  });
+});
+
+describe('de spond-koppeling als module', () => {
+  /**
+   * Spond is sinds 24-08-2026 aan en uit te zetten. Uit betekent: geen kaart
+   * op het repetitiescherm, en geen verzoek naar /api/spond - dat antwoordt
+   * dan met 404, en een mislukte aanroep bij het openen van de pagina is geen
+   * manier om "deze vereniging gebruikt Spond niet" uit te drukken.
+   *
+   * Wat blijft: de repetities zelf, en de aanwezigheid van de leden. Uitzetten
+   * verbergt de koppeling, niet wat er ooit uit is gekomen.
+   */
+  afterEach(() => {
+    spondModuleAan = true;
+  });
+
+  it('toont de kaart als de module aan staat', async () => {
+    await toon();
+    expect(screen.getByText('rehearsals.spond.title')).toBeInTheDocument();
+  });
+
+  it('laat de kaart weg als de module uit staat', async () => {
+    spondModuleAan = false;
+    await toon();
+
+    expect(screen.queryByText('rehearsals.spond.title')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'rehearsals.spond.configure' })).not.toBeInTheDocument();
+  });
+
+  it('vraagt de configuratie niet op als de module uit staat', async () => {
+    spondModuleAan = false;
+    await toon();
+
+    expect(api.getSpondConfig).not.toHaveBeenCalled();
+  });
+
+  it('houdt de repetities zelf gewoon zichtbaar', async () => {
+    spondModuleAan = false;
+    await toon();
+
+    // De koppeling is weg, de gegevens niet.
+    expect(screen.getByText('De Zaal')).toBeInTheDocument();
   });
 });
 
