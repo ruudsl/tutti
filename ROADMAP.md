@@ -304,19 +304,20 @@ Gemeten 23-08-2026, over de **hele** backend respectievelijk frontend:
 ### Deliverables
 
 - [x] Unit tests: >80% coverage — _backend **83,4%**, frontend **81,6%**_ (statements; lines 83,6% en 82,4%)
-  - **De 50 uur die hiervoor begroot staat is niet realistisch.** De backend is in drie PR's van 12,9% naar 64,4% gegaan; dat alleen al was meer werk dan de hele post. De frontend staat nog vrijwel op nul
-  - De api-laag en de hooks zijn nu grotendeels gedekt. Wat resteert zijn de pagina's, en dat is bewust nog niet aangeraakt: `Accounting.tsx` is 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655. Tests schrijven tegen zo'n bestand betekent ze vastzetten aan een structuur die toch moet wijken — opknippen hoort eerst
+  - **De 50 uur die hiervoor begroot staat was niet realistisch.** Alleen al de eerste drie backend-PR's (12,9% naar 64,4%) waren meer werk dan de hele post; daarna kwamen er nog vier rondes bij, aan beide kanten
+  - De volgorde was: eerst de api-laag en de hooks, dan de grote pagina's opknippen, dan pas tests daarop. Andersom zouden die tests vastzitten aan een structuur die toch moest wijken. `Accounting.tsx` ging van 2.680 regels naar 851, `Rehearsals.tsx` van 1.950 naar 886
   - **De backend is op 23-08-2026 over de 80% gegaan: 64,7% -> 83,4%**, in een ronde met tien parallelle agenten over twintig bronbestanden. 1.466 tests erbij (4.785 -> 6.251), 205 testbestanden. Onderweg zijn er **40 echte fouten** gevonden; 75 tests zijn aantoonbaar rood zonder de reparatie
   - Wat die ronde over de fouten zegt: bijna geen enkele was subtiel. `GET /export/accounts` gaf altijd een 500 omdat er een parameter te veel meeging; `create_task` werkte in geen enkele workflow omdat de motor een status zette die de CHECK niet toelaat; een lid als passagier aanmelden gaf altijd een 500 op een NOT NULL-kolom. Ze konden blijven staan omdat geen enkele test die route ooit aanriep
   - **De frontend is op 23-08-2026 over de 80% gegaan: 36,6% -> 81,6%**, in drie golven van tien parallelle agenten over ruim honderd bronbestanden. 2.850 tests erbij (3.339 -> 6.189), 276 testbestanden
   - Branches (72,9%) en functions (76,2%) blijven onder de 80. Dat is eerlijk zo gelaten: de resterende vertakkingen zijn grotendeels `?? null`-terugvallen en stijltakken, en daar een test op zetten bewaakt niets
   - Twee bestanden zijn bewust ongedekt gebleven: `sw-custom.ts` (113 statements) draait als service worker in een eigen levenscyclus, en `src/index.ts` en `migrations/cli.ts` aan de serverkant zijn opstartbestanden. Die testen vraagt om een eigen aanpak, niet om een dekkingsronde
 - [x] Integration tests voor tenant isolatie
-- [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job): `e2e/smoke.spec.ts` plus twee flowbestanden_
+- [x] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job): `e2e/smoke.spec.ts` plus drie flowbestanden, 17 tests_
   - `e2e/repetities.spec.ts`: een beheerder plant een repetitie, een lid meldt zich aan en weer af, en een lid krijgt de beheerknoppen niet te zien
   - `e2e/leden.spec.ts`: een beheerder voegt een lid toe en koppelt het aan een orkest, en een lid komt niet op de ledenbeheerpagina
   - De seed (`backend/src/scripts/seed-e2e.ts`) zet daar repetities en een tweede orkest voor klaar, met vaste id's
-  - Nog niet gedekt: concerten met een programma. De knoppen in de concerttabel zijn pictogrammen zonder toegankelijke naam, dus een test zou ze op positie moeten aanwijzen. Eerst die knoppen een naam geven
+  - `e2e/concerten.spec.ts`: een beheerder maakt een concert aan, vult het programma en vindt beide terug na opnieuw laden; een gewoon lid komt niet op de pagina
+  - Die laatste kon lang niet, en niet omdat hij vergeten was: de drie actieknoppen per concertrij droegen alleen een pictogram zonder toegankelijke naam. Een test kon ze alleen op positie aanwijzen, en zo'n verwijzing breekt bij de eerste kolomwijziging. Ze dragen nu een `aria-label` met de naam van het concert erin - ook winst voor een schermlezer, die anders drie keer "knop" hoorde bij elke rij. `Concerts.knopnamen.test.tsx` bewaakt dat ze die naam houden
 - [x] Dependabot of Renovate configuratie
 - [x] SAST scanning (CodeQL of Semgrep)
 - [x] Automated staging deployments — _`.github/workflows/deploy-staging.yml`: rolt uit zodra CI op `main` slaagt, wacht tot de omgeving antwoordt en draait daarna `scripts/smoke-test.mjs`_

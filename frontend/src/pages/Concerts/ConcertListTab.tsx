@@ -116,14 +116,35 @@ export function ConcertListTab({
                     </span>
                   </td>
                   <td>
+                    {/*
+                      De naam van het concert hoort in het label. Deze drie
+                      knoppen dragen alleen een pictogram, dus zonder aria-label
+                      heten ze voor een schermlezer helemaal niets - en met
+                      alleen "Details" hoort iemand die tekst bij elke rij
+                      opnieuw, zonder te weten waarbij. Dat maakt ze ook
+                      aanwijsbaar in een test zonder op positie te tellen; op
+                      positie tellen breekt bij de eerste kolomwijziging.
+                    */}
                     <div className="flex gap-1">
-                      <button className="btn btn-outline btn-sm" onClick={() => setViewingConcert(concert.id)}>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        aria-label={`${t('common.details')}: ${concert.name}`}
+                        onClick={() => setViewingConcert(concert.id)}
+                      >
                         <Icon name="eye" size={16} />
                       </button>
-                      <button className="btn btn-outline btn-sm" onClick={() => openEditModal(concert)}>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        aria-label={`${t('common.edit')}: ${concert.name}`}
+                        onClick={() => openEditModal(concert)}
+                      >
                         <Icon name="pencil" size={16} />
                       </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => setDeletingConcert(concert)}>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        aria-label={`${t('common.delete')}: ${concert.name}`}
+                        onClick={() => setDeletingConcert(concert)}
+                      >
                         <Icon name="trash" size={16} />
                       </button>
                     </div>
