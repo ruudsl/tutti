@@ -62,8 +62,25 @@ process.on('unhandledRejection', (reden) => {
  * streefwaarde. Een drempel die vandaag al rood staat bewaakt niets - hij
  * wordt genegeerd of uitgezet. Zo vangt hij wel elke verslechtering.
  *
- * Gemeten op 19-08-2026 met het lettertype uit het project zelf: performance
- * 80, accessibility 98, best-practices 96, seo 100.
+ * Gemeten op 24-08-2026: performance 91, accessibility 98, best-practices
+ * 100, seo 100.
+ *
+ * De sprong van 80 naar 91 zat vrijwel helemaal in wat de browser moest
+ * ophalen en ontleden voordat er iets op het scherm stond. De hoofdbundel ging
+ * van 905 KB naar 296 KB doordat de Engelse en de Duitse vertalingen eruit
+ * zijn (610 KB JSON die een Nederlandse gebruiker nooit aanraakt), doordat
+ * Layout en de toestemmingspoort nu pas na het inloggen worden opgehaald - met
+ * dexie eraan vast - en doordat date-fns, ua-parser-js en idb niet langer in
+ * dezelfde vendorchunk zitten als axios. De stylesheet staat sinds deze ronde
+ * ingelijnd in de HTML en houdt het tekenen dus niet meer op.
+ *
+ * Best-practices ging van 96 naar 100 toen de service worker eindelijk kon
+ * registreren; zie controleerServiceWorker() hieronder.
+ *
+ * Wat er nog ligt: van de 236 KB (ingepakt) die vóór de eerste weergave binnen
+ * moet zijn, is ongeveer 55 KB het Nederlandse vertaalbestand. Dat opsplitsen
+ * per pagina is de volgende stap, en een grotere dan hij lijkt: 5.149 sleutels
+ * zonder namespaces in de aanroepen.
  *
  * Daarvoor stond performance op 75. Dat cijfer ging grotendeels over de
  * meetopstelling: er stond een stylesheet van fonts.googleapis.com in de head,
@@ -73,9 +90,9 @@ process.on('unhandledRejection', (reden) => {
  * onopgemerkt in een cijfer verdwijnt.
  */
 const DREMPELS = {
-  performance: 75,
+  performance: 88,
   accessibility: 95,
-  'best-practices': 90,
+  'best-practices': 95,
   seo: 95,
 };
 
@@ -146,6 +163,68 @@ async function controleerInstalleerbaarheid(basis) {
   }
   if (!iconen.some((i) => String(i.purpose || '').includes('maskable'))) {
     problemen.push('manifest mist een maskable icoon');
+  }
+
+  problemen.push(...(await controleerServiceWorker(basis)));
+
+  return problemen;
+}
+
+/**
+ * De service worker moet te evalueren zijn, anders is er geen PWA.
+ *
+ * Aanleiding: `offline.html` stond twee keer in de precachelijst, met twee
+ * verschillende revisies. Workbox weigert dat en gooit
+ * `add-to-cache-list-conflicting-entries` - niet bij het installeren maar al
+ * bij het evalueren van het script. Registreren liep daardoor altijd stuk op
+ * "ServiceWorker script evaluation failed", in elke browser en ook in
+ * productie. Weg waren de precache, het offline gebruik, de
+ * achtergrondmeldingen en de installatie als app.
+ *
+ * Niets in de meting merkte daar iets van. Lighthouse heeft de PWA-audits
+ * geschrapt, de applicatie logde de fout naar de console en werkte verder
+ * gewoon door. Vandaar deze controle: de precachelijst uit het gebouwde
+ * script halen en kijken of er geen URL twee keer in staat. Dat is precies de
+ * voorwaarde waar workbox op afgaat.
+ */
+async function controleerServiceWorker(basis) {
+  const problemen = [];
+
+  const res = await fetch(new URL('/sw-custom.js', basis));
+  if (!res.ok) return [`service worker niet op te halen (status ${res.status})`];
+
+  const script = await res.text();
+  if (/^\s*<!doctype html/i.test(script)) {
+    return ['service worker geeft HTML terug; de server valt terug op index.html'];
+  }
+
+  // De volgorde van de twee velden binnen zo'n vermelding ligt niet vast -
+  // vandaar beide varianten. Vandaag schrijft de minifier
+  // {"revision":...,"url":...}; dat kan bij een volgende versie omdraaien.
+  const perUrl = new Map();
+  const vermeldingen = [...script.matchAll(/\{"revision":(null|"[^"]*"),"url":"([^"]+)"\}/g)].map((t) => [t[2], t[1]]);
+  vermeldingen.push(...[...script.matchAll(/\{"url":"([^"]+)","revision":(null|"[^"]*")\}/g)].map((t) => [t[1], t[2]]));
+
+  // Workbox rekent elke vermelding om naar een absoluut adres voordat hij op
+  // dubbelen controleert, en daar zat de fout ook: `offline.html` uit het
+  // globpatroon en `/offline.html` uit de handmatige lijst zijn twee
+  // verschillende teksten en hetzelfde bestand. Zonder deze omrekening ziet
+  // deze controle het verschil niet en vangt hij precies het geval niet
+  // waarvoor hij is geschreven.
+  const swAdres = new URL('/sw-custom.js', basis).href;
+  const gemeld = new Set();
+  for (const [adres, revisie] of vermeldingen) {
+    const absoluut = new URL(adres, swAdres).href;
+    const eerder = perUrl.get(absoluut);
+    if (eerder !== undefined && eerder !== revisie && !gemeld.has(absoluut)) {
+      gemeld.add(absoluut);
+      problemen.push(`${absoluut} staat twee keer in de precachelijst, met revisie ${eerder} en ${revisie}`);
+    }
+    perUrl.set(absoluut, revisie);
+  }
+
+  if (perUrl.size === 0) {
+    problemen.push('geen precachelijst in de service worker gevonden');
   }
 
   return problemen;
@@ -295,7 +374,7 @@ async function meetEenRonde() {
 
   const installeerbaarheid = await controleerInstalleerbaarheid(url);
   if (installeerbaarheid.length === 0) {
-    console.log('ok   installeerbaarheid  manifest en iconen in orde');
+    console.log('ok   installeerbaarheid  manifest, iconen en precachelijst in orde');
   } else {
     installeerbaarheid.forEach((p) => console.log(`LAAG installeerbaarheid  ${p}`));
   }

@@ -7,6 +7,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import * as offlineStorage from '../lib/offlineStorage';
+// Blijft hier herexporteerd zodat bestaande importen werken; de hook zelf
+// staat in een eigen bestand omdat hij anders dexie meesleept.
+export { useOnlineStatus } from './useOnlineStatus';
 import * as api from '../api';
 import type { User, Instrument, Orchestra, MusicPiece, MusicTitle, Rehearsal, Genre } from '../types';
 
@@ -592,28 +595,6 @@ export function useOfflineData(): OfflineDataHook {
     processPendingMutations,
     clearOfflineData,
   };
-}
-
-/**
- * Hook to track online/offline status
- */
-export function useOnlineStatus(): boolean {
-  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  return isOnline;
 }
 
 /**

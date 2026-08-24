@@ -1,10 +1,56 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+
+/**
+ * Zet de stylesheet van het schild rechtstreeks in de HTML.
+ *
+ * Een <link rel="stylesheet"> in de <head> houdt het tekenen tegen tot het
+ * bestand binnen is, en dat is een eigen rondgang naar de server. Lighthouse
+ * rekende daar 600 ms voor - niet vanwege de omvang (22 KB ingepakt) maar
+ * vanwege die rondgang. De stijlen staan in één bestand voor de hele
+ * applicatie; ze opsplitsen in "wat het inlogscherm nodig heeft" en "de rest"
+ * is een grotere verbouwing dan dit werkpakket toestaat, en dan nog blijft er
+ * een blokkerend deel over.
+ *
+ * Inpakken in de HTML haalt die rondgang helemaal weg. Dat mag hier: de
+ * backend staat 'unsafe-inline' toe in style-src, en de applicatie heeft maar
+ * één HTML-document, dus er is geen tweede pagina die de stylesheet opnieuw
+ * uit de cache zou kunnen halen.
+ *
+ * Het losse .css-bestand wordt uit de bundel gehaald nadat het is ingepakt.
+ * Bleef het staan, dan zette de service worker het in zijn precache: een
+ * bestand van 118 KB dat niemand meer opvraagt.
+ */
+function stijlenInlijnen(): Plugin {
+  return {
+    name: 'tutti-stijlen-inlijnen',
+    enforce: 'post',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const bundle = ctx.bundle;
+        if (!bundle) return html;
+
+        return html.replace(/<link[^>]+rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g, (heleTag, href: string) => {
+          const naam = href.replace(/^\//, '');
+          const bestand = bundle[naam];
+          if (!bestand || bestand.type !== 'asset') return heleTag;
+
+          const inhoud = String(bestand.source);
+          delete bundle[naam];
+          return `<style>${inhoud}</style>`;
+        });
+      },
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    stijlenInlijnen(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
@@ -15,7 +61,23 @@ export default defineConfig({
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB to accommodate large bundles
-        additionalManifestEntries: [{ url: '/offline.html', revision: '1' }],
+        // Hier stond `additionalManifestEntries: [{ url: '/offline.html',
+        // revision: '1' }]`, en dat maakte de service worker onbruikbaar.
+        //
+        // offline.html staat in `includeAssets` hierboven en komt daardoor al
+        // in dist terecht, waar het globpatroon `**/*.html` hem oppikt - met
+        // een revisie die uit de inhoud van het bestand is berekend. De regel
+        // hierboven zette hem er een tweede keer bij, met revisie '1'.
+        // Workbox weigert dezelfde URL met twee verschillende revisies en
+        // gooit `add-to-cache-list-conflicting-entries` - niet bij het
+        // installeren, maar al bij het evalueren van het script. Registreren
+        // liep daarmee altijd stuk op "ServiceWorker script evaluation
+        // failed", in elke browser, ook in productie.
+        //
+        // Wat daar allemaal aan vastzat: geen precache, dus geen offline
+        // gebruik, geen offline bladmuziek, geen achtergrondmeldingen en geen
+        // installatie als app. De applicatie logde de fout in de console en
+        // werkte verder gewoon, dus het viel niemand op.
       },
       devOptions: {
         enabled: false,
@@ -75,7 +137,16 @@ export default defineConfig({
           if (/[\\/](i18next|react-i18next|i18next-browser-languagedetector)[\\/]/.test(id)) {
             return 'vendor-i18n';
           }
-          if (/[\\/](axios|date-fns|idb|ua-parser-js)[\\/]/.test(id)) return 'vendor-utils';
+          // Deze vier stonden samen in één 'vendor-utils'-chunk, en dat
+          // kostte meer dan het opleverde. Een gedeelde chunk wordt geladen
+          // zodra iets erin nodig is: axios heeft het inlogscherm nodig, dus
+          // kwamen date-fns, ua-parser-js en idb ongevraagd mee - samen 215 KB
+          // broncode die op het inlogscherm niets doet. Elk zijn eigen chunk,
+          // dan haalt de browser alleen op wat er werkelijk wordt aangeroepen.
+          if (/[\\/]axios[\\/]/.test(id)) return 'vendor-http';
+          if (/[\\/]date-fns[\\/]/.test(id)) return 'vendor-datum';
+          if (/[\\/]ua-parser-js[\\/]/.test(id)) return 'vendor-ua';
+          if (/[\\/]idb[\\/]/.test(id)) return 'vendor-idb';
 
           return undefined;
         },

@@ -60,7 +60,7 @@ const conditionLabels: Record<AssetCondition, string> = {
 
 export default function InstrumentAssets() {
   const { t } = useTranslation();
-  useDocumentTitle('Instrumentenbeheer');
+  useDocumentTitle('pageTitle.instrumentAssets');
   // Basis voor de veld-ids. De labels stonden los naast hun veld: een
   // schermlezer kondigde dan "bewerkbaar veld" aan zonder te zeggen wat erin
   // moest, en klikken op het label zette de aanwijzer nergens.

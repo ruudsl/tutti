@@ -2,6 +2,26 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.16.0] - 2026-08-24
+
+Een prestatieronde die onderweg twee dingen vond die er al lang stonden. De applicatie is bij de eerste keer openen ruim drie keer zo licht geworden, de service worker deed helemaal niets, en het tabblad van de browser toonde op vrijwel elke pagina een technische sleutel in plaats van een titel.
+
+### Opgelost
+
+- **De app installeerde nooit als app, en werkte nooit offline.** De service worker liep bij het registreren altijd stuk. In de precachelijst stond `offline.html` twee keer, met twee verschillende revisies, en daar weigert Workbox op — al bij het inlezen van het script, dus voordat er iets geïnstalleerd kon worden. Gevolg: geen offline gebruik, geen offline bladmuziek, geen meldingen op de achtergrond en geen installatie op het beginscherm. De fout stond in de console en verder werkte alles gewoon, dus het viel niemand op.
+- **Het tabblad van de browser toonde `pageTitle.dashboard`.** Van de 65 paginatitels bestonden er 61 in geen enkele taal, waardoor de technische sleutel zelf in het tabblad kwam te staan — en daarmee ook in bladwijzers en in de geschiedenis. Alle 61 zijn er nu, in het Nederlands, Engels en Duits. De pagina Instrumentenbeheer had bovendien een vaste Nederlandse titel voor iedereen; die is nu ook vertaald.
+
+### Gewijzigd
+
+- **Het openen van de applicatie is ruim drie keer zo licht.** Wat de browser bij een eerste bezoek moet ophalen en verwerken voordat er iets op het scherm staat, ging van 905 KB naar 296 KB. De Lighthouse-prestatiescore ging daarmee van 80 naar 91.
+  - **De Engelse en Duitse teksten worden niet meer meegestuurd** aan wie de applicatie in het Nederlands gebruikt. Dat was 610 KB die niemand aanraakte. Wie van taal wisselt, haalt het bijbehorende bestand op dat moment op.
+  - **Het ingelogde menu wordt pas na het inloggen opgehaald.** Zoekbalk, meldingen, snelle acties, kruimelpad en de offline-opslag stonden allemaal in het pakket dat iemand op het inlogscherm binnenkreeg.
+  - **De opmaak zit nu in de pagina zelf** in plaats van in een apart bestand dat het tekenen tegenhield.
+
+### Toegevoegd
+
+- **Twee controles die deze fouten voortaan tegenhouden.** De prestatiemeting in CI controleert nu ook of de precachelijst van de service worker klopt, en een nieuwe test bewaakt dat elke paginatitel in alle drie de talen bestaat.
+
 ## [1.15.0] - 2026-08-23
 
 Een grote onderhoudsronde. De testdekking ging van 12,9% naar 83,4% aan de serverkant en van 6,9% naar 81,6% aan de kant van het scherm, en onderweg kwamen ruim honderd echte fouten boven water. Bijna geen daarvan maakte een test rood: het waren functies die stil niets deden, gegevens die over de verenigingsgrens heen lekten, en meldingen die het tegenovergestelde zeiden van wat er gebeurde.

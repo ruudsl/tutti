@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { availableLanguages, languageNames } from '../i18n';
+import { availableLanguages, laadTaal, languageNames } from '../i18n';
 
 const languageFlags: Record<string, string> = {
   nl: '🇳🇱',
@@ -14,8 +14,11 @@ interface LanguageSwitcherProps {
 export function LanguageSwitcher({ compact = false }: LanguageSwitcherProps) {
   const { i18n, t } = useTranslation();
 
+  // Engels en Duits zitten niet in de hoofdbundel. Eerst het taalbestand
+  // ophalen en dan pas omschakelen, anders staat het scherm een tel lang vol
+  // met kale sleutels als `nav.members`.
   const handleChange = (lang: string) => {
-    i18n.changeLanguage(lang);
+    void laadTaal(lang).then(() => i18n.changeLanguage(lang));
   };
 
   if (compact) {

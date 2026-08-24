@@ -2,6 +2,26 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.16.0] - 2026-08-24
+
+Eine Leistungsrunde, die unterwegs zwei seit Langem bestehende Probleme fand. Die Anwendung ist beim ersten Öffnen mehr als dreimal so leicht geworden, der Service Worker tat überhaupt nichts, und der Browser-Tab zeigte auf fast jeder Seite einen technischen Schlüssel statt eines Titels.
+
+### Behoben
+
+- **Die App ließ sich nie als App installieren und funktionierte nie offline.** Die Registrierung des Service Workers scheiterte jedes Mal. `offline.html` stand zweimal in der Precache-Liste, mit zwei verschiedenen Revisionen, und das lehnt Workbox ab — bereits beim Einlesen des Skripts, also bevor überhaupt etwas installiert werden konnte. Die Folge: keine Offline-Nutzung, keine Offline-Noten, keine Hintergrundbenachrichtigungen und keine Installation auf dem Startbildschirm. Der Fehler stand in der Konsole und alles andere lief weiter, deshalb fiel es niemandem auf.
+- **Der Browser-Tab zeigte `pageTitle.dashboard`.** Von den 65 Seitentiteln existierten 61 in keiner einzigen Sprache, sodass der technische Schlüssel selbst im Tab landete — und damit auch in Lesezeichen und im Verlauf. Alle 61 sind jetzt vorhanden, auf Niederländisch, Englisch und Deutsch. Die Seite Instrumentenverwaltung hatte zudem für alle einen festen niederländischen Titel; auch der ist jetzt übersetzt.
+
+### Geändert
+
+- **Das Öffnen der Anwendung ist mehr als dreimal so leicht.** Was der Browser bei einem ersten Besuch holen und verarbeiten muss, bevor etwas auf dem Bildschirm steht, ging von 905 KB auf 296 KB zurück. Der Lighthouse-Leistungswert stieg damit von 80 auf 91.
+  - **Die englischen und deutschen Texte werden nicht mehr mitgeschickt** an alle, die die Anwendung auf Niederländisch nutzen. Das waren 610 KB, die niemand anrührte. Wer die Sprache wechselt, holt die passende Datei in diesem Moment.
+  - **Das angemeldete Menü wird erst nach der Anmeldung geholt.** Suchleiste, Benachrichtigungen, Schnellaktionen, Brotkrumenpfad und der Offline-Speicher steckten alle in dem Paket, das jemand auf dem Anmeldebildschirm bekam.
+  - **Die Gestaltung steht jetzt in der Seite selbst** statt in einer separaten Datei, die das Zeichnen aufhielt.
+
+### Hinzugefügt
+
+- **Zwei Prüfungen, die diese Fehler künftig abfangen.** Die Leistungsmessung in CI prüft jetzt auch die Precache-Liste des Service Workers, und ein neuer Test wacht darüber, dass jeder Seitentitel in allen drei Sprachen existiert.
+
 ## [1.15.0] - 2026-08-23
 
 Eine große Wartungsrunde. Die Testabdeckung stieg serverseitig von 12,9 % auf 83,4 % und auf der Bildschirmseite von 6,9 % auf 81,6 %, und dabei kamen weit über hundert echte Fehler zum Vorschein. Fast keiner davon machte einen Test rot: Es waren Funktionen, die stillschweigend nichts taten, Daten, die über die Vereinsgrenze hinweg sichtbar wurden, und Meldungen, die das Gegenteil dessen sagten, was geschehen war.

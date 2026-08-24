@@ -2,6 +2,26 @@
 
 All notable changes to this application are documented here.
 
+## [1.16.0] - 2026-08-24
+
+A performance round that found two long-standing problems along the way. The application is now more than three times lighter on first open, the service worker was doing nothing at all, and the browser tab showed a technical key instead of a title on nearly every page.
+
+### Fixed
+
+- **The app never installed as an app, and never worked offline.** Service worker registration failed every time. `offline.html` appeared twice in the precache list with two different revisions, which Workbox refuses — while reading the script, so before anything could be installed. The result: no offline use, no offline sheet music, no background notifications and no install to the home screen. The error was logged to the console and everything else kept working, so nobody noticed.
+- **The browser tab showed `pageTitle.dashboard`.** Of the 65 page titles, 61 existed in no language at all, so the technical key itself ended up in the tab — and therefore in bookmarks and history too. All 61 are now there, in Dutch, English and German. The Instrument Management page also had a fixed Dutch title for everyone; that is translated now as well.
+
+### Changed
+
+- **Opening the application is more than three times lighter.** What the browser has to fetch and process on a first visit before anything appears on screen went from 905 KB to 296 KB. The Lighthouse performance score went from 80 to 91.
+  - **The English and German texts are no longer sent** to someone using the application in Dutch. That was 610 KB nobody touched. Switching language fetches the matching file at that moment.
+  - **The signed-in menu is only fetched after signing in.** Search bar, notifications, quick actions, breadcrumbs and the offline storage were all in the package handed to someone on the login screen.
+  - **The styling now sits in the page itself** instead of in a separate file that held up rendering.
+
+### Added
+
+- **Two checks that stop these bugs from coming back.** The performance measurement in CI now also verifies the service worker's precache list, and a new test guards that every page title exists in all three languages.
+
 ## [1.15.0] - 2026-08-23
 
 A large maintenance round. Test coverage went from 12.9% to 83.4% on the server side and from 6.9% to 81.6% on the screen side, and well over a hundred real bugs surfaced along the way. Almost none of them turned a test red: they were features that silently did nothing, data leaking across the association boundary, and messages saying the opposite of what had happened.
