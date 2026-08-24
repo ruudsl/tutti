@@ -157,17 +157,18 @@ See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for self-hosting options.
 
 ### Developer Documentation
 
-| Document                                        | Description                   |
-| ----------------------------------------------- | ----------------------------- |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md)         | System architecture           |
-| [DATABASE.md](docs/DATABASE.md)                 | Database schema & ERD         |
-| [API.md](docs/API.md)                           | REST API documentation        |
-| [AUTHENTICATION.md](docs/AUTHENTICATION.md)     | Auth flows & JWT/MFA          |
-| [WEBSOCKET.md](docs/WEBSOCKET.md)               | WebSocket events reference    |
-| [STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md) | Frontend state patterns       |
-| [HOOKS.md](docs/HOOKS.md)                       | React hooks documentation     |
-| [TESTING.md](docs/TESTING.md)                   | Testing strategy & guidelines |
-| [THEMING.md](docs/THEMING.md)                   | Theming system                |
+| Document                                            | Description                   |
+| --------------------------------------------------- | ----------------------------- |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)             | System architecture           |
+| [DATABASE.md](docs/DATABASE.md)                     | Database schema & ERD         |
+| [POSTGRES_MIGRATION.md](docs/POSTGRES_MIGRATION.md) | PostgreSQL migration path     |
+| [API.md](docs/API.md)                               | REST API documentation        |
+| [AUTHENTICATION.md](docs/AUTHENTICATION.md)         | Auth flows & JWT/MFA          |
+| [WEBSOCKET.md](docs/WEBSOCKET.md)                   | WebSocket events reference    |
+| [STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md)     | Frontend state patterns       |
+| [HOOKS.md](docs/HOOKS.md)                           | React hooks documentation     |
+| [TESTING.md](docs/TESTING.md)                       | Testing strategy & guidelines |
+| [THEMING.md](docs/THEMING.md)                       | Theming system                |
 
 ### Integration & Compliance
 

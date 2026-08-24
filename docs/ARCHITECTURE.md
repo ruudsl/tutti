@@ -44,8 +44,8 @@ Tutti is a multi-tenant web application for music associations (concert bands, b
 ┌─────────────────────────────────────────────────────────────┐
 │                      Data Layer                              │
 │  ┌──────────────────┐  ┌──────────────────┐                 │
-│  │  SQLite (better- │  │   File Storage   │                 │
-│  │  sqlite3-multi)  │  │   (PDFs, Audio)  │                 │
+│  │  SQLite (sql.js) │  │   File Storage   │                 │
+│  │                  │  │   (PDFs, Audio)  │                 │
 │  └──────────────────┘  └──────────────────┘                 │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -66,15 +66,15 @@ Tutti is a multi-tenant web application for music associations (concert bands, b
 
 ### Backend
 
-| Technology     | Purpose            |
-| -------------- | ------------------ |
-| Node.js 24     | Runtime            |
-| Express        | HTTP framework     |
-| TypeScript     | Type safety        |
-| better-sqlite3 | Database           |
-| Zod            | Request validation |
-| JWT            | Authentication     |
-| bcrypt         | Password hashing   |
+| Technology | Purpose            |
+| ---------- | ------------------ |
+| Node.js 24 | Runtime            |
+| Express    | HTTP framework     |
+| TypeScript | Type safety        |
+| sql.js     | Database (SQLite)  |
+| Zod        | Request validation |
+| JWT        | Authentication     |
+| bcrypt     | Password hashing   |
 
 ## Multi-Tenancy
 

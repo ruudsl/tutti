@@ -4,7 +4,7 @@ This guide covers how database migrations work in Harmonie and how to create and
 
 ## Overview
 
-Harmonie uses **better-sqlite3** as its database engine and implements a custom migration system. Migrations are stored in `backend/src/migrations/` and tracked in a `migrations` table in the database.
+Harmonie uses **SQLite via sql.js** as its database engine (behind a wrapper that mimics the better-sqlite3 API, see `backend/src/database/connection.ts`) and implements a custom migration system. Migrations are stored in `backend/src/migrations/` and tracked in a `migrations` table in the database.
 
 ## Migration System Architecture
 

@@ -24,7 +24,9 @@ Key considerations for our use case:
 
 ## Decision
 
-We chose SQLite (using better-sqlite3 and sql.js) as our database engine.
+We chose SQLite as our database engine. It is accessed through sql.js behind a
+wrapper that mimics the better-sqlite3 API (`backend/src/database/connection.ts`);
+better-sqlite3 itself is not a dependency.
 
 Reasons for this decision:
 
@@ -55,6 +57,11 @@ Reasons for this decision:
 
 ### Mitigations
 
-- Use WAL (Write-Ahead Logging) mode for better concurrency
+- ~~Use WAL (Write-Ahead Logging) mode for better concurrency~~ — not applicable
+  as implemented: sql.js holds the whole database in memory and exports it to a
+  file, so there is no journal to switch modes on. `journal_mode` is set nowhere
+  in the codebase. Switching to better-sqlite3 would make this mitigation real
 - Keep write transactions short
-- Consider PostgreSQL migration path if scaling requirements change significantly
+- Consider PostgreSQL migration path if scaling requirements change significantly.
+  That path is worked out in detail — with the actual cost per obstacle — in
+  [Migratiepad naar PostgreSQL](../POSTGRES_MIGRATION.md)

@@ -11,11 +11,11 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 1          | Onafhankelijke security audit                   | extern           | ⬜ Gepland  |
 | 2          | Security audit remediation                      | 65h              | ⬜ Gepland  |
 | 3          | WCAG 2.1 AA accessibility audit + fixes         | 45h              | ✅ Voltooid |
-| 4          | Docker packaging + self-hosting guide           | 50h              | 🔄 Deels    |
+| 4          | Docker packaging + self-hosting guide           | 50h              | ✅ Voltooid |
 | 5          | Open music metadata (MusicXML / JSKOS)          | 75h              | ✅ Voltooid |
 | 6          | Privacy-by-design review + GDPR hardening       | 45h              | 🔄 Deels    |
 | 7          | Community docs, onboarding, multilingual README | 45h              | ✅ Voltooid |
-| 8          | CI/CD hardening + test coverage >80%            | 50h              | 🔄 Deels    |
+| 8          | CI/CD hardening + test coverage >80%            | 50h              | ✅ Voltooid |
 | 9          | Community outreach (KNMO, federaties)           | 25h              | ⬜ Gepland  |
 | 10         | PWA hardening + mobile UX                       | 55h              | 🔄 Deels    |
 | 11         | Pilot deployments (2-3 verenigingen)            | 45h              | ⬜ Gepland  |
@@ -178,7 +178,12 @@ Formele audit van WCAG 2.1 AA compliance:
 - [x] Self-hosting guide voor non-developers
 - [x] Backup/restore scripts
 - [x] Health check endpoints
-- [ ] PostgreSQL migratiepad gedocumenteerd — _staat wel in de scope hierboven, maar er is niets over geschreven. `docs/adr/0001-use-sqlite.md` noemt het alleen als iets om te overwegen als de schaal daarom vraagt; dat is een afweging, geen migratiepad. Dit is het enige dat WP4 nog openhoudt_
+- [x] PostgreSQL migratiepad gedocumenteerd — _`docs/POSTGRES_MIGRATION.md`: wat er werkelijk aan sql.js vastzit, de obstakels op volgorde van kosten, en een pad in vier fasen waarvan elke fase los bruikbaar is_
+  - Kern van de bevinding: de koppeling met sql.js is **smal maar diep**. Eén bestand kent sql.js (`backend/src/database/connection.ts`, één `require` op regel 13), maar het biedt een _synchrone_ API aan en die aanname zit in 1.753 aanroepen verspreid over 160 productiebestanden. Postgres kan niet synchroon; dat maakt de overstap een herontwerp van de opslaglaag, geen configuratiewijziging
+  - Meevallers: sleutels zijn door de applicatie gemaakte uuid's (geen enkele plek leest `lastInsertRowid`), geen BLOB-kolommen, één toegangspunt, en `schema-usage.test.ts` is al het gereedschap dat je bij een schemaherbouw wilt hebben
+  - Tegenvallers: het schema staat op vier plaatsen met twee migratiesystemen, 135 × `BOOLEAN DEFAULT 1` (in Postgres een harde fout), 104 bedragen in `REAL`, 89 transactieblokken die een verbinding door de aanroepketen moeten gaan doorgeven
+  - Onderweg gevonden en meteen rechtgezet: drie documenten noemden `better-sqlite3` als de gebruikte bibliotheek terwijl die in geen enkele `package.json` staat, en ADR 0001 noemt WAL als mitigatie terwijl sql.js geen journal heeft — `journal_mode` wordt nergens gezet
+  - De aanbeveling in het stuk is nadrukkelijk **nog niet migreren**: doe fase 0 en 1 (die betalen zich terug ongeacht de database eronder), en pak Postgres pas als er een concrete aanleiding is
 
 ---
 
