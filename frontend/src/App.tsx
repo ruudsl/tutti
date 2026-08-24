@@ -16,7 +16,6 @@ import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { AriaLiveProvider } from './components/AriaLiveRegion';
 import { ConfirmProvider } from './hooks/useConfirm';
-import { PrivacyConsentGate } from './components/PrivacyConsentGate';
 import { ROLES } from './utils/constants';
 
 // Alleen wat de eerste weergave echt nodig heeft, staat hier eager.
@@ -26,8 +25,23 @@ import { ROLES } from './utils/constants';
 // hele dashboard met zijn widgets binnen voordat hij zijn e-mailadres kon
 // typen. Dat is de duurste pagina van de twee, en de enige die je op dat
 // moment zeker niet nodig hebt.
-import Layout from './components/Layout';
 import Login from './pages/Login';
+
+// Layout en de toestemmingspoort stonden hier als gewone import, en dat is
+// duurder dan het lijkt. Layout sleept het hele ingelogde schild mee -
+// GlobalSearch, NotificationCenter, QuickActionsMenu, RecentItems,
+// Breadcrumbs, OnboardingTour, SyncStatusIndicator - en via
+// SyncStatusIndicator ook dexie, de IndexedDB-laag van 94 KB. Al die code
+// stond in de hoofdbundel en werd dus ook gedownload en ontleed door iemand
+// die alleen nog maar het inlogscherm te zien krijgt.
+//
+// Beide renderen uitsluitend binnen <PrivateRoute>, dus voor wie niet is
+// ingelogd komt er nu niets van binnen. Wie wel inlogt haalt ze op terwijl de
+// Suspense-terugval al op het scherm staat.
+const Layout = lazy(() => import('./components/Layout'));
+const PrivacyConsentGate = lazy(() =>
+  import('./components/PrivacyConsentGate').then((m) => ({ default: m.PrivacyConsentGate })),
+);
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 

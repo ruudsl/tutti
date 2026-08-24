@@ -3,8 +3,6 @@ import type { User, LoginResponse } from '../types';
 import { login as apiLogin, getProfile } from '../api/auth';
 import { clearPersistedCache } from '../lib/queryClient';
 import { clearDownloadTokenCache } from '../utils/downloadUrl';
-import { clearAllData } from '../lib/offlineStorage';
-import { wisAlleOfflineGegevens } from '../lib/offlineDb';
 
 interface AuthContextType {
   user: User | null;
@@ -134,7 +132,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Bewust zonder await: uitloggen mag niet blijven hangen op een database
     // die niet meewerkt. Een fout bij het opruimen wordt gelogd, niet
     // doorgegeven - de gebruiker is dan hoe dan ook uitgelogd.
-    void Promise.allSettled([clearAllData(), wisAlleOfflineGegevens()]).then((uitkomsten) => {
+    //
+    // De twee opruimmodules worden hier pas opgehaald en niet bovenaan
+    // geïmporteerd. Ze trekken allebei dexie mee - 94 KB IndexedDB-laag - en
+    // AuthContext zit in het schild dat iedereen binnenhaalt, ook wie alleen
+    // het inlogscherm ziet. Uitloggen is het enige moment waarop ze nodig
+    // zijn, en dan is een extra verzoek niet erg.
+    void Promise.allSettled([
+      import('../lib/offlineStorage').then((m) => m.clearAllData()),
+      import('../lib/offlineDb').then((m) => m.wisAlleOfflineGegevens()),
+    ]).then((uitkomsten) => {
       for (const uitkomst of uitkomsten) {
         if (uitkomst.status === 'rejected') {
           console.error('Offline gegevens konden niet worden gewist bij uitloggen:', uitkomst.reason);
