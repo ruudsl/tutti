@@ -6,20 +6,22 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 
 ## Overzicht Werkpakketten
 
-| WP         | Titel                                           | Uren             | Status      |
-| ---------- | ----------------------------------------------- | ---------------- | ----------- |
-| 1          | Onafhankelijke security audit                   | extern           | ⬜ Gepland  |
-| 2          | Security audit remediation                      | 65h              | ⬜ Gepland  |
-| 3          | WCAG 2.1 AA accessibility audit + fixes         | 45h              | ✅ Voltooid |
-| 4          | Docker packaging + self-hosting guide           | 50h              | ✅ Voltooid |
-| 5          | Open music metadata (MusicXML / JSKOS)          | 75h              | ✅ Voltooid |
-| 6          | Privacy-by-design review + GDPR hardening       | 45h              | 🔄 Deels    |
-| 7          | Community docs, onboarding, multilingual README | 45h              | ✅ Voltooid |
-| 8          | CI/CD hardening + test coverage >80%            | 50h              | ✅ Voltooid |
-| 9          | Community outreach (KNMO, federaties)           | 25h              | ⬜ Gepland  |
-| 10         | PWA hardening + mobile UX                       | 55h              | 🔄 Deels    |
-| 11         | Pilot deployments (2-3 verenigingen)            | 45h              | ⬜ Gepland  |
+| WP         | Titel                                           | Uren             | Status       |
+| ---------- | ----------------------------------------------- | ---------------- | ------------ |
+| 1          | Onafhankelijke security audit                   | extern           | ⬜ Gepland   |
+| 2          | Security audit remediation                      | 65h              | ⬜ Gepland   |
+| 3          | WCAG 2.1 AA accessibility audit + fixes         | 45h              | ✅ Voltooid  |
+| 4          | Docker packaging + self-hosting guide           | 50h              | ✅ Voltooid  |
+| 5          | Open music metadata (MusicXML / JSKOS)          | 75h              | ✅ Voltooid  |
+| 6          | Privacy-by-design review + GDPR hardening       | 45h              | 🔄 Deels     |
+| 7          | Community docs, onboarding, multilingual README | 45h              | ✅ Voltooid  |
+| 8          | CI/CD hardening + test coverage >80%            | 50h              | ✅ Voltooid¹ |
+| 9          | Community outreach (KNMO, federaties)           | 25h              | ⬜ Gepland   |
+| 10         | PWA hardening + mobile UX                       | 55h              | 🔄 Deels     |
+| 11         | Pilot deployments (2-3 verenigingen)            | 45h              | ⬜ Gepland   |
 | **Totaal** |                                                 | **500h + audit** |
+
+¹ Alle deliverables zijn geleverd, maar de staging-uitrol is _ingericht_ en nog niet _aantoonbaar werkend_: hij heeft nog geen keer gedraaid, en de Build Command in het Render-dashboard staat nog zonder `--include=dev`. Zie WP8 hieronder.
 
 ---
 
@@ -337,7 +339,9 @@ Gemeten 23-08-2026, over de **hele** backend respectievelijk frontend:
 - [x] Dependabot of Renovate configuratie
 - [x] SAST scanning (CodeQL of Semgrep)
 - [x] Automated staging deployments — _`.github/workflows/deploy-staging.yml`: rolt uit zodra CI op `main` slaagt, wacht tot de omgeving antwoordt en draait daarna `scripts/smoke-test.mjs`_
-  - Vereist nog twee instellingen in GitHub: secret `RENDER_STAGING_DEPLOY_HOOK` en variable `STAGING_URL`. Zonder die twee stopt de workflow met een uitleg in plaats van met een fout. Inrichten staat in `docs/DEPLOYMENT.md`
+  - De twee GitHub-instellingen zijn gezet (24-08-2026): secret `RENDER_STAGING_DEPLOY_HOOK` en variable `STAGING_URL`. Zonder die twee sloeg de workflow zichzelf over met een uitleg in plaats van een fout
+  - **Dit vinkje betekent ingericht, niet aantoonbaar werkend.** De uitrol heeft nog geen enkele keer gedraaid. Één keer met de hand starten (Actions → _Deploy naar staging_ → _Run workflow_) is wat er nodig is om dat verschil weg te nemen; pas dan is bewezen dat de hook, de wachtlus en de rooktest samen doen wat ze horen te doen
+  - **De Build Command in het Render-dashboard staat nog op `npm install` zonder `--include=dev`.** `render.yaml` is daarvoor gerepareerd, maar een service die eerder met de hand is aangemaakt leest dat bestand niet: die houdt de waarde uit het dashboard. Dat gaat pas mis bij de eerstvolgende uitrol die een dev-afhankelijkheid nodig heeft — de build is `tsc`, en typescript staat juist daar. De juiste waarde staat in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - [x] Coverage badges in README
 
 ---
