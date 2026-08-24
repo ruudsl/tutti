@@ -13,7 +13,7 @@ Eine Leistungsrunde, die unterwegs zwei seit Langem bestehende Probleme fand. Di
 
 ### Geändert
 
-- **Das Öffnen der Anwendung ist mehr als dreimal so leicht.** Was der Browser bei einem ersten Besuch holen und verarbeiten muss, bevor etwas auf dem Bildschirm steht, ging von 905 KB auf 296 KB zurück. Der Lighthouse-Leistungswert stieg damit von 80 auf 91.
+- **Das Öffnen der Anwendung ist mehr als dreimal so leicht.** Was der Browser bei einem ersten Besuch holen und verarbeiten muss, bevor etwas auf dem Bildschirm steht, ging von 905 KB auf 296 KB zurück. Der Lighthouse-Leistungswert stieg damit von 79 auf 84 auf der Messmaschine der Build-Pipeline (auf einer schnelleren Maschine von 79 auf 91 — die Zahl hängt davon ab, wo gemessen wird).
   - **Die englischen und deutschen Texte werden nicht mehr mitgeschickt** an alle, die die Anwendung auf Niederländisch nutzen. Das waren 610 KB, die niemand anrührte. Wer die Sprache wechselt, holt die passende Datei in diesem Moment.
   - **Das angemeldete Menü wird erst nach der Anmeldung geholt.** Suchleiste, Benachrichtigungen, Schnellaktionen, Brotkrumenpfad und der Offline-Speicher steckten alle in dem Paket, das jemand auf dem Anmeldebildschirm bekam.
   - **Die Gestaltung steht jetzt in der Seite selbst** statt in einer separaten Datei, die das Zeichnen aufhielt.

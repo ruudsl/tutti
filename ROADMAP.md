@@ -17,7 +17,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 7          | Community docs, onboarding, multilingual README | 45h              | ✅ Voltooid |
 | 8          | CI/CD hardening + test coverage >80%            | 50h              | 🔄 Deels    |
 | 9          | Community outreach (KNMO, federaties)           | 25h              | ⬜ Gepland  |
-| 10         | PWA hardening + mobile UX                       | 55h              | ✅ Voltooid |
+| 10         | PWA hardening + mobile UX                       | 55h              | 🔄 Deels    |
 | 11         | Pilot deployments (2-3 verenigingen)            | 45h              | ⬜ Gepland  |
 | **Totaal** |                                                 | **500h + audit** |
 
@@ -382,14 +382,17 @@ Fase 1-4 zijn geïmplementeerd:
 - [x] Lighthouse gemeten in CI — _job `lighthouse` in `ci.yml`, mediaan van drie metingen tegen de gebouwde applicatie_
   - Gemeten 19-08-2026: performance 80, accessibility 98, best-practices 96, seo 100
   - De **PWA-categorie bestaat niet meer**: Lighthouse 12 heeft die geschrapt, inclusief de losse audits (`installable-manifest`, `service-worker`, `maskable-icon`). Een PWA-score van >90 is dus niet te halen omdat het getal niet meer bestaat. Wat die score controleerde staat nu als eigen controle in `scripts/lighthouse-check.mjs`
-- [x] Prestatiescore naar >90 — _**91**, gemeten 24-08-2026 (was 80, daarvoor 75). Drempel in `scripts/lighthouse-check.mjs` staat nu op 88_
+- [ ] Prestatiescore naar >90 — _**84** op de CI-runner, gemeten 24-08-2026. Dezelfde runner mat op `main` **79**. Drempel in `scripts/lighthouse-check.mjs` staat op 80_
+  - **Het cijfer hangt af van de machine, en dat is hier de kern.** Dezelfde build haalt 91 op een ontwikkelmachine en 84 op de CI-runner. Ik heb eerst die 91 opgeschreven alsof het _het_ cijfer was en de drempel op 88 gezet; de bouw viel daarop om. De CI-runner is de maat, want daar gaat de drempel af
+  - Wat de verbetering werkelijk is, beide vandaag op dezelfde soort runner gemeten: **79 → 84** voor performance, **96 → 100** voor best-practices
   - De sprong van 75 naar 80 kwam doordat het lettertype uit het project zelf komt. Er stond een render-blokkerende stylesheet van `fonts.googleapis.com` in de `<head>`; die host is in de meetomgeving geblokkeerd, waardoor het verzoek het tekenen 12,9 seconden tegenhield
-  - Van 80 naar 91 zat vrijwel alles in wat de browser moest ophalen en ontleden vóór de eerste weergave. De hoofdbundel ging van **905 KB naar 296 KB**:
+  - Van 79 naar 84 zat vrijwel alles in wat de browser moest ophalen en ontleden vóór de eerste weergave. De hoofdbundel ging van **905 KB naar 296 KB**:
     - **610 KB aan vertalingen eruit.** `i18n.ts` importeerde `nl`, `en` én `de` statisch. Wie de applicatie in het Nederlands opent, haalde de Engelse en Duitse teksten ook binnen en deed er niets mee. Nederlands blijft in de bundel (het is de terugvaltaal en de taal van vrijwel iedereen), de andere twee worden opgehaald als iemand ze kiest
     - **Layout en de toestemmingspoort zijn lui geworden.** Ze renderen alleen binnen `<PrivateRoute>`, maar stonden als gewone import in `App.tsx` en sleepten het hele ingelogde schild mee — GlobalSearch, NotificationCenter, QuickActionsMenu, RecentItems, Breadcrumbs, OnboardingTour — plus, via `AuthContext` en `OfflineIndicator`, dexie: 94 KB IndexedDB-laag op het inlogscherm
     - **`vendor-utils` opgesplitst.** Eén chunk met axios, date-fns, ua-parser-js en idb wordt geladen zodra íéts erin nodig is. Het inlogscherm heeft axios nodig, dus kwamen de andere drie ongevraagd mee
     - **De stylesheet staat ingelijnd in de HTML.** Eén bestand van 118 KB voor de hele applicatie hield het tekenen tegen; Lighthouse rekende daar 600 ms voor, vooral vanwege de rondgang zelf
-  - Wat er nog ligt: van de 236 KB (ingepakt) die vóór de eerste weergave binnen moet zijn, is ongeveer 55 KB het Nederlandse vertaalbestand. Per pagina opsplitsen is de volgende stap, en een grotere dan hij lijkt — 5.149 sleutels, zonder namespaces in de aanroepen
+  - **Wat er nog ligt, en waarom dat nog niet vaststaat.** Dezelfde ingreep leverde lokaal twaalf punten op en in CI vijf. Uit één samengesteld cijfer valt niet af te lezen waar dat verschil zit: zakt het op bytes (dan lopen FCP en LCP samen terug) of op rekentijd (dan loopt TBT op). `lighthouse-check.mjs` print de losse metrieken sinds deze ronde mee, zodat de volgende CI-run dat wél vertelt
+  - Lokaal is het beeld: FCP 2,7 s (58/100) en LCP 2,9 s (80/100) laten de punten liggen, TBT en CLS staan op 100. Als CI hetzelfde beeld geeft, is de volgende stap het Nederlandse vertaalbestand — ongeveer 55 KB van de 236 KB (ingepakt) die vóór de eerste weergave binnen moet zijn. Per pagina opsplitsen is een grotere ingreep dan hij lijkt: 5.149 sleutels, zonder namespaces in de aanroepen
 - [x] **De service worker registreerde nooit** — _gevonden bij deze ronde, in `frontend/vite.config.ts`_
   - `offline.html` stond twee keer in de precachelijst: één keer via het globpatroon `**/*.html` met een revisie uit de bestandsinhoud, en één keer via `additionalManifestEntries` met revisie `'1'`. Workbox weigert dezelfde URL met twee revisies en gooit `add-to-cache-list-conflicting-entries` — al bij het evalueren van het script, dus vóór het installeren
   - Registreren liep daardoor **altijd** stuk op "ServiceWorker script evaluation failed", in elke browser en ook in productie. De applicatie logde de fout naar de console en werkte verder gewoon door, dus het viel niemand op

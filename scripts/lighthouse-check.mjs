@@ -62,25 +62,32 @@ process.on('unhandledRejection', (reden) => {
  * streefwaarde. Een drempel die vandaag al rood staat bewaakt niets - hij
  * wordt genegeerd of uitgezet. Zo vangt hij wel elke verslechtering.
  *
- * Gemeten op 24-08-2026: performance 91, accessibility 98, best-practices
- * 100, seo 100.
+ * LET OP: het cijfer hangt af van de machine. Op de CI-runner van 24-08-2026
+ * meet dezelfde build performance 84 (rondes 84/84/86), op een snellere
+ * ontwikkelmachine 91. Deze drempels horen bij de CI-runner, want dat is waar
+ * ze afgaan. Een cijfer uit een lokale meting hier invullen maakt de bouw
+ * rood zonder dat er iets veranderd is - dat is precies wat er gebeurde toen
+ * hier 88 stond.
  *
- * De sprong van 80 naar 91 zat vrijwel helemaal in wat de browser moest
- * ophalen en ontleden voordat er iets op het scherm stond. De hoofdbundel ging
- * van 905 KB naar 296 KB doordat de Engelse en de Duitse vertalingen eruit
- * zijn (610 KB JSON die een Nederlandse gebruiker nooit aanraakt), doordat
- * Layout en de toestemmingspoort nu pas na het inloggen worden opgehaald - met
- * dexie eraan vast - en doordat date-fns, ua-parser-js en idb niet langer in
- * dezelfde vendorchunk zitten als axios. De stylesheet staat sinds deze ronde
+ * Gemeten op de CI-runner, 24-08-2026: performance 84, accessibility 98,
+ * best-practices 100, seo 100. Dezelfde runner mat op `main` 79 en 96.
+ *
+ * De sprong van 79 naar 84 zat in wat de browser moest ophalen en ontleden
+ * voordat er iets op het scherm stond. De hoofdbundel ging van 905 KB naar
+ * 296 KB doordat de Engelse en de Duitse vertalingen eruit zijn (610 KB JSON
+ * die een Nederlandse gebruiker nooit aanraakt), doordat Layout en de
+ * toestemmingspoort nu pas na het inloggen worden opgehaald - met dexie eraan
+ * vast - en doordat date-fns, ua-parser-js en idb niet langer in dezelfde
+ * vendorchunk zitten als axios. De stylesheet staat sinds deze ronde
  * ingelijnd in de HTML en houdt het tekenen dus niet meer op.
+ *
+ * Dezelfde verandering leverde lokaal twaalf punten op en in CI vijf. Dat
+ * verschil is de reden dat de meetregels hieronder de losse metrieken
+ * meeprinten: zonder te weten of het cijfer op bytes of op rekentijd vastzit,
+ * is verder optimaliseren gokken.
  *
  * Best-practices ging van 96 naar 100 toen de service worker eindelijk kon
  * registreren; zie controleerServiceWorker() hieronder.
- *
- * Wat er nog ligt: van de 236 KB (ingepakt) die vóór de eerste weergave binnen
- * moet zijn, is ongeveer 55 KB het Nederlandse vertaalbestand. Dat opsplitsen
- * per pagina is de volgende stap, en een grotere dan hij lijkt: 5.149 sleutels
- * zonder namespaces in de aanroepen.
  *
  * Daarvoor stond performance op 75. Dat cijfer ging grotendeels over de
  * meetopstelling: er stond een stylesheet van fonts.googleapis.com in de head,
@@ -90,7 +97,7 @@ process.on('unhandledRejection', (reden) => {
  * onopgemerkt in een cijfer verdwijnt.
  */
 const DREMPELS = {
-  performance: 88,
+  performance: 80,
   accessibility: 95,
   'best-practices': 95,
   seo: 95,
@@ -132,6 +139,47 @@ function controleerVerzoeken(lhr) {
   }
 
   return problemen;
+}
+
+/**
+ * De losse metrieken achter de prestatiescore.
+ *
+ * Zonder deze regels is verder optimaliseren gokken. Dezelfde build haalde 91
+ * op een ontwikkelmachine en 84 op de CI-runner, en uit één samengesteld
+ * cijfer valt niet af te lezen waar dat verschil zit. Elke metriek heeft een
+ * eigen gewicht in de score; deze uitvoer laat zien welke er punten laat
+ * liggen en of dat aan het aantal bytes ligt (dan zakken FCP en LCP samen) of
+ * aan rekentijd (dan loopt vooral TBT op).
+ *
+ * Alleen van de laatste geldige ronde, niet de mediaan: de metrieken van drie
+ * verschillende rondes door elkaar geven een beeld dat bij geen enkele meting
+ * hoort.
+ */
+function toonMetrieken(lhr) {
+  if (!lhr) return;
+
+  const metrieken = [
+    ['first-contentful-paint', 'FCP'],
+    ['largest-contentful-paint', 'LCP'],
+    ['speed-index', 'Speed Index'],
+    ['total-blocking-time', 'TBT'],
+    ['cumulative-layout-shift', 'CLS'],
+  ];
+
+  const regels = metrieken
+    .map(([sleutel, naam]) => {
+      const audit = lhr.audits?.[sleutel];
+      if (!audit) return null;
+      const punten = typeof audit.score === 'number' ? Math.round(audit.score * 100) : '--';
+      return `  ${naam.padEnd(13)} ${String(audit.displayValue ?? '').padEnd(9)} (${punten}/100)`;
+    })
+    .filter(Boolean);
+
+  const gewicht = lhr.audits?.['total-byte-weight']?.displayValue;
+  console.log('\nMetrieken van de laatste ronde:');
+  regels.forEach((r) => console.log(r));
+  if (gewicht) console.log(`  ${'Overdracht'.padEnd(13)} ${gewicht}`);
+  console.log('');
 }
 
 /** Losse eisen aan het manifest, als vervanging van de geschrapte PWA-score. */
@@ -364,6 +412,8 @@ async function meetEenRonde() {
     console.log(`${ok ? 'ok  ' : 'LAAG'} ${categorie.padEnd(16)} ${String(score).padStart(3)}  (min ${ondergrens})`);
     if (!ok) tekort.push(`${categorie}: ${score} < ${ondergrens}`);
   }
+
+  toonMetrieken(laatste);
 
   const mislukteVerzoeken = controleerVerzoeken(laatste);
   if (mislukteVerzoeken.length === 0) {

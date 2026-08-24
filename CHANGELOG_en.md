@@ -13,7 +13,7 @@ A performance round that found two long-standing problems along the way. The app
 
 ### Changed
 
-- **Opening the application is more than three times lighter.** What the browser has to fetch and process on a first visit before anything appears on screen went from 905 KB to 296 KB. The Lighthouse performance score went from 80 to 91.
+- **Opening the application is more than three times lighter.** What the browser has to fetch and process on a first visit before anything appears on screen went from 905 KB to 296 KB. The Lighthouse performance score went from 79 to 84 on the build pipeline's measuring machine (from 79 to 91 on a faster machine — the number depends on where you measure).
   - **The English and German texts are no longer sent** to someone using the application in Dutch. That was 610 KB nobody touched. Switching language fetches the matching file at that moment.
   - **The signed-in menu is only fetched after signing in.** Search bar, notifications, quick actions, breadcrumbs and the offline storage were all in the package handed to someone on the login screen.
   - **The styling now sits in the page itself** instead of in a separate file that held up rendering.

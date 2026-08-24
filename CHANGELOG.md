@@ -13,7 +13,7 @@ Een prestatieronde die onderweg twee dingen vond die er al lang stonden. De appl
 
 ### Gewijzigd
 
-- **Het openen van de applicatie is ruim drie keer zo licht.** Wat de browser bij een eerste bezoek moet ophalen en verwerken voordat er iets op het scherm staat, ging van 905 KB naar 296 KB. De Lighthouse-prestatiescore ging daarmee van 80 naar 91.
+- **Het openen van de applicatie is ruim drie keer zo licht.** Wat de browser bij een eerste bezoek moet ophalen en verwerken voordat er iets op het scherm staat, ging van 905 KB naar 296 KB. De Lighthouse-prestatiescore ging daarmee van 79 naar 84 op de meetmachine van de bouwstraat (op een snellere machine van 79 naar 91 — het cijfer hangt af van waar je meet).
   - **De Engelse en Duitse teksten worden niet meer meegestuurd** aan wie de applicatie in het Nederlands gebruikt. Dat was 610 KB die niemand aanraakte. Wie van taal wisselt, haalt het bijbehorende bestand op dat moment op.
   - **Het ingelogde menu wordt pas na het inloggen opgehaald.** Zoekbalk, meldingen, snelle acties, kruimelpad en de offline-opslag stonden allemaal in het pakket dat iemand op het inlogscherm binnenkreeg.
   - **De opmaak zit nu in de pagina zelf** in plaats van in een apart bestand dat het tekenen tegenhield.
