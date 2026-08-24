@@ -1,9 +1,25 @@
 import { useTranslation } from 'react-i18next';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useAuth } from '../context/AuthContext';
 
 export function InstallPrompt() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { canInstall, promptInstall, dismissPrompt, isDismissed } = usePWAInstall();
+
+  // Niet aanbieden aan wie nog niet is ingelogd.
+  //
+  // Deze balk stond er altijd al, maar was in de praktijk dode code: Chrome
+  // stuurt `beforeinstallprompt` alleen als er een service worker draait, en
+  // die registreerde nooit (zie de toelichting in vite.config.ts). Sinds die
+  // fout weg is verschijnt hij wel - en dan meteen op het inlogscherm, aan
+  // iemand die de applicatie nog niet eens binnen is.
+  //
+  // Dat is de verkeerde volgorde: "zet deze app op je beginscherm" vraag je
+  // aan iemand die hem gebruikt, niet aan een bezoeker die nog moet bewijzen
+  // dat hij lid is. Het kostte bovendien meetbaar: de balk was op het
+  // inlogscherm het grootste element op het scherm en bepaalde daarmee de LCP.
+  if (!user) return null;
 
   if (!canInstall || isDismissed) return null;
 
