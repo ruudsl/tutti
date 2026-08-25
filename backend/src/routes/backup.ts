@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
 import { authenticateToken, requireSuperAdmin, AuthRequest } from '../middleware/auth';
@@ -134,7 +134,7 @@ router.get(
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
     // Create archive
-    const archive = archiver('zip', {
+    const archive = new ZipArchive({
       zlib: { level: 9 }, // Maximum compression
     });
 

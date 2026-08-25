@@ -4,7 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { FileValidationError } from '../utils/errors';
@@ -463,7 +463,7 @@ router.post(
     // in het zip-bestand regelt.
     res.setHeader('Content-Disposition', 'attachment; filename="split_parts.zip"');
 
-    const archive = archiver('zip', { zlib: { level: 5 } });
+    const archive = new ZipArchive({ zlib: { level: 5 } });
     archive.pipe(res);
 
     for (const file of validFiles) {

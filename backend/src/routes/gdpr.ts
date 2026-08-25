@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import db from '../database/connection';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import logger from '../utils/logger';
 import { ApiError } from '../middleware/errorHandler';
 import { logAuditEvent } from './audit-logs';
@@ -275,7 +275,7 @@ router.get(
       // tijdstempel, geen vrije tekst die de kopregel kan verminken.
       res.setHeader('Content-Disposition', `attachment; filename="gdpr-export-${userId}-${Date.now()}.zip"`);
 
-      const archive = archiver('zip', { zlib: { level: 9 } });
+      const archive = new ZipArchive({ zlib: { level: 9 } });
       archive.pipe(res);
 
       // Add main data file
