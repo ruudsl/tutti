@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { requireModule } from '../middleware/requireModule';
+import { isModuleEnabled } from '../modules/service';
 import {
   SpondClient,
   encryptPassword,
@@ -68,6 +70,7 @@ export function timeToMinutes(time: string): number {
 router.get(
   '/config',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const config = db
@@ -100,6 +103,7 @@ router.get(
 router.put(
   '/config',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { username, password, groupId, syncEnabled } = req.body;
@@ -169,6 +173,7 @@ router.put(
 router.delete(
   '/config',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     db.prepare('DELETE FROM spond_config WHERE association_id = ?').run(req.user!.associationId);
@@ -187,6 +192,7 @@ router.delete(
 router.get(
   '/groups',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const config = db
@@ -218,6 +224,7 @@ router.get(
 router.get(
   '/orchestra-groups',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const mappings = db
@@ -241,6 +248,7 @@ router.get(
 router.put(
   '/orchestra-groups/:orchestraId',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { orchestraId } = req.params;
@@ -299,6 +307,7 @@ router.put(
 router.get(
   '/member-links',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const links = db
@@ -323,6 +332,7 @@ router.get(
 router.post(
   '/member-links',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { spondMemberId, userId, spondMemberName } = req.body;
@@ -374,6 +384,7 @@ router.post(
 router.delete(
   '/member-links/:id',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
@@ -400,6 +411,7 @@ router.delete(
 router.post(
   '/sync',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin', 'music_committee', 'conductor'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const spondConfig = db
@@ -732,6 +744,7 @@ router.post(
 router.post(
   '/sync/:rehearsalId',
   authenticateToken,
+  requireModule('spond'),
   requireRole('admin', 'music_committee', 'conductor'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { rehearsalId } = req.params;
@@ -1198,9 +1211,21 @@ router.get(
     // Can sync to Spond if we have an event ID and a spond_member_id (from record or link)
     const spondMemberId = attendance?.spond_member_id || memberLink?.spond_member_id;
 
+    // Deze route en de PUT hierboven staan bewust niet achter requireModule.
+    // Ze heten wel /spond/attendance, maar het zijn de kernvragen "ben ik
+    // aanwezig" en "zet mij op aanwezig" - die horen bij repetities en niet
+    // bij de koppeling. Ze staan hier alleen omdat ze ooit samen met de
+    // Spond-synchronisatie zijn geschreven. Zou de guard er wel op staan, dan
+    // zou het uitzetten van de module elk lid zijn eigen aanwezigheid
+    // afnemen.
+    //
+    // Wat wel van de module afhangt is het knopje "ook naar Spond sturen".
+    // Staat de module uit, dan is er geen koppeling om naartoe te sturen.
+    const koppelingAan = isModuleEnabled(req.user!.associationId, 'spond');
+
     res.json({
       status: attendance?.status || 'unknown',
-      canSyncToSpond: !!(rehearsal.spond_event_id && spondMemberId),
+      canSyncToSpond: koppelingAan && !!(rehearsal.spond_event_id && spondMemberId),
     });
   }),
 );

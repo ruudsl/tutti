@@ -67,6 +67,7 @@ import {
   TestOrchestra,
   TestUser,
 } from '../testUtils';
+import { setModuleEnabled } from '../../modules/service';
 
 const app = express();
 app.use(express.json());
@@ -93,6 +94,14 @@ describe('koppeling met Spond', () => {
     wijzigAntwoord.mockResolvedValue(undefined);
 
     const omgeving = createTestEnvironment();
+
+    // De Spond-koppeling is sinds 24-08-2026 een module, en die staat standaard
+
+    // uit. Zonder deze regel antwoorden de routes hieronder met 404 - terecht,
+
+    // maar dat is niet wat dit bestand onderzoekt.
+
+    setModuleEnabled(omgeving.association.id, 'spond', true, omgeving.adminUser.id);
     vereniging = omgeving.association;
     beheerder = omgeving.adminUser;
     beheerderToken = omgeving.adminToken;

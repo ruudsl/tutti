@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { useModules } from '../../context/ModulesContext';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { showSuccess, showError } from '../../utils/toast';
@@ -99,10 +100,21 @@ export default function Rehearsals() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // De Spond-koppeling is een module. Staat hij uit, dan is er geen kaart, geen
+  // synchronisatieknop en geen verzoek naar /api/spond - dat antwoordt dan met
+  // 404, en een mislukt verzoek bij het openen van de pagina is geen manier om
+  // "deze vereniging gebruikt Spond niet" uit te drukken.
+  //
+  // Wat blijft staan: repetities die ooit uit Spond zijn opgehaald, en de
+  // aanwezigheid van de leden. Uitzetten verbergt de koppeling, niet de
+  // gegevens die eruit zijn gekomen.
+  const { isEnabled } = useModules();
+  const spondAan = isEnabled('spond');
+
   const { data: spondConfig = null } = useQuery({
     queryKey: ['spondConfig'],
     queryFn: getSpondConfig,
-    enabled: user?.role === ROLES.ADMIN,
+    enabled: user?.role === ROLES.ADMIN && spondAan,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -836,7 +848,7 @@ export default function Rehearsals() {
           )}
 
           {/* Spond integration */}
-          {isAdmin && (
+          {isAdmin && spondAan && (
             <SpondCard
               spondConfig={spondConfig}
               isSyncing={isSyncing}

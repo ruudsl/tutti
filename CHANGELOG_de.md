@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.17.0] - 2026-08-24
+
+### Hinzugefügt
+
+- **Die Spond-Anbindung ist jetzt ein Modul.** Unter **Verwaltung → Module** steht sie bei _Planung_ und lässt sich mit einem Schalter ein- oder ausschalten, wie die anderen neunzehn Teile. Vereine, die kein Spond nutzen — die große Mehrheit — sehen die Anbindung auf dem Probenbildschirm nicht mehr.
+  - Wer Spond heute nutzt, merkt nichts: Für diese Vereine ist das Modul eingeschaltet. Ausschalten verbirgt die Anbindung und löscht nichts — die Einstellungen, die verknüpften Mitglieder und die abgerufenen Proben bleiben erhalten und kommen beim Einschalten unverändert zurück.
+  - Was _nicht_ mit dem Modul verschwindet, ist die eigene Anwesenheit. Sich für eine Probe an- oder abmelden funktioniert auch bei ausgeschaltetem Spond; nur das Weiterleiten an Spond entfällt, weil es dann keine Anbindung gibt, an die etwas weitergeleitet werden könnte.
+
 ## [1.16.0] - 2026-08-24
 
 Eine Leistungsrunde, die unterwegs zwei seit Langem bestehende Probleme fand. Die Anwendung ist beim ersten Öffnen mehr als dreimal so leicht geworden, der Service Worker tat überhaupt nichts, und der Browser-Tab zeigte auf fast jeder Seite einen technischen Schlüssel statt eines Titels.

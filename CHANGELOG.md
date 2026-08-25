@@ -2,6 +2,14 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.17.0] - 2026-08-24
+
+### Toegevoegd
+
+- **De Spond-koppeling is nu een module.** Onder **Beheer → Modules** staat hij bij _Planning_ en is hij met één schakelaar aan of uit te zetten, net als de negentien andere onderdelen. Verenigingen die geen Spond gebruiken — verreweg de meeste — zien de koppeling niet meer op het repetitiescherm.
+  - Wie Spond vandaag gebruikt merkt niets: voor die verenigingen staat de module aan. Uitzetten verbergt de koppeling en verwijdert niets — de instellingen, de gekoppelde leden en de opgehaalde repetities blijven staan en komen bij aanzetten ongewijzigd terug.
+  - Wat níét met de module meegaat is je eigen aanwezigheid. Je aan- of afmelden voor een repetitie blijft gewoon werken, ook als Spond uit staat; alleen het doorsturen naar Spond vervalt, want er is dan geen koppeling om naartoe te sturen.
+
 ## [1.16.0] - 2026-08-24
 
 Een prestatieronde die onderweg twee dingen vond die er al lang stonden. De applicatie is bij de eerste keer openen ruim drie keer zo licht geworden, de service worker deed helemaal niets, en het tabblad van de browser toonde op vrijwel elke pagina een technische sleutel in plaats van een titel.
