@@ -1,4 +1,5 @@
 import logger from '../utils/logger';
+import { beschermd, BeschermdOpties, DienstFout, herkansNaUitKop } from '../utils/veerkracht';
 import jwt from 'jsonwebtoken';
 
 const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
@@ -12,6 +13,21 @@ const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
  * bijzaak gaat: een streaminglink bij een titel. Beter is: opgeven.
  */
 const APPLE_MUSIC_TIMEOUT_MS = 10000;
+
+/**
+ * Hoe we omgaan met een Apple Music dat hikt of omvalt.
+ *
+ * Zoeken en een nummer opvragen zijn leesacties en mogen dus nog eens. Ligt de
+ * dienst er echt uit, dan slaan we hem een halve minuut over in plaats van bij
+ * elke aanvraag opnieuw tien seconden op een timeout te wachten.
+ */
+const APPLE_MUSIC_VEERKRACHT: BeschermdOpties = {
+  pogingen: 3,
+  basisMs: 200,
+  maxMs: 1000,
+  maxTotaalMs: 2000,
+  onderbreker: { drempel: 5, openMs: 30_000 },
+};
 
 export interface AppleMusicTrack {
   id: string;
@@ -136,20 +152,30 @@ export class AppleMusicClient {
       });
     }
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    return beschermd(
+      'apple-music',
+      async () => {
+        const response = await fetch(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: AbortSignal.timeout(APPLE_MUSIC_TIMEOUT_MS),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          logger.error('Apple Music API request failed', { endpoint, status: response.status, body: text });
+          throw new DienstFout(`Apple Music API request failed: ${response.status}`, {
+            dienst: 'apple-music',
+            status: response.status,
+            herkansNaMs: herkansNaUitKop(response.headers?.get?.('retry-after')),
+          });
+        }
+
+        return response.json() as Promise<T>;
       },
-      signal: AbortSignal.timeout(APPLE_MUSIC_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      logger.error('Apple Music API request failed', { endpoint, status: response.status, body: text });
-      throw new Error(`Apple Music API request failed: ${response.status}`);
-    }
-
-    return response.json() as Promise<T>;
+      APPLE_MUSIC_VEERKRACHT,
+    );
   }
 
   /**

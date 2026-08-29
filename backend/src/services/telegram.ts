@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { beschermd, BeschermdOpties } from '../utils/veerkracht';
 
 // Telegram Bot API configuration (env var fallback)
 const TELEGRAM_BOT_TOKEN_ENV = process.env.TELEGRAM_BOT_TOKEN;
@@ -16,6 +17,23 @@ const TELEGRAM_BOT_TOKEN_ENV = process.env.TELEGRAM_BOT_TOKEN;
  * een verzendronde naar alle leden de hele ronde.
  */
 const TELEGRAM_TIMEOUT_MS = 10_000;
+
+/**
+ * Hoe we omgaan met een Telegram dat er niet is.
+ *
+ * Hier wordt bewust **niet** herkanst: een bericht versturen is niet te
+ * herhalen. Mislukt het en proberen we het toch nog eens, dan staat het
+ * mogelijk twee keer in de groep - het verzoek kan aangekomen zijn terwijl
+ * alleen het antwoord onderweg verloren ging.
+ *
+ * De onderbreker blijft wel over. Ligt Telegram eruit, dan is er geen reden om
+ * bij elke melding opnieuw tien seconden op een tijdslimiet te wachten terwijl
+ * de rest van de verzendronde staat te wachten.
+ */
+const TELEGRAM_VEERKRACHT: BeschermdOpties = {
+  pogingen: 1,
+  onderbreker: { drempel: 5, openMs: 60_000 },
+};
 
 /**
  * Gedeeld geheim tussen Telegram en deze server.
@@ -194,16 +212,21 @@ export async function sendTelegramMessage(message: TelegramMessage, associationI
   }
 
   try {
-    const response = await axios.post(
-      `${config.apiUrl}/sendMessage`,
-      {
-        chat_id: message.chatId,
-        text: message.text,
-        parse_mode: message.parseMode || 'HTML',
-        disable_notification: message.disableNotification || false,
-        reply_markup: message.replyMarkup,
-      },
-      { timeout: TELEGRAM_TIMEOUT_MS },
+    const response = await beschermd(
+      'telegram',
+      () =>
+        axios.post(
+          `${config.apiUrl}/sendMessage`,
+          {
+            chat_id: message.chatId,
+            text: message.text,
+            parse_mode: message.parseMode || 'HTML',
+            disable_notification: message.disableNotification || false,
+            reply_markup: message.replyMarkup,
+          },
+          { timeout: TELEGRAM_TIMEOUT_MS },
+        ),
+      TELEGRAM_VEERKRACHT,
     );
 
     if (response.data.ok) {
@@ -313,7 +336,11 @@ export async function getBotUsername(associationId?: string): Promise<string | n
   }
 
   try {
-    const response = await axios.get(`${config.apiUrl}/getMe`, { timeout: TELEGRAM_TIMEOUT_MS });
+    const response = await beschermd(
+      'telegram',
+      () => axios.get(`${config.apiUrl}/getMe`, { timeout: TELEGRAM_TIMEOUT_MS }),
+      TELEGRAM_VEERKRACHT,
+    );
     if (response.data.ok) {
       return response.data.result.username;
     }

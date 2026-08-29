@@ -24,6 +24,11 @@ This document describes all third-party integrations available in Harmonie, incl
 | Music         | MusicaInfo         | Built-in | Sheet music metadata lookup                     |
 | Monitoring    | Sentry             | Optional | Error tracking and performance                  |
 
+Every outbound call to these services runs behind a timeout, a retry policy and
+a circuit breaker. What happens when a service is slow, hiccups or goes down -
+and which calls may be retried and which may not - is described in
+[VEERKRACHT.md](VEERKRACHT.md).
+
 ---
 
 ## Payment Integrations

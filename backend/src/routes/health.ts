@@ -7,6 +7,7 @@ import config from '../config';
 import logger from '../logging/logger';
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
+import { Stroomstatistiek, stroomstanden } from '../utils/veerkracht';
 
 const router = Router();
 
@@ -40,6 +41,15 @@ interface DetailedHealthCheckResponse extends HealthCheckResponse {
     hostname: string;
     loadAverage: number[];
   };
+  /**
+   * De stand van de stroomonderbrekers om de externe diensten.
+   *
+   * Staat er een open, dan slaat de applicatie die dienst tijdelijk over. Dat
+   * is precies wat een beheerder wil zien wanneer meldingen niet aankomen of
+   * de synchronisatie stilligt: het ligt dan niet aan Tutti en het herstelt
+   * vanzelf zodra de andere kant weer antwoordt.
+   */
+  externeDiensten: Stroomstatistiek[];
 }
 
 /**
@@ -297,6 +307,10 @@ router.get(
         hostname: os.hostname(),
         loadAverage: os.loadavg(),
       },
+      // Een open onderbreker is geen storing van Tutti zelf; de applicatie doet
+      // dan juist wat ze moet doen. Daarom telt hij niet mee in de algehele
+      // status, maar staat hij er wel bij.
+      externeDiensten: stroomstanden(),
     };
 
     const statusCode = overallStatus === 'unhealthy' ? 503 : 200;

@@ -19,7 +19,8 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 9          | Community outreach (KNMO, federaties)           | 25h              | ⬜ Gepland   |
 | 10         | PWA hardening + mobile UX                       | 55h              | 🔄 Deels     |
 | 11         | Pilot deployments (2-3 verenigingen)            | 45h              | ⬜ Gepland   |
-| **Totaal** |                                                 | **500h + audit** |
+| 12         | Achtergrondtaken die een herstart overleven     | 40h              | ⬜ Gepland   |
+| **Totaal** |                                                 | **540h + audit** |
 
 ¹ Alle deliverables zijn geleverd, maar de staging-uitrol is _ingericht_ en nog niet _aantoonbaar werkend_: hij heeft nog geen keer gedraaid, en de Build Command in het Render-dashboard staat nog zonder `--include=dev`. Zie WP8 hieronder.
 
@@ -32,13 +33,16 @@ ingevuld: ze vragen een keuze die van de omgeving of van de bedoeling afhangt,
 niet van de code. Ze staan hier zodat ze niet in een samengevoegde
 pull request achterblijven.
 
-1. **`X-Forwarded-For` wordt onvoorwaardelijk vertrouwd.** Wie die kopregel zelf
-   meestuurt, kiest daarmee zijn eigen IP-adres — en daarmee wat er in het
-   auditlogboek komt te staan, hoe de snelheidsbegrenzer telt en of hij door de
-   IP-witlijst komt. De reparatie is één regel `trust proxy` in
-   `backend/src/index.ts`, maar welke waarde daar moet staan hangt af van
-   hoeveel proxy's er vóór de applicatie staan. Een verkeerde waarde is net zo
-   fout als geen waarde
+1. **`X-Forwarded-For` wordt op twee plekken nog rechtstreeks gelezen.**
+   `app.set('trust proxy', 1)` staat er inmiddels wel (`index.ts`, alleen in
+   productie), dus `req.ip` klopt achter de proxy van Render. Maar
+   `middleware/ipWhitelist.ts` en `routes/tickets.ts` lezen de kopregel zelf uit
+   en nemen het meest linkse adres — en dat is per definitie het adres dat de
+   aanvrager erin heeft gezet. Daarmee is de IP-witlijst voor het beheerscherm
+   met één kopregel te omzeilen. De reparatie is `req.ip` gebruiken op beide
+   plekken; wat de juiste waarde voor `trust proxy` is hangt af van hoeveel
+   proxy's er vóór de applicatie staan, en een verkeerde waarde is net zo fout
+   als geen waarde. Vastgelegd in `__tests__/middleware/ip-whitelist.test.ts`
 2. **`payment_settings` heeft Mollie-sleutels per vereniging die nergens
    gebruikt worden.** Alle betalingen lopen over één sleutel uit de omgeving.
    Ofwel de tabel gaat weg, ofwel de code gaat hem gebruiken — nu wekt hij de
@@ -449,6 +453,96 @@ Gestructureerde pilot deployments:
 - [ ] Onboarding handleiding
 - [ ] Feedback rapport per pilot
 - [ ] Publieke case studies
+
+---
+
+## WP12: Achtergrondtaken die een Herstart Overleven
+
+**Doorlooptijd:** 4-6 weken  
+**Afhankelijkheden:** WP4 (Docker), en de PostgreSQL-keuze uit `docs/POSTGRES_MIGRATION.md` als er meer dan één instantie komt
+
+### Huidige status
+
+Achtergrondwerk zit nu volledig in het geheugen van het ene proces dat de
+applicatie draait. Dat is te overzien zolang er één instantie is, maar het valt
+op drie manieren stil.
+
+**1. De wachtrij die er is, wordt nergens gebruikt.**
+`backend/src/utils/backgroundQueue.ts` is 290 regels: een `BackgroundQueue` met
+statussen, herkansingen, een maximum aan gelijktijdige taken en een eigen
+testbestand. Er is geen enkele plek in de productiecode die hem aanroept. Zwaar
+werk - PDF's samenvoegen, rapporten maken, exports - gebeurt gewoon binnen het
+verzoek van de gebruiker.
+
+**2. Twee stukken gepland werk zijn geschreven en getest maar starten nooit.**
+
+| Bestand                        | Wat het doet                                    | Aangeroepen vanuit         |
+| ------------------------------ | ----------------------------------------------- | -------------------------- |
+| `scheduler/workflow-runner.ts` | `runWorkflowScheduler`, `runDateFieldWorkflows` | niets                      |
+| `scheduler/email-digest.ts`    | `sendWeeklyDigest`, de wekelijkse samenvatting  | alleen de tests (21 stuks) |
+
+De wekelijkse samenvatting is dus volledig gebouwd en uitgebreid getest, en is
+nog nooit bij een lid aangekomen.
+
+**3. Wat wél draait, draait per proces.**
+`seating-notifications` (elke minuut), `email-forwarding-retry` (elke twee
+minuten), `gdpr-cleanup` (elk uur) en de back-upplanner worden gestart binnen
+`httpServer.listen` in `index.ts`. Gevolgen:
+
+- **Een herstart onderbreekt lopend werk.** Elke uitrol naar Render is een
+  herstart. Wat halverwege was, is weg; er is geen enkele plek waar staat dat
+  het niet af is.
+- **Een tweede instantie doet alles dubbel.** Er is geen sluis en geen
+  eigenaarschap per taak. Zodra Tutti horizontaal schaalt, krijgt elk lid zijn
+  melding twee keer.
+- **Niemand kan zien wat er misging.** Een taak die faalt komt in het logboek
+  terecht en verder nergens. Er is geen scherm met "wat staat er klaar, wat is
+  mislukt, en waarom".
+
+### Scope
+
+Achtergrondwerk verplaatsen van geheugen naar de database, zodat het een
+herstart overleeft, hooguit één keer wordt uitgevoerd en zichtbaar is.
+
+- Een `jobs`-tabel met status, poging, eigenaar, planmoment en foutmelding
+- Een werker die taken oppakt met een sluis, zodat twee instanties elkaar niet
+  in de weg zitten
+- Herkansing met oplopende wachttijd, en een eindstation voor wat blijft
+  mislukken
+- De bestaande planners omzetten naar taken in die tabel
+- De twee stukken gepland werk die nooit starten: aanzetten of weghalen - maar
+  niet laten liggen
+- Een beheerscherm met de wachtrij, de mislukte taken en een knop om er één
+  opnieuw te proberen
+- Het zware werk binnen een verzoek (PDF's, exports, rapporten) naar de
+  wachtrij verplaatsen
+
+### Overwegingen
+
+- **Geen extra dienst als het niet hoeft.** Redis of een aparte queue-server
+  betekent iets extra's om te draaien, te bewaken en uit te leggen in de
+  zelfhostinghandleiding. Een tabel in de database die er toch al is, is voor
+  een vereniging met honderd leden ruim genoeg.
+- **Dit raakt de PostgreSQL-vraag.** De sluis die voorkomt dat twee instanties
+  dezelfde taak pakken vraagt om `SELECT ... FOR UPDATE SKIP LOCKED` of iets
+  gelijkwaardigs. sql.js draait in het geheugen van één proces en kan dat per
+  definitie niet. Zolang er één instantie is, kan het met een `UPDATE ... WHERE
+status = 'wachtend'`; wordt het er meer, dan hoort dit werk na de
+  PostgreSQL-overstap.
+- **Herkansen mag niet alles.** Een taak die een e-mail verstuurt en dan
+  vastloopt mag niet opnieuw. Elke taak moet zeggen of hij herhaalbaar is; zie
+  dezelfde afweging in `docs/VEERKRACHT.md`.
+
+### Deliverables
+
+- [ ] `jobs`-tabel met migratie
+- [ ] Werker met sluis, herkansing en eindstation
+- [ ] De vier draaiende planners omgezet
+- [ ] `workflow-runner` en `email-digest` aangezet of weggehaald, met een reden
+- [ ] `backgroundQueue.ts` vervangen of verwijderd
+- [ ] Beheerscherm voor de wachtrij en de mislukte taken
+- [ ] Zwaar werk binnen een verzoek naar de wachtrij
+- [ ] Documentatie in `docs/` en een regel in `CLAUDE.md`
 
 ---
 

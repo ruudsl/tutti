@@ -55,6 +55,7 @@ process.env.JWT_SECRET = 'test-jwt-secret-for-testing-must-be-at-least-32-charac
 process.env.CSRF_ENABLED = 'false';
 
 import testDb from './testDb';
+import { herstelAlleStroomonderbrekers } from '../utils/veerkracht';
 
 beforeAll(async () => {
   await testDb.init();
@@ -63,6 +64,12 @@ beforeAll(async () => {
 beforeEach(async () => {
   // Reset database to clean state before each test
   await testDb.reset();
+
+  // De stroomonderbrekers zijn gedeeld over de hele applicatie en dus ook over
+  // alle tests in een bestand. Een test die een dienst vijf keer laat mislukken
+  // zou de onderbreker openzetten en elke volgende test in datzelfde bestand
+  // laten falen op iets wat die test niet doet. Elke test begint dicht.
+  herstelAlleStroomonderbrekers();
 });
 
 afterAll(() => {

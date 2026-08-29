@@ -1,8 +1,35 @@
 import crypto from 'crypto';
 import config from '../config';
 import logger from '../utils/logger';
+import { beschermd, BeschermdOpties, DienstFout, herkansNaUitKop, statusIsTijdelijk } from '../utils/veerkracht';
 
 const SPOND_API_BASE = 'https://api.spond.com/core/v1';
+
+/**
+ * Tijdslimiet op elke aanroep naar Spond.
+ *
+ * fetch wacht zonder deze optie oneindig lang. De synchronisatie draait binnen
+ * het verzoek van een gebruiker en in de geplande taken; een Spond dat de
+ * verbinding openhoudt zonder te antwoorden houdt daarmee die gebruiker of die
+ * hele ronde vast.
+ */
+const SPOND_TIMEOUT_MS = 15_000;
+
+/**
+ * Hoe we omgaan met een Spond dat hikt of omvalt.
+ *
+ * Zowel het ophalen als het zetten van een aanwezigheid mag worden herhaald:
+ * het zijn allebei bewerkingen die een waarde uitlezen of overschrijven, niet
+ * bewerkingen die iets toevoegen. Twee keer "aanwezig" zetten geeft één keer
+ * aanwezig.
+ */
+const SPOND_VEERKRACHT: BeschermdOpties = {
+  pogingen: 3,
+  basisMs: 300,
+  maxMs: 2000,
+  maxTotaalMs: 4000,
+  onderbreker: { drempel: 5, openMs: 60_000 },
+};
 
 // ========================
 // Credential encryption
@@ -156,20 +183,61 @@ export class SpondClient {
    */
   private static readonly LOGIN_PATHS = ['/auth2/login', '/login'];
 
+  /**
+   * Eén aanroep naar Spond, met tijdslimiet, herkansing en onderbreker.
+   *
+   * Een 401 en een 404 zijn antwoorden waar de aanroeper zelf iets mee doet -
+   * opnieuw aanmelden, of het volgende aanmeldpad proberen - en die passeren
+   * deze laag ongemoeid. Alleen tijdelijke statussen worden tot fout verheven,
+   * zodat de herkansing en de onderbreker ze zien.
+   *
+   * @param herkansTijdelijkeStatus zet dit uit voor het aanmelden. Dat pad
+   *   maakt van een 503 zelf een SpondLoginError met de status erbij, wat een
+   *   bruikbaardere melding is dan "niet bereikbaar" - en een aanmelding die
+   *   drie keer met een verkeerd wachtwoord langskomt is bij Spond een reden
+   *   om het account te blokkeren.
+   */
+  private async spondFetch(
+    url: string,
+    init: RequestInit = {},
+    { herkansTijdelijkeStatus = true }: { herkansTijdelijkeStatus?: boolean } = {},
+  ): Promise<Response> {
+    return beschermd(
+      'spond',
+      async () => {
+        const res = await fetch(url, { ...init, signal: AbortSignal.timeout(SPOND_TIMEOUT_MS) });
+        if (herkansTijdelijkeStatus && statusIsTijdelijk(res.status)) {
+          throw new DienstFout(`Spond API error: ${res.status}`, {
+            dienst: 'spond',
+            status: res.status,
+            herkansNaMs: herkansNaUitKop(res.headers?.get?.('retry-after')),
+          });
+        }
+        return res;
+      },
+      SPOND_VEERKRACHT,
+    );
+  }
+
   private async postLogin(path: string): Promise<Response> {
     try {
-      return await fetch(`${SPOND_API_BASE}${path}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Spond weigert aanvragen zonder herkenbare afzender. Node stuurt
-          // van zichzelf niets bruikbaars mee, wat een 403 oplevert die niets
-          // met het wachtwoord te maken heeft.
-          'User-Agent': 'Tutti/1.0 (+https://github.com/ruudsl/tutti)',
-          Accept: 'application/json',
+      return await this.spondFetch(
+        `${SPOND_API_BASE}${path}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Spond weigert aanvragen zonder herkenbare afzender. Node stuurt
+            // van zichzelf niets bruikbaars mee, wat een 403 oplevert die niets
+            // met het wachtwoord te maken heeft.
+            'User-Agent': 'Tutti/1.0 (+https://github.com/ruudsl/tutti)',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ email: this.username, password: this.password }),
         },
-        body: JSON.stringify({ email: this.username, password: this.password }),
-      });
+        // Zie spondFetch: het aanmeldpad handelt statussen zelf af.
+        { herkansTijdelijkeStatus: false },
+      );
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       logger.error('Spond niet bereikbaar', { path, detail });
@@ -248,14 +316,14 @@ export class SpondClient {
       Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     }
 
-    const res = await fetch(url.toString(), {
+    const res = await this.spondFetch(url.toString(), {
       headers: { Authorization: `Bearer ${this.token}` },
     });
 
     if (res.status === 401) {
       // Token expired, retry once
       await this.login();
-      const retryRes = await fetch(url.toString(), {
+      const retryRes = await this.spondFetch(url.toString(), {
         headers: { Authorization: `Bearer ${this.token}` },
       });
       if (!retryRes.ok) throw new Error(`Spond API error: ${retryRes.status}`);
@@ -352,7 +420,7 @@ export class SpondClient {
     }
 
     const url = `${SPOND_API_BASE}/sponds/${eventId}/responses/${memberId}`;
-    const res = await fetch(url, {
+    const res = await this.spondFetch(url, {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${this.token}`,
@@ -364,7 +432,7 @@ export class SpondClient {
     if (res.status === 401) {
       // Token expired, retry once
       await this.login();
-      const retryRes = await fetch(url, {
+      const retryRes = await this.spondFetch(url, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${this.token}`,
