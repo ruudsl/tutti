@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { ReactElement } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -74,7 +75,7 @@ vi.mock('../OnboardingTour', () => ({ OnboardingTour: () => null, resetOnboardin
 import Layout from '../Layout';
 
 /** Een pagina die stukgaat zodra hij getekend wordt. */
-function KapottePagina(): JSX.Element {
+function KapottePagina(): ReactElement {
   throw new Error('deze pagina is stuk');
 }
 

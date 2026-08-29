@@ -35,7 +35,11 @@ export function TitleMetaModal({
   state: MusicTitlesState;
   genres: Genre[];
   dispatch: Dispatch<MusicTitlesAction>;
-  mp3InputRef: RefObject<HTMLInputElement>;
+  /**
+   * React 19 laat `useRef<T>(null)` een `RefObject<T | null>` teruggeven: de
+   * ref is leeg tot het element getekend is, en dat staat nu in het type.
+   */
+  mp3InputRef: RefObject<HTMLInputElement | null>;
   onSubmit: (e: React.FormEvent) => void;
   onSearchMusicaInfo: () => void;
   onLoadMusicaInfoDetail: (artnr: string) => void;
