@@ -50,6 +50,33 @@ twee kopieën van `@types/react` en de fout
 `Type 'bigint' is not assignable to type 'ReactNode'`, die niets met bigint te
 maken heeft.
 
+**Bij die sprong houdt npm de oude react in de lock vast.** Dit is een
+workspace-opstelling: alle react-bibliotheken worden gehoist naar de
+hoofd-`node_modules`, en `require('react')` vanuit bijvoorbeeld `@dnd-kit/core`
+komt daar uit. Bewerk je alleen `frontend/package.json`, dan zet npm de nieuwe
+versie _genest_ onder `frontend/node_modules` en laat de oude bovenin staan.
+Twee kopieën, en de gehoiste bibliotheken praten met de verkeerde: `Invalid
+hook call` op elk scherm dat ze gebruikt.
+
+`npm install` repareert dat niet, ook niet na `rm -rf node_modules`: de
+package-lock is leidend en die wijst nog naar de oude. Een `overrides`-blok
+helpt evenmin - npm neemt het niet mee zolang de lock klopt. Wat wél werkt:
+**de vermeldingen weghalen uit de lock, bovenin én in de workspace**, en dan
+opnieuw installeren. Dan hoist npm de nieuwe versie vanzelf naar boven.
+
+```bash
+node -e "const fs=require('fs');const l=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+for (const k of Object.keys(l.packages)) if (/(^|\/)node_modules\/(react|react-dom|scheduler|@types\/react|@types\/react-dom)$/.test(k)) delete l.packages[k];
+fs.writeFileSync('package-lock.json', JSON.stringify(l,null,2)+'\n');"
+npm install
+```
+
+Controleer daarna dat er van elk precies één staat, bovenin en nergens anders:
+
+```bash
+node -e "console.log(require.resolve('react',{paths:['node_modules/@dnd-kit/core']}))"
+```
+
 **archiver 8 heeft de aanroepbare default-export laten vallen.** `archiver('zip')`
 bestaat niet meer; het zijn nu de klassen `ZipArchive`, `TarArchive` en
 `JsonArchive`. Raakt `backup.ts`, `gdpr.ts`, `music-lists.ts` en `pdf-tools.ts`.

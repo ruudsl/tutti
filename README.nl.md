@@ -190,7 +190,7 @@ Zie [SECURITY.md](SECURITY.md) voor ons beveiligingsbeleid en het melden van kwe
 
 | Backend         | Frontend           |
 | --------------- | ------------------ |
-| Node.js 24+     | React 18           |
+| Node.js 24+     | React 19           |
 | Express 4.x     | Vite 5.x           |
 | TypeScript 5.x  | TanStack Query 5.x |
 | SQLite (sql.js) | React Router 6.x   |

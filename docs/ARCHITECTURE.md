@@ -56,7 +56,7 @@ Tutti is a multi-tenant web application for music associations (concert bands, b
 
 | Technology   | Purpose                           |
 | ------------ | --------------------------------- |
-| React 18     | UI framework                      |
+| React 19     | UI framework                      |
 | TypeScript   | Type safety                       |
 | Vite         | Build tool                        |
 | React Query  | Server state management           |

@@ -196,7 +196,7 @@ See [SECURITY.md](SECURITY.md) for our security policy and how to report vulnera
 
 | Backend         | Frontend           |
 | --------------- | ------------------ |
-| Node.js 24+     | React 18           |
+| Node.js 24+     | React 19           |
 | Express 4.x     | Vite 5.x           |
 | TypeScript 5.x  | TanStack Query 5.x |
 | SQLite (sql.js) | React Router 6.x   |
