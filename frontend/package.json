@@ -59,7 +59,7 @@
     "@vitest/coverage-v8": "^4.1.11",
     "axe-core": "^4.11.4",
     "chrome-launcher": "^1.2.1",
-    "jest-axe": "^10.0.0",
+    "jest-axe": "^11.0.0",
     "jsdom": "^30.0.1",
     "lighthouse": "^13.4.1",
     "typescript": "^5.2.2",
