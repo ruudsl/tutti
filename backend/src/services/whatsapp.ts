@@ -2,6 +2,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { beschermd, BeschermdOpties } from '../utils/veerkracht';
 
 // WhatsApp Business API / Twilio WhatsApp configuration (env var fallback)
 const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0';
@@ -24,6 +25,22 @@ const TWILIO_WHATSAPP_FROM_ENV = process.env.TWILIO_WHATSAPP_FROM; // e.g., 'wha
  * een verzendronde naar alle leden de hele ronde.
  */
 const WHATSAPP_TIMEOUT_MS = 10_000;
+
+/**
+ * Hoe we omgaan met een WhatsApp-aanbieder die er niet is.
+ *
+ * Net als bij Telegram wordt hier niet herkanst: een bericht dat mogelijk al
+ * is aangekomen mag niet nog eens de deur uit. Wat overblijft is de
+ * onderbreker, zodat een verzendronde naar honderd leden niet honderd keer de
+ * volle tijdslimiet kost als Meta of Twilio eruit ligt.
+ *
+ * Meta en Twilio krijgen elk hun eigen onderbreker: het zijn twee diensten en
+ * de een ligt er niet uit omdat de ander dat doet.
+ */
+const WHATSAPP_VEERKRACHT: BeschermdOpties = {
+  pogingen: 1,
+  onderbreker: { drempel: 5, openMs: 60_000 },
+};
 
 export interface WhatsAppMessage {
   to: string; // Phone number with country code (e.g., +31612345678)
@@ -213,13 +230,18 @@ async function sendMetaWhatsAppMessage(
       return null;
     }
 
-    const response = await axios.post(url, payload, {
-      headers: {
-        Authorization: `Bearer ${config.accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: WHATSAPP_TIMEOUT_MS,
-    });
+    const response = await beschermd(
+      'whatsapp-meta',
+      () =>
+        axios.post(url, payload, {
+          headers: {
+            Authorization: `Bearer ${config.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: WHATSAPP_TIMEOUT_MS,
+        }),
+      WHATSAPP_VEERKRACHT,
+    );
 
     const messageId = response.data.messages?.[0]?.id;
     logger.info(`WhatsApp message sent successfully: ${messageId}`);
@@ -256,16 +278,21 @@ async function sendTwilioWhatsAppMessage(
       Body: body,
     });
 
-    const response = await axios.post(url, params.toString(), {
-      auth: {
-        username: config.accountSid,
-        password: config.authToken,
-      },
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      timeout: WHATSAPP_TIMEOUT_MS,
-    });
+    const response = await beschermd(
+      'whatsapp-twilio',
+      () =>
+        axios.post(url, params.toString(), {
+          auth: {
+            username: config.accountSid,
+            password: config.authToken,
+          },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          timeout: WHATSAPP_TIMEOUT_MS,
+        }),
+      WHATSAPP_VEERKRACHT,
+    );
 
     const messageId = response.data.sid;
     logger.info(`WhatsApp message sent successfully via Twilio: ${messageId}`);

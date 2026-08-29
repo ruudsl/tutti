@@ -60,8 +60,11 @@ De volgorde telt - een specifieker pad staat vóór een algemener pad.
    die geeft 404, geen 403. Zie de skill `nieuwe-module`.
 6. **Lijsten pagineren.** `LIMIT`/`OFFSET` met een bovengrens; een eindpunt dat
    alles teruggeeft werkt tot een vereniging groeit.
-7. **Uitgaande HTTP heeft een timeout**, en gaat via `backend/src/services/`,
-   niet rechtstreeks uit een route.
+7. **Uitgaande HTTP** gaat via `backend/src/services/`, niet rechtstreeks uit
+   een route, en heeft een tijdslimiet plus een stroomonderbreker via
+   `beschermd(...)` uit `utils/veerkracht.ts`. Herkansen mag alleen als de
+   aanroep herhaalbaar is; iets versturen krijgt `pogingen: 1`. Zie
+   `docs/VEERKRACHT.md`.
 
 ## Cache
 

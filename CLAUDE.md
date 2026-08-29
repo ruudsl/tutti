@@ -80,8 +80,12 @@ Deze staan hier omdat ze in deze repository al eens zijn overtreden.
 10. Een route achter een module krijgt `requireModule('sleutel')`. Die geeft
     **404, niet 403**: een uitgezette module hoort niet te bestaan voor die
     vereniging, en een 403 verklapt dat de functionaliteit er wel is.
-11. Uitgaande HTTP heeft een timeout. Zonder timeout blijft een trage externe
-    dienst je verzoek vasthouden tot de gebruiker weggaat.
+11. Uitgaande HTTP heeft een tijdslimiet en gaat door `beschermd(...)` uit
+    `utils/veerkracht.ts`. Zonder tijdslimiet blijft een trage externe dienst je
+    verzoek vasthouden tot de gebruiker weggaat; zonder stroomonderbreker kost
+    elke aanroep de volle limiet zolang de dienst plat ligt. Herkansen mag
+    alleen als de aanroep herhaalbaar is - iets versturen krijgt `pogingen: 1`.
+    Zie `docs/VEERKRACHT.md`.
 
 ### Modules
 
@@ -130,18 +134,19 @@ Deze staan hier omdat ze in deze repository al eens zijn overtreden.
 
 ## Waar dingen staan
 
-| Wat                      | Waar                                                                     |
-| ------------------------ | ------------------------------------------------------------------------ |
-| Databaseverbinding       | `backend/src/database/connection.ts`                                     |
-| Schema verse installatie | `backend/src/database/schema.ts`                                         |
-| Migraties                | `backend/src/migrations/` (`npm run migrate:create --workspace=backend`) |
-| Authenticatie            | `backend/src/middleware/auth.ts`                                         |
-| Foutafhandeling          | `backend/src/middleware/errorHandler.ts`                                 |
-| Validatie                | `backend/src/middleware/validate.ts`                                     |
-| Cache                    | `backend/src/middleware/cache.ts`                                        |
-| Modules                  | `backend/src/modules/registry.ts`, `frontend/src/utils/modules.ts`       |
-| Achtergrondtaken         | `backend/src/scheduler/`, `backend/src/utils/backgroundQueue.ts`         |
-| Externe koppelingen      | `backend/src/services/`                                                  |
-| Logboek                  | `backend/src/utils/logger.ts`, `backend/src/logging/requestLogger.ts`    |
-| Vertalingen              | `frontend/src/locales/{nl,en,de}.json`                                   |
-| API-laag frontend        | `frontend/src/api/` (niet langs `fetch` heen)                            |
+| Wat                             | Waar                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| Databaseverbinding              | `backend/src/database/connection.ts`                                     |
+| Schema verse installatie        | `backend/src/database/schema.ts`                                         |
+| Migraties                       | `backend/src/migrations/` (`npm run migrate:create --workspace=backend`) |
+| Authenticatie                   | `backend/src/middleware/auth.ts`                                         |
+| Foutafhandeling                 | `backend/src/middleware/errorHandler.ts`                                 |
+| Validatie                       | `backend/src/middleware/validate.ts`                                     |
+| Cache                           | `backend/src/middleware/cache.ts`                                        |
+| Modules                         | `backend/src/modules/registry.ts`, `frontend/src/utils/modules.ts`       |
+| Achtergrondtaken                | `backend/src/scheduler/`, `backend/src/utils/backgroundQueue.ts`         |
+| Externe koppelingen             | `backend/src/services/`                                                  |
+| Herkansen en stroomonderbrekers | `backend/src/utils/veerkracht.ts`, `docs/VEERKRACHT.md`                  |
+| Logboek                         | `backend/src/utils/logger.ts`, `backend/src/logging/requestLogger.ts`    |
+| Vertalingen                     | `frontend/src/locales/{nl,en,de}.json`                                   |
+| API-laag frontend               | `frontend/src/api/` (niet langs `fetch` heen)                            |

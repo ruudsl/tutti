@@ -1,4 +1,5 @@
 import logger from '../utils/logger';
+import { beschermd, BeschermdOpties, DienstFout, herkansNaUitKop } from '../utils/veerkracht';
 
 const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token';
@@ -12,6 +13,22 @@ const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token';
  * bijzaak gaat: een streaminglink bij een titel. Beter is: opgeven.
  */
 const SPOTIFY_TIMEOUT_MS = 10000;
+
+/**
+ * Hoe we omgaan met een Spotify dat hikt of omvalt.
+ *
+ * Zoeken en een nummer opvragen zijn leesacties: die mogen zonder gevolgen
+ * nog eens. Bij een reeks storingen slaan we de dienst een halve minuut over -
+ * een streaminglink bij een titel is een aardigheid, en daarvoor hoort niemand
+ * tien seconden op een timeout te wachten.
+ */
+const SPOTIFY_VEERKRACHT: BeschermdOpties = {
+  pogingen: 3,
+  basisMs: 200,
+  maxMs: 1000,
+  maxTotaalMs: 2000,
+  onderbreker: { drempel: 5, openMs: 30_000 },
+};
 
 export interface SpotifyTrack {
   id: string;
@@ -88,23 +105,33 @@ export class SpotifyClient {
 
     const credentials = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
-    const response = await fetch(SPOTIFY_AUTH_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
+    const data = await beschermd(
+      'spotify',
+      async () => {
+        const response = await fetch(SPOTIFY_AUTH_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'grant_type=client_credentials',
+          signal: AbortSignal.timeout(SPOTIFY_TIMEOUT_MS),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          logger.error('Spotify authentication failed', { status: response.status, body: text });
+          throw new DienstFout(`Spotify authentication failed: ${response.status}`, {
+            dienst: 'spotify',
+            status: response.status,
+            herkansNaMs: herkansNaUitKop(response.headers?.get?.('retry-after')),
+          });
+        }
+
+        return (await response.json()) as { access_token: string; expires_in: number };
       },
-      body: 'grant_type=client_credentials',
-      signal: AbortSignal.timeout(SPOTIFY_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      logger.error('Spotify authentication failed', { status: response.status, body: text });
-      throw new Error(`Spotify authentication failed: ${response.status}`);
-    }
-
-    const data = (await response.json()) as { access_token: string; expires_in: number };
+      SPOTIFY_VEERKRACHT,
+    );
     this.accessToken = data.access_token;
     this.tokenExpiresAt = Date.now() + data.expires_in * 1000;
 
@@ -124,20 +151,32 @@ export class SpotifyClient {
       });
     }
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    // De aanmelding hierboven heeft haar eigen bescherming en is al klaar; deze
+    // aanroep wordt dus niet in die van het token genest.
+    return beschermd(
+      'spotify',
+      async () => {
+        const response = await fetch(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: AbortSignal.timeout(SPOTIFY_TIMEOUT_MS),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          logger.error('Spotify API request failed', { endpoint, status: response.status, body: text });
+          throw new DienstFout(`Spotify API request failed: ${response.status}`, {
+            dienst: 'spotify',
+            status: response.status,
+            herkansNaMs: herkansNaUitKop(response.headers?.get?.('retry-after')),
+          });
+        }
+
+        return response.json() as Promise<T>;
       },
-      signal: AbortSignal.timeout(SPOTIFY_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      logger.error('Spotify API request failed', { endpoint, status: response.status, body: text });
-      throw new Error(`Spotify API request failed: ${response.status}`);
-    }
-
-    return response.json() as Promise<T>;
+      SPOTIFY_VEERKRACHT,
+    );
   }
 
   /**

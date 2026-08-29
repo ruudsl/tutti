@@ -2,6 +2,11 @@
 
 This guide covers error handling patterns used throughout the Harmonie application, including backend error classes, frontend error boundaries, and monitoring integration.
 
+> Errors coming **from** external services (Spond, Spotify, Apple Music,
+> Telegram, WhatsApp) are handled one layer earlier, by the timeout / retry /
+> circuit-breaker stack described in [VEERKRACHT.md](VEERKRACHT.md). This
+> document covers errors raised and returned by Tutti itself.
+
 ## Backend Error Handling
 
 ### ApiError Class

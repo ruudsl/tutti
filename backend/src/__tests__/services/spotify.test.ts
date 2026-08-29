@@ -21,6 +21,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '../setup';
 import logger from '../../utils/logger';
 import { SpotifyClient, getSpotifyClient, SpotifyTrack } from '../../services/spotify';
+import { StroomonderbrekerOpenFout, stroomonderbreker } from '../../utils/veerkracht';
 
 const CLIENT_ID = 'onze-client-id';
 const CLIENT_SECRET = 'geheim-van-de-vereniging-xyz';
@@ -451,6 +452,55 @@ describe('Spotify-koppeling', () => {
   describe('de gedeelde koppeling', () => {
     it('geeft steeds dezelfde koppeling terug', () => {
       expect(getSpotifyClient()).toBe(getSpotifyClient());
+    });
+  });
+
+  /**
+   * Spotify valt weleens even om. Zoeken is een leesactie, dus een tweede
+   * poging kost niets en levert vaak wel wat op; blijft de dienst weg, dan
+   * heeft doorbellen geen zin meer en wachten we liever niet elke keer opnieuw
+   * de volle tijdslimiet af.
+   */
+  describe('als Spotify hapert', () => {
+    /** Een rij antwoorden die precies één keer wordt afgelopen. */
+    function rij(...antwoorden: Response[]) {
+      const alles = [antwoord(200, { access_token: TOKEN, expires_in: 3600 }), ...antwoorden];
+      let volgende = 0;
+      const nep = vi.fn(async () => alles[Math.min(volgende++, alles.length - 1)]);
+      vi.stubGlobal('fetch', nep);
+      return nep;
+    }
+
+    it('probeert het na een storing nog eens en slaagt alsnog', async () => {
+      const nep = rij(antwoord(503, 'Service Unavailable'), zoekantwoord([nummer()]));
+
+      const resultaat = await client.searchTracks('Mars');
+
+      expect(resultaat).toHaveLength(1);
+      // token, mislukte zoekopdracht, geslaagde zoekopdracht
+      expect(nep).toHaveBeenCalledTimes(3);
+    });
+
+    it('probeert het niet nog eens bij een nummer dat niet bestaat', async () => {
+      const nep = rij(antwoord(404, { error: { status: 404 } }));
+
+      await expect(client.getTrack('bestaatniet')).rejects.toThrow('Spotify API request failed: 404');
+      expect(nep).toHaveBeenCalledTimes(2);
+    });
+
+    it('slaat de dienst over zodra hij er echt uit ligt', async () => {
+      const nep = rij(antwoord(503, 'Service Unavailable'));
+
+      // Vijf mislukte aanroepen is de drempel; elke aanroep herkanst drie keer
+      // en telt daarna als één storing.
+      for (let i = 0; i < 5; i++) {
+        await client.searchTracks('Mars').catch(() => undefined);
+      }
+      expect(stroomonderbreker('spotify').stand).toBe('open');
+
+      const aanroepenTotNuToe = nep.mock.calls.length;
+      await expect(client.searchTracks('Mars')).rejects.toBeInstanceOf(StroomonderbrekerOpenFout);
+      expect(nep).toHaveBeenCalledTimes(aanroepenTotNuToe);
     });
   });
 });
