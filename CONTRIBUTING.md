@@ -2,6 +2,11 @@
 
 Thank you for your interest in contributing to Tutti! This document provides guidelines and information for contributors.
 
+> **Working with an AI assistant?** Read [CLAUDE.md](CLAUDE.md) first. It holds
+> the project conventions, the rules that have been broken here before, and
+> step-by-step recipes in `.claude/skills/` for adding a module, writing a
+> migration, or building a route.
+
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
