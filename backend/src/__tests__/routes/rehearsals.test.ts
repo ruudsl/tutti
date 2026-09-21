@@ -60,6 +60,32 @@ describe('Rehearsals Routes', () => {
 
   describe('POST /api/rehearsals/recurring', () => {
     /**
+     * De eerstvolgende maandag na vandaag, om 19:30 UTC.
+     *
+     * De route genereert met `between(new Date(), until)` en maakt dus geen
+     * repetities in het verleden. Een test met vaste datums werkt daardoor
+     * precies tot die datums voorbij zijn en faalt daarna elke dag - wat hier
+     * ook is gebeurd: de reeks stond op 7 en 14 september 2026 en ging op 15
+     * september stuk, op een dag dat niemand iets aan de code had veranderd.
+     * Vandaar dat de maandagen hier worden uitgerekend.
+     */
+    function eerstvolgendeMaandag(): Date {
+      const maandag = new Date();
+      maandag.setUTCHours(19, 30, 0, 0);
+      // Altijd minstens een dag vooruit: is het vandaag maandag, dan pakken we
+      // de volgende, zodat het tijdstip van draaien niets uitmaakt.
+      do {
+        maandag.setUTCDate(maandag.getUTCDate() + 1);
+      } while (maandag.getUTCDay() !== 1);
+      return maandag;
+    }
+
+    /** YYYY-MM-DD, zoals het invoerveld `type="date"` het levert. */
+    const alsDatum = (d: Date): string => d.toISOString().slice(0, 10);
+    /** YYYYMMDDTHHMMSSZ, zoals een DTSTART in een RRULE hoort. */
+    const alsTijdstempel = (d: Date): string => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+
+    /**
      * Het veld heet "tot en met", dus de einddatum hoort er zelf bij.
      *
      * `new Date('2026-09-28')` is middernacht UTC. Een repetitie die om 19:30
@@ -69,15 +95,19 @@ describe('Rehearsals Routes', () => {
      * rekende dezelfde fout, dus de twee waren het eens - allebei fout.
      */
     it('neemt een repetitie op de einddatum zelf mee', async () => {
-      // Twee maandagen: 7 en 14 september 2026. De einddatum is de tweede.
+      // Twee opeenvolgende maandagen. De einddatum is de tweede.
+      const eerste = eerstvolgendeMaandag();
+      const tweede = new Date(eerste);
+      tweede.setUTCDate(tweede.getUTCDate() + 7);
+
       const respons = await request(app)
         .post('/api/rehearsals/recurring')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          rrule: 'DTSTART:20260907T193000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO',
+          rrule: `DTSTART:${alsTijdstempel(eerste)}\nRRULE:FREQ=WEEKLY;BYDAY=MO`,
           startTime: '19:30',
           endTime: '21:30',
-          until: '2026-09-14',
+          until: alsDatum(tweede),
         });
 
       expect(respons.status).toBe(201);
@@ -85,7 +115,7 @@ describe('Rehearsals Routes', () => {
         .prepare('SELECT date FROM rehearsals WHERE association_id = ? ORDER BY date')
         .all(association.id) as { date: string }[];
 
-      expect(data.map((r) => r.date)).toContain('2026-09-14');
+      expect(data.map((r) => r.date)).toContain(alsDatum(tweede));
     });
 
     // Het invoerveld is type="date", maar geen enkel schema dwingt dat af. Een
