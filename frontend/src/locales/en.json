@@ -2092,7 +2092,9 @@
     "log": "Log",
     "deleteGoalTitle": "Delete goal",
     "deleteLogTitle": "Delete session",
-    "quickLog": "Log"
+    "quickLog": "Log",
+    "timerSessionEnded_one": "Practice session of {{count}} minute ended!",
+    "timerSessionEnded_other": "Practice session of {{count}} minutes ended!"
   },
   "accessibility": {
     "skipToContent": "Skip to content",
@@ -2605,7 +2607,9 @@
     },
     "instrument": "Instrument",
     "setlistBuilder": "Setlist",
-    "posterGenerator": "Poster"
+    "posterGenerator": "Poster",
+    "posterDownloaded": "Poster \"{{title}}\" downloaded as {{format}}",
+    "setlistSaved": "Setlist \"{{name}}\" saved"
   },
   "tickets": {
     "title": "Tickets",

@@ -218,7 +218,7 @@ export default function Practice() {
             queryClient.invalidateQueries({ queryKey: ['practiceLogs'] });
             queryClient.invalidateQueries({ queryKey: ['practiceStats'] });
             queryClient.invalidateQueries({ queryKey: ['practiceGoals'] });
-            showSuccess(t('practice.timerSessionEnded', `Oefensessie van ${durationMinutes} minuten beeindigd!`));
+            showSuccess(t('practice.timerSessionEnded', { count: durationMinutes }));
           }}
         />
       </div>

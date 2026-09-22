@@ -88,12 +88,15 @@ pull request achterblijven.
    een sleutel die overal ontbreekt ontbreekt overal even hard. Er staat nu een
    controle naast die de code met de bestanden vergelijkt.
 
-   De resterende 75 staan als expliciete achterstandslijst in
-   `src/locales/__tests__/translations.test.ts`, met een tweede test die de lijst
-   schoonhoudt. Grote clusters: `sync.*` (16 sleutels), `offline.*` (9),
-   `shareTarget.*` (8), `memberDirectory.*` (4). Dat is een eigen ronde waard —
-   niet omdat het moeilijk is, maar omdat het per sleutel een keuze over
-   formulering vraagt in drie talen
+   **Die 75 zijn inmiddels ook weg.** 72 kwamen erbij in de
+   toegankelijkheidsronde; de laatste drie op 22-09-2026. Die drie
+   (`concerts.posterDownloaded`, `concerts.setlistSaved`,
+   `practice.timerSessionEnded`) zetten hun tekst zelf in elkaar met een
+   Nederlandse sjabloonstring en gaven géén waarden aan `t()` mee, dus een
+   Engelse of Duitse gebruiker kreeg de Nederlandse zin. Ze geven hun waarden nu
+   mee, en de minuten gaan via `_one`/`_other` ("1 minuut", niet "1 minuten").
+   De achterstandslijst in `src/locales/__tests__/translations.test.ts` is leeg;
+   het mechanisme blijft staan zodat een nieuw gat weer opvalt
 
 Daarnaast wachten twee GitHub-instellingen die alleen de eigenaar van de
 repository kan zetten. Zonder deze twee stopt `deploy-staging.yml` met een
