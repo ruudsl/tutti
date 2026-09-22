@@ -327,14 +327,29 @@ export async function getInvoices(filters?: {
   type?: InvoiceType;
   fiscalYearId?: string;
   relationId?: string;
-}): Promise<Invoice[]> {
+  page?: number;
+  limit?: number;
+}): Promise<PaginatedResponse<Invoice>> {
   const params = new URLSearchParams();
   if (filters?.status) params.append('status', filters.status);
   if (filters?.type) params.append('type', filters.type);
   if (filters?.fiscalYearId) params.append('fiscalYearId', filters.fiscalYearId);
   if (filters?.relationId) params.append('relationId', filters.relationId);
+  if (filters?.page) params.append('page', String(filters.page));
+  if (filters?.limit) params.append('limit', String(filters.limit));
 
   const response = await api.get(`/accounting/invoices?${params.toString()}`);
+  return naarPagina<Invoice>(response.data);
+}
+
+/**
+ * De aantallen voor de overzichtskaart.
+ *
+ * De lijst komt per pagina binnen, dus die client-side tellen zou alleen de
+ * eerste vijfentwintig facturen zien. De server ziet ze allemaal.
+ */
+export async function getInvoiceSummary(): Promise<{ total: number; open: number }> {
+  const response = await api.get('/accounting/invoices/summary');
   return response.data;
 }
 

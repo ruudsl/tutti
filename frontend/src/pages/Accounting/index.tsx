@@ -8,6 +8,7 @@ import {
   createFiscalYear,
   getAccounts,
   getInvoices,
+  getInvoiceSummary,
   deleteAccount,
   initializeAccounts,
   getBalanceReport,
@@ -166,9 +167,24 @@ export default function Accounting() {
     enabled: ['overview', 'chart', 'transactions', 'invoices', 'budgets'].includes(activeTab),
   });
 
-  const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: () => getInvoices(),
+  // Ook facturen komen per pagina binnen; het paginanummer hoort in de
+  // queryKey, anders blijft React Query pagina 1 teruggeven.
+  const [facturenPagina, setFacturenPagina] = useState(1);
+
+  const { data: facturenPagineerd, isLoading: loadingInvoices } = useQuery({
+    queryKey: ['invoices', facturenPagina],
+    queryFn: () => getInvoices({ page: facturenPagina }),
+    enabled: activeTab === 'invoices' || activeTab === 'overview',
+  });
+
+  const invoices = facturenPagineerd?.data ?? [];
+  const facturenPaginas = facturenPagineerd?.totalPages ?? 0;
+
+  // De kaart telt de openstaande facturen. Dat kan niet meer uit `invoices`:
+  // dat is één pagina. De server telt ze allemaal.
+  const { data: factuurTotalen } = useQuery({
+    queryKey: ['invoiceSummary'],
+    queryFn: getInvoiceSummary,
     enabled: activeTab === 'invoices' || activeTab === 'overview',
   });
 
@@ -457,9 +473,7 @@ export default function Accounting() {
             >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.openInvoices')}</div>
-                <div className="text-2xl font-bold">
-                  {invoices.filter((i) => ['draft', 'sent', 'partial', 'overdue'].includes(i.status)).length}
-                </div>
+                <div className="text-2xl font-bold">{factuurTotalen?.open ?? 0}</div>
               </div>
             </div>
 
@@ -746,6 +760,9 @@ export default function Accounting() {
         <FacturenTab
           invoices={invoices}
           loadingInvoices={loadingInvoices}
+          pagina={facturenPagina}
+          paginas={facturenPaginas}
+          setPagina={setFacturenPagina}
           factuurVerzendMutatie={factuurVerzendMutatie}
           factuurBetaaldMutatie={factuurBetaaldMutatie}
           factuurVerwijderMutatie={factuurVerwijderMutatie}

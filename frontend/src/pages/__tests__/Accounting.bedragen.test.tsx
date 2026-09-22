@@ -33,6 +33,17 @@ import * as boekhoudApi from '../../api/accounting';
 import type { Account, FiscalYear, Invoice, Transaction } from '../../api/accounting';
 import { showSuccess, showError } from '../../utils/toast';
 
+/** Een lijst facturen in de vorm waarin de server hem levert: per pagina. */
+function facturenPagina(facturen: Invoice[]) {
+  return {
+    data: facturen,
+    total: facturen.length,
+    page: 1,
+    pageSize: Math.max(facturen.length, 1),
+    totalPages: facturen.length === 0 ? 0 : 1,
+  };
+}
+
 /** Een lijst boekingen in de vorm waarin de server hem levert: per pagina. */
 function boekingenPagina(boekingen: Transaction[]) {
   return {
@@ -201,7 +212,8 @@ function zetApiKlaar(): void {
   }
   vi.mocked(boekhoudApi.getFiscalYears).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getAccounts).mockResolvedValue([]);
-  vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([]);
+  vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([]));
+  vi.mocked(boekhoudApi.getInvoiceSummary).mockResolvedValue({ total: 0, open: 0 });
   vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([]));
   vi.mocked(boekhoudApi.getRelations).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getCostCenters).mockResolvedValue([]);
@@ -336,21 +348,22 @@ describe('boekhouding - het overzicht rekent op', () => {
     expect(screen.queryByText('accounting.bankAccounts')).not.toBeInTheDocument();
   });
 
-  it('telt alleen de nog niet afgeronde facturen als openstaand', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([
-      factuur({ id: 'f-1', status: 'draft' }),
-      factuur({ id: 'f-2', status: 'sent' }),
-      factuur({ id: 'f-3', status: 'partial' }),
-      factuur({ id: 'f-4', status: 'overdue' }),
-      factuur({ id: 'f-5', status: 'paid' }),
-      factuur({ id: 'f-6', status: 'cancelled' }),
-      factuur({ id: 'f-7', status: 'written_off' }),
-    ]);
+  /**
+   * Het aantal openstaande facturen komt van de server, niet uit de lijst.
+   *
+   * Die lijst is sinds de paginering nog maar één pagina van hoogstens
+   * vijfentwintig. Zou de kaart hem blijven filteren, dan telde hij bij een
+   * vereniging met honderd facturen alleen de eerste vijfentwintig mee en
+   * toonde hij stilzwijgend een te laag getal.
+   */
+  it('haalt het aantal openstaande facturen bij de server op', async () => {
+    vi.mocked(boekhoudApi.getInvoiceSummary).mockResolvedValue({ total: 120, open: 37 });
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-1', status: 'paid' })]));
     await toonPagina();
 
-    // Zeven facturen, vier openstaand.
     await screen.findByText('accounting.recentTransactions');
-    expect(within(telkaart('accounting.openInvoices')).getByText('4')).toBeInTheDocument();
+    // Eén betaalde factuur op de pagina, en toch zevenendertig openstaand.
+    expect(within(telkaart('accounting.openInvoices')).getByText('37')).toBeInTheDocument();
   });
 
   it('zet in de telkaarten de aantallen van elk onderdeel', async () => {
@@ -618,7 +631,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('verstuurt een conceptfactuur', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-3', status: 'draft' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-3', status: 'draft' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -629,7 +642,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('meldt een verstuurde factuur betaald, en biedt dat niet aan bij een concept', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-4', status: 'sent' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-4', status: 'sent' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -641,7 +654,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('verwijdert een conceptfactuur na bevestiging', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-5', status: 'draft' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-5', status: 'draft' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -652,7 +665,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('meldt het als een factuur niet verstuurd kan worden', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-6', status: 'draft' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-6', status: 'draft' })]));
     vi.mocked(boekhoudApi.sendInvoice).mockRejectedValue({ response: { data: { error: 'geen e-mailadres' } } });
     const gebruiker = await toonPagina();
 
@@ -663,9 +676,9 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('toont het factuurbedrag zoals de server het gaf', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([
-      factuur({ id: 'f-8', subtotal: 1000, vatAmount: 210, total: 1210 }),
-    ]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(
+      facturenPagina([factuur({ id: 'f-8', subtotal: 1000, vatAmount: 210, total: 1210 })]),
+    );
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -676,7 +689,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('opent en sluit de afdrukweergave van een factuur', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-9' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-9' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));

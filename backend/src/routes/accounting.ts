@@ -843,64 +843,117 @@ router.get(
 
     const { status, type, fiscalYearId, relationId } = req.query;
 
-    let query = `
+    // Zie /transactions: de voorwaarden staan los van de SELECT zodat de
+    // telling en de pagina dezelfde rijen bekijken.
+    let voorwaarden = 'WHERE i.association_id = ?';
+    const params: any[] = [associationId];
+
+    if (status) {
+      voorwaarden += ' AND i.status = ?';
+      params.push(status);
+    }
+    if (type) {
+      voorwaarden += ' AND i.invoice_type = ?';
+      params.push(type);
+    }
+    if (fiscalYearId) {
+      voorwaarden += ' AND i.fiscal_year_id = ?';
+      params.push(fiscalYearId);
+    }
+    if (relationId) {
+      voorwaarden += ' AND i.relation_id = ?';
+      params.push(relationId);
+    }
+
+    // Facturen worden niet opgeruimd: elk seizoen komt er een stapel bij.
+    const { offset, limit, page } = getPaginationParams(req.query);
+
+    const telling = db.prepare(`SELECT COUNT(*) as total FROM invoices i ${voorwaarden}`).get(...params) as {
+      total: number;
+    };
+
+    const invoices = db
+      .prepare(
+        `
         SELECT i.*, r.name AS relation_name, u.first_name || ' ' || u.last_name AS user_name,
             c.first_name || ' ' || c.last_name AS created_by_name
         FROM invoices i
         LEFT JOIN accounting_relations r ON i.relation_id = r.id
         LEFT JOIN users u ON i.user_id = u.id
         LEFT JOIN users c ON i.created_by = c.id
-        WHERE i.association_id = ?
-    `;
-    const params: any[] = [associationId];
-
-    if (status) {
-      query += ' AND i.status = ?';
-      params.push(status);
-    }
-    if (type) {
-      query += ' AND i.invoice_type = ?';
-      params.push(type);
-    }
-    if (fiscalYearId) {
-      query += ' AND i.fiscal_year_id = ?';
-      params.push(fiscalYearId);
-    }
-    if (relationId) {
-      query += ' AND i.relation_id = ?';
-      params.push(relationId);
-    }
-
-    query += ' ORDER BY i.invoice_date DESC, i.invoice_number DESC';
-
-    const invoices = db.prepare(query).all(...params);
+        ${voorwaarden}
+        ORDER BY i.invoice_date DESC, i.invoice_number DESC
+        LIMIT ? OFFSET ?
+    `,
+      )
+      .all(...params, limit, offset);
 
     res.json(
-      invoices.map((i: any) => ({
-        id: i.id,
-        invoiceNumber: i.invoice_number,
-        invoiceType: i.invoice_type,
-        relationId: i.relation_id,
-        relationName: i.relation_name,
-        userId: i.user_id,
-        userName: i.user_name,
-        status: i.status,
-        invoiceDate: i.invoice_date,
-        dueDate: i.due_date,
-        reference: i.reference,
-        description: i.description,
-        subtotal: i.subtotal,
-        vatAmount: i.vat_amount,
-        total: i.total,
-        amountPaid: i.amount_paid,
-        amountDue: i.total - i.amount_paid,
-        sentAt: i.sent_at,
-        paidAt: i.paid_at,
-        createdBy: i.created_by,
-        createdByName: i.created_by_name,
-        createdAt: i.created_at,
-      })),
+      createPaginatedResult(
+        invoices.map((i: any) => ({
+          id: i.id,
+          invoiceNumber: i.invoice_number,
+          invoiceType: i.invoice_type,
+          relationId: i.relation_id,
+          relationName: i.relation_name,
+          userId: i.user_id,
+          userName: i.user_name,
+          status: i.status,
+          invoiceDate: i.invoice_date,
+          dueDate: i.due_date,
+          reference: i.reference,
+          description: i.description,
+          subtotal: i.subtotal,
+          vatAmount: i.vat_amount,
+          total: i.total,
+          amountPaid: i.amount_paid,
+          amountDue: i.total - i.amount_paid,
+          sentAt: i.sent_at,
+          paidAt: i.paid_at,
+          createdBy: i.created_by,
+          createdByName: i.created_by_name,
+          createdAt: i.created_at,
+        })),
+        telling.total,
+        page,
+        limit,
+      ),
     );
+  }),
+);
+
+/**
+ * De aantallen voor het overzichtsscherm.
+ *
+ * Stond eerst in de frontend: die telde de openstaande facturen uit de lijst
+ * die hij toch al had. Sinds die lijst per pagina binnenkomt telt zo'n filter
+ * alleen de eerste vijfentwintig, en gaat de kaart stilzwijgend een te laag
+ * getal tonen. Tellen hoort bij de partij die alle rijen ziet.
+ *
+ * Let op de volgorde: dit pad moet vóór '/invoices/:id' staan, anders leest
+ * die route 'summary' als een factuur-id.
+ */
+router.get(
+  '/invoices/summary',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const rij = db
+      .prepare(
+        `
+        SELECT
+            COUNT(*) AS totaal,
+            SUM(CASE WHEN status IN ('draft', 'sent', 'partial', 'overdue') THEN 1 ELSE 0 END) AS openstaand
+        FROM invoices
+        WHERE association_id = ?
+    `,
+      )
+      .get(associationId) as { totaal: number; openstaand: number | null };
+
+    res.json({ total: rij.totaal, open: rij.openstaand ?? 0 });
   }),
 );
 
