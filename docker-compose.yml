@@ -15,8 +15,13 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    # Alleen op de machine zelf. De backend vertrouwt één proxy (TRUST_PROXY),
+    # en een verzoek dat daar langs gaat mag zelf zeggen welk adres het heeft:
+    # van buitenaf rechtstreeks op 3001 omzeil je daarmee de IP-witlijst. De
+    # browser komt via nginx (/api) binnen; localhost:3001 blijft voor wie op
+    # de server zelf zit.
     ports:
-      - '3001:3001'
+      - '127.0.0.1:3001:3001'
     volumes:
       # Persistent data volumes
       - backend-data:/app/data

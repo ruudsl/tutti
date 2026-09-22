@@ -39,8 +39,23 @@ interface Notification {
 
 type EventCallback<T> = (data: T) => void;
 
-const SOCKET_URL =
-  import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
+/**
+ * Waar de websocket heen moet.
+ *
+ * Een volledige API-URL (Render achter Vercel) wijst ook de server aan. Een
+ * relatieve (`/api`, de Docker-opstelling) of lege (ontwikkelen) betekent: de
+ * server waar de pagina vandaan komt, en dan stuurt nginx, Traefik of de
+ * Vite-proxy `/socket.io` door. Hier stond eerst een terugval op
+ * `http://localhost:3001` - `'/api'.replace('/api', '')` is leeg en dus onwaar -
+ * waardoor de browser via Docker met zijn eigen computer probeerde te verbinden.
+ */
+export function bepaalSocketUrl(wsUrl?: string, apiUrl?: string): string | undefined {
+  if (wsUrl) return wsUrl;
+  if (apiUrl && /^https?:\/\//.test(apiUrl)) return apiUrl.replace(/\/api\/?$/, '');
+  return undefined;
+}
+
+const SOCKET_URL = bepaalSocketUrl(import.meta.env.VITE_WS_URL, import.meta.env.VITE_API_URL);
 
 /**
  * @description Hook for real-time WebSocket communication with the server.

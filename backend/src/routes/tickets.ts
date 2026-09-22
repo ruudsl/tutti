@@ -285,9 +285,9 @@ router.post(
     }
     const items = [...gebundeld].map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }));
 
-    // Get client IP address
-    const clientIp =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    // req.ip en niet X-Forwarded-For: het meest linkse adres daarin kiest de
+    // koper zelf, en met elke bestelling een ander adres telde de teller nooit op.
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || '';
 
     // Track checkout request for rate limiting
