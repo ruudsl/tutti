@@ -81,6 +81,21 @@ node -e "console.log(require.resolve('react',{paths:['node_modules/@dnd-kit/core
 bestaat niet meer; het zijn nu de klassen `ZipArchive`, `TarArchive` en
 `JsonArchive`. Raakt `backup.ts`, `gdpr.ts`, `music-lists.ts` en `pdf-tools.ts`.
 
+**jsdom 30.1.0 heeft een kapotte `URL.createObjectURL`.** Er een `Blob` in
+stoppen gooit `TypeError: Cannot read properties of undefined (reading
+'_buffer')`. Elk scherm dat een bestand aanbiedt doet precies dat, dus zo'n test
+valt om terwijl de applicatie niets mankeert. `jsdom` staat daarom op een vaste
+`30.0.1` in `frontend/package.json` en op de negeerlijst in `dependabot.yml`.
+
+**TypeScript 7 kan nog niet.** Het is de native herschrijving, en
+`typescript-eslint` accepteert tot en met 8.70.1 alleen `>=4.8.4 <6.1.0`. De
+linter kan de bron dan niet meer ontleden. Controleer dat met
+`npm view typescript-eslint peerDependencies` voordat je het opnieuw probeert.
+
+**Zoek bij een rode Dependabot-PR eerst uit of `main` zelf rood is.** Dat
+scheelt een middag zoeken in een diff die er niets mee te maken heeft; zie de
+tijdbom hieronder onder Testen.
+
 ## Database
 
 **`PRAGMA foreign_key_list` op de draaiende database is de waarheid.** Een
@@ -97,6 +112,13 @@ ontbrekende `ON DELETE`-regel.
 dezelfde zin op drie plekken in drie bestanden onderhouden.
 
 ## Testen
+
+**Een test met een vaste datum in de toekomst is een tijdbom.** De test voor
+terugkerende repetities vroeg een reeks aan op 7 en 14 september 2026 en werkte
+prima - tot 15 september. De route genereert met `between(new Date(), until)` en
+maakt dus niets in het verleden aan, dus vanaf die dag kwam er een 400 uit op
+een dag dat niemand iets had aangeraakt. Dat hield `main` rood en daarmee elke
+openstaande Dependabot-PR. Reken datums uit vanaf vandaag.
 
 **De gedeelde `createTestEnvironment()` uitbreiden breekt andere bestanden.**
 Alle modules aanzetten in die helper gaf `UNIQUE constraint failed:
