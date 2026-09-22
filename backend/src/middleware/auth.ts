@@ -158,7 +158,10 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 
   try {
-    const sessionError = validateSession(token, decoded, { ip: req.ip, userAgent: req.get('user-agent') });
+    // De kopregel rechtstreeks lezen en niet via req.get(): dat is een aanroep
+    // die kan gooien, en een fout hier valt in de catch hieronder - die de
+    // sessiecontrole overslaat. Een ingetrokken sessie zou dan doorkomen.
+    const sessionError = validateSession(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] });
     if (sessionError) {
       return res.status(401).json({ error: sessionError });
     }
