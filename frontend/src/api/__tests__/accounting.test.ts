@@ -672,7 +672,19 @@ describe('bankafschriften', () => {
     antwoordMet([]);
     await getBankStatements();
 
-    expect(laatsteVerzoek().pad).toBe('/accounting/bank-statements');
+    expect(laatsteVerzoek().pad.startsWith('/accounting/bank-statements?')).toBe(true);
+  });
+
+  it('getBankStatements geeft de pagina van de server door', async () => {
+    antwoordMet({ data: [{ id: 'a1' }], pagination: { page: 2, limit: 25, total: 30, totalPages: 2 } });
+
+    const pagina = await getBankStatements({ page: 2, limit: 25 });
+
+    const pad = laatsteVerzoek().pad;
+    expect(pad).toContain('page=2');
+    expect(pad).toContain('limit=25');
+    expect(pagina.total).toBe(30);
+    expect(pagina.data).toHaveLength(1);
   });
 
   it('getBankStatementEntries haalt de regels van een afschrift op', async () => {

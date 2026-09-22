@@ -2734,6 +2734,22 @@ router.get(
     const associationId = req.user!.associationId;
     if (!associationId) throw new ApiError(400, 'Geen vereniging.');
 
+    // Elk geïmporteerd afschrift blijft staan; de lijst groeit met elke maand.
+    // Dit eindpunt heeft nog geen scherm, dus er zijn geen pagineerknoppen -
+    // de grens zit er alvast in zodat hij niet alsnog alles gaat teruggeven.
+    const { offset, limit, page } = getPaginationParams(req.query);
+
+    const telling = db
+      .prepare(
+        `
+        SELECT COUNT(*) as total
+        FROM bank_statements bs
+        JOIN bank_accounts ba ON bs.bank_account_id = ba.id
+        WHERE ba.association_id = ?
+    `,
+      )
+      .get(associationId) as { total: number };
+
     const statements = db
       .prepare(
         `
@@ -2743,25 +2759,31 @@ router.get(
         LEFT JOIN accounts a ON ba.account_id = a.id
         WHERE ba.association_id = ?
         ORDER BY bs.statement_date DESC, bs.imported_at DESC
+        LIMIT ? OFFSET ?
     `,
       )
-      .all(associationId);
+      .all(associationId, limit, offset);
 
     res.json(
-      statements.map((s: any) => ({
-        id: s.id,
-        accountId: s.ledger_account_id,
-        bankAccountId: s.bank_account_id,
-        accountCode: s.account_code,
-        accountName: s.account_name,
-        statementDate: s.statement_date,
-        importFileName: s.import_file_name,
-        status: s.status,
-        totalDebit: s.total_debit,
-        totalCredit: s.total_credit,
-        lineCount: s.line_count,
-        importedAt: s.imported_at,
-      })),
+      createPaginatedResult(
+        statements.map((s: any) => ({
+          id: s.id,
+          accountId: s.ledger_account_id,
+          bankAccountId: s.bank_account_id,
+          accountCode: s.account_code,
+          accountName: s.account_name,
+          statementDate: s.statement_date,
+          importFileName: s.import_file_name,
+          status: s.status,
+          totalDebit: s.total_debit,
+          totalCredit: s.total_credit,
+          lineCount: s.line_count,
+          importedAt: s.imported_at,
+        })),
+        telling.total,
+        page,
+        limit,
+      ),
     );
   }),
 );

@@ -440,7 +440,7 @@ describe('Facturen', () => {
 
     expect(res.status).toBe(201);
     const lijst = await alsAdmin('get', '/invoices');
-    expect(lijst.body.length).toBeGreaterThan(0);
+    expect(lijst.body.data.length).toBeGreaterThan(0);
   });
 
   it('weigert een factuur zonder regels', async () => {

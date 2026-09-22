@@ -569,9 +569,16 @@ export async function importBankStatement(
   return response.data;
 }
 
-export async function getBankStatements(): Promise<BankStatement[]> {
-  const response = await api.get('/accounting/bank-statements');
-  return response.data;
+export async function getBankStatements(filters?: {
+  page?: number;
+  limit?: number;
+}): Promise<PaginatedResponse<BankStatement>> {
+  const params = new URLSearchParams();
+  if (filters?.page) params.append('page', String(filters.page));
+  if (filters?.limit) params.append('limit', String(filters.limit));
+
+  const response = await api.get(`/accounting/bank-statements?${params.toString()}`);
+  return naarPagina<BankStatement>(response.data);
 }
 
 export async function getBankStatementEntries(statementId: string): Promise<BankStatementDetail> {

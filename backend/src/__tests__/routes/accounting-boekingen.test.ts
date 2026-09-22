@@ -949,7 +949,7 @@ describe('Bankafschriften inlezen en boeken', () => {
     expect(res.body.totalCredit).toBeCloseTo(1234.56, 2);
     expect(res.body.totalDebit).toBeCloseTo(250, 2);
 
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regels = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries;
     expect(regels).toHaveLength(2);
     expect(regels[0]).toMatchObject({ amount: 1234.56, description: 'Contributie maart', status: 'pending' });
@@ -981,7 +981,7 @@ describe('Bankafschriften inlezen en boeken', () => {
 
     await alsAdmin('post', '/bank-import').send({ accountId: bankRekening, format: 'mt940', content: mt940 });
 
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regels = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries;
 
     expect(regels).toHaveLength(1);
@@ -993,7 +993,7 @@ describe('Bankafschriften inlezen en boeken', () => {
     const mt940 = [':20:STARTUP', ':60F:C260301EUR1000,00', ':61:2603050305D250,00N123NONREF'].join('\n');
 
     await alsAdmin('post', '/bank-import').send({ accountId: bankRekening, format: 'mt940', content: mt940 });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regels = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries;
 
     expect(regels).toHaveLength(1);
@@ -1007,7 +1007,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;100,00\n',
     });
 
-    const afschriften = (await alsAdmin('get', '/bank-statements')).body;
+    const afschriften = (await alsAdmin('get', '/bank-statements')).body.data;
     expect(afschriften).toHaveLength(1);
     expect(afschriften[0]).toMatchObject({
       accountId: bankRekening,
@@ -1018,6 +1018,28 @@ describe('Bankafschriften inlezen en boeken', () => {
       totalCredit: 100,
       totalDebit: 0,
     });
+  });
+
+  it('geeft afschriften per pagina terug met de telling van alles', async () => {
+    for (const dag of ['01', '02', '03']) {
+      await alsAdmin('post', '/bank-import').send({
+        accountId: bankRekening,
+        format: 'csv',
+        content: `datum;omschrijving;bedrag\n2026-03-${dag};Contributie;100,00\n`,
+      });
+    }
+
+    const eerste = await alsAdmin('get', '/bank-statements').query({ limit: 2 });
+    expect(eerste.status).toBe(200);
+    expect(eerste.body.data).toHaveLength(2);
+    expect(eerste.body.pagination).toMatchObject({ page: 1, limit: 2, total: 3, totalPages: 2, hasNext: true });
+
+    const tweede = await alsAdmin('get', '/bank-statements').query({ limit: 2, page: 2 });
+    expect(tweede.body.data).toHaveLength(1);
+    expect(tweede.body.pagination).toMatchObject({ page: 2, hasNext: false, hasPrev: true });
+
+    const ids = [...eerste.body.data, ...tweede.body.data].map((a: { id: string }) => a.id);
+    expect(new Set(ids).size).toBe(3);
   });
 
   it('weigert een onbekende bestandsvorm', async () => {
@@ -1055,7 +1077,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;100,00\n',
     });
     expect(res.status).toBe(404);
-    expect((await alsAdmin('get', '/bank-statements')).body).toEqual([]);
+    expect((await alsAdmin('get', '/bank-statements')).body.data).toEqual([]);
   });
 
   it('slaat een regel met te weinig kolommen over in plaats van er onzin van te maken', async () => {
@@ -1079,10 +1101,10 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;100,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
 
     expect((await alsB('get', `/bank-statements/${afschrift.id}/entries`)).status).toBe(404);
-    expect((await alsB('get', '/bank-statements')).body).toEqual([]);
+    expect((await alsB('get', '/bank-statements')).body.data).toEqual([]);
   });
 
   it('boekt een ontvangst debet op de bank en credit op de tegenrekening', async () => {
@@ -1091,7 +1113,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
     const contributie = await rekeningId('8000');
 
@@ -1118,7 +1140,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Huur zaal;-400,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
     expect(regel.amount).toBe(-400);
     const huur = await rekeningId('4200');
@@ -1143,7 +1165,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
     const contributie = await rekeningId('8000');
 
@@ -1168,7 +1190,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
 
     const res = await alsAdmin('post', `/bank-statements/${afschrift.id}/lines/${regel.id}/book`).send({});
@@ -1182,7 +1204,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const contributie = await rekeningId('8000');
 
     const res = await alsAdmin('post', `/bank-statements/${afschrift.id}/lines/${uuidv4()}/book`).send({
@@ -1197,7 +1219,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
     const contributie = await rekeningId('8000');
 
