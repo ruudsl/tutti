@@ -60,7 +60,13 @@ De volgorde telt - een specifieker pad staat vóór een algemener pad.
    die geeft 404, geen 403. Zie de skill `nieuwe-module`.
 6. **Lijsten pagineren.** `LIMIT`/`OFFSET` met een bovengrens; een eindpunt dat
    alles teruggeeft werkt tot een vereniging groeit.
-7. **Uitgaande HTTP** gaat via `backend/src/services/`, niet rechtstreeks uit
+7. **Geen `SELECT` in een lus over gegevens die meegroeien.** Haal het in één
+   query op met een `JOIN` of `IN (...)`, of laad vooraf in een `Map`. Op
+   sql.js kost een lus van zestig nu anderhalve milliseconde en merkt niemand
+   het - maar met een serverdatabase wordt elke doorloop een netwerkrondje.
+   Zie `docs/POSTGRES_MIGRATION.md` §4.G. Een lus over een vaste kleine
+   verzameling (betaalmethodes, meldkanalen) mag gewoon.
+8. **Uitgaande HTTP** gaat via `backend/src/services/`, niet rechtstreeks uit
    een route, en heeft een tijdslimiet plus een stroomonderbreker via
    `beschermd(...)` uit `utils/veerkracht.ts`. Herkansen mag alleen als de
    aanroep herhaalbaar is; iets versturen krijgt `pogingen: 1`. Zie
@@ -111,6 +117,7 @@ Minimaal:
 - [ ] `asyncHandler` + `ApiError`
 - [ ] Rol- en modulecontrole als middleware
 - [ ] Paginering op lijsten
+- [ ] Geen `SELECT` in een lus over meegroeiende gegevens
 - [ ] Cache-invalidatie bij schrijven, `varyByUser` bij persoonlijke gegevens
 - [ ] Auditlogregel bij wijzigingen die ertoe doen
 - [ ] Gemount in `index.ts`

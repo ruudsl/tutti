@@ -255,6 +255,54 @@ vragen alleen de datums-als-tekst (§2) en de booleans (0/1 → `false`/`true`).
 Omdat de bestanden (bladmuziek, audio) op schijf staan en niet in de database,
 hoeft daar niets mee te gebeuren.
 
+### G. Queries in een lus
+
+_Qua kosten hoort dit tussen D en E. Het staat onderaan omdat het pas bij een
+latere ronde boven water kwam._
+
+Op 41 plekken in 21 bestanden staat een `SELECT` binnen een lus. Vandaag is dat
+nauwelijks een probleem, want sql.js draait in hetzelfde proces: een query is
+een functieaanroep, geen netwerkrondje. Gemeten op de testdatabase, zestig leden:
+
+|                        |         |
+| ---------------------- | ------- |
+| 60 losse `SELECT`s     | 2,07 ms |
+| 1 query met `IN (...)` | 0,58 ms |
+
+Anderhalve milliseconde. Niemand merkt het.
+
+Met een serverdatabase verandert dat karakter volledig. Elk van die zestig
+wordt een rondje over een socket - reken op 0,2 tot 1 ms per stuk, ook op
+dezelfde machine. Dezelfde lus kost dan 12 tot 60 ms in plaats van 2, en dat
+telt op over elk scherm dat zo'n lus heeft.
+
+**Dit is dus geen prestatiewerk voor nu, maar voorwerk voor de overstap.** Het
+hoort in fase 0: het is los te doen, los te testen, en het maakt de applicatie
+vandaag geen haar trager.
+
+De plekken die met de vereniging meegroeien, op volgorde:
+
+| Plek                                   | Lus over                | Queries per doorloop                                           |
+| -------------------------------------- | ----------------------- | -------------------------------------------------------------- |
+| `scheduler/email-digest.ts`            | verenigingen, dan leden | 4 per vereniging + 1 per lid                                   |
+| `routes/seating.ts:1225`               | aanwezigen              | 2 (rol en instrumenten)                                        |
+| `routes/concerts.ts:530`               | leden                   | 1, met een deelquery die voor elk lid hetzelfde antwoord geeft |
+| `services/attendanceAnalytics.ts:733`  | repetities              | 1, voor een CSV over een heel seizoen                          |
+| `routes/accounting.ts:3344` en `:3600` | budgetten               | 1 aggregatie over `transaction_lines`                          |
+
+De weekmail is qua aantal het ergst - verenigingen maal leden - maar staat
+onderaan de urgentie omdat die planner nog nergens wordt gestart; zie WP12 in
+`../ROADMAP.md`.
+
+Wat hier níét bij hoort: lussen over een vaste, kleine verzameling. Zes
+Mollie-betaalmethodes, twee meldkanalen, een herkansingslus die na tien pogingen
+stopt, het opbouwen van de zaadgegevens bij een verse installatie. Die blijven
+zoals ze zijn.
+
+De lijst is opnieuw te maken met een scan die op inspringing bijhoudt of een
+`.prepare(` binnen een lus staat; let erop dat `db` en `.prepare(` op
+verschillende regels kunnen staan, anders telt de scan te laag uit.
+
 ---
 
 ## 5. Een pad in fasen
@@ -267,6 +315,12 @@ Drie dubbele aanhalingstekens repareren (§2), de 10 datumvergelijkingen
 nalopen, de 104 bedragen van `REAL` naar een exact type. Levert direct werkende
 functies op; heeft niets met Postgres te maken behalve dat het het pad
 vrijmaakt.
+
+Hier hoort ook de handvol lussen uit §4.G thuis - die vijf plekken die met de
+vereniging meegroeien. Vandaag scheelt dat anderhalve milliseconde en dus
+niets; na fase 3 scheelt het tientallen. Nu doen is goedkoper dan straks,
+omdat je de lus dan nog los kunt testen zonder dat de halve aanroepketen
+`async` is geworden.
 
 **Fase 1 — één schemabron** _(1-2 weken)_
 Vier bronnen terugbrengen tot één, twee migratiesystemen tot één.
