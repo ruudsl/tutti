@@ -330,7 +330,24 @@ describe('getInvoices', () => {
 
   it('geeft een lege facturenlijst terug zonder te vallen', async () => {
     antwoordMet([]);
-    await expect(getInvoices()).resolves.toEqual([]);
+    // Een kale array betekent: een server die nog niet pagineert. Dan is wat
+    // er binnenkomt de hele lijst.
+    await expect(getInvoices()).resolves.toEqual({ data: [], total: 0, page: 1, pageSize: 0, totalPages: 1 });
+  });
+
+  it('slaat het genestte pagination-object van de server plat', async () => {
+    antwoordMet({
+      data: [{ id: 'f-1' }],
+      pagination: { page: 2, limit: 25, total: 30, totalPages: 2, hasNext: false, hasPrev: true },
+    });
+
+    await expect(getInvoices({ page: 2 })).resolves.toEqual({
+      data: [{ id: 'f-1' }],
+      total: 30,
+      page: 2,
+      pageSize: 25,
+      totalPages: 2,
+    });
   });
 });
 
@@ -655,7 +672,19 @@ describe('bankafschriften', () => {
     antwoordMet([]);
     await getBankStatements();
 
-    expect(laatsteVerzoek().pad).toBe('/accounting/bank-statements');
+    expect(laatsteVerzoek().pad.startsWith('/accounting/bank-statements?')).toBe(true);
+  });
+
+  it('getBankStatements geeft de pagina van de server door', async () => {
+    antwoordMet({ data: [{ id: 'a1' }], pagination: { page: 2, limit: 25, total: 30, totalPages: 2 } });
+
+    const pagina = await getBankStatements({ page: 2, limit: 25 });
+
+    const pad = laatsteVerzoek().pad;
+    expect(pad).toContain('page=2');
+    expect(pad).toContain('limit=25');
+    expect(pagina.total).toBe(30);
+    expect(pagina.data).toHaveLength(1);
   });
 
   it('getBankStatementEntries haalt de regels van een afschrift op', async () => {

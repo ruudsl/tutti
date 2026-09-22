@@ -5,6 +5,7 @@ import { Icon } from '../../components/Icon';
 import { SkeletonTable } from '../../components/Skeleton';
 import { formatCurrency } from './formatteer';
 import type { MutatieMetId } from './types';
+import { Pagination } from '../../components/Pagination';
 
 export function FacturenTab({
   invoices,
@@ -14,7 +15,11 @@ export function FacturenTab({
   factuurVerwijderMutatie,
   setPrintInvoice,
   setShowInvoiceModal,
+  pagina,
+  paginas,
+  setPagina,
 }: {
+  /** Eén pagina facturen, niet alle facturen. */
   invoices: Invoice[];
   loadingInvoices: boolean;
   factuurVerzendMutatie: MutatieMetId;
@@ -22,6 +27,9 @@ export function FacturenTab({
   factuurVerwijderMutatie: MutatieMetId;
   setPrintInvoice: (factuur: Invoice) => void;
   setShowInvoiceModal: (open: boolean) => void;
+  pagina: number;
+  paginas: number;
+  setPagina: (pagina: number) => void;
 }) {
   const { t } = useTranslation();
 
@@ -138,6 +146,8 @@ export function FacturenTab({
           </div>
         </div>
       )}
+
+      {paginas > 1 && <Pagination page={pagina} totalPages={paginas} onPageChange={setPagina} />}
     </div>
   );
 }

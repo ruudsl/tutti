@@ -115,15 +115,16 @@ describe('Het boekingsoverzicht', () => {
   it('begint leeg', async () => {
     const res = await alsAdmin('get', '/transactions');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body.data).toEqual([]);
+    expect(res.body.pagination).toMatchObject({ page: 1, total: 0, totalPages: 0, hasNext: false, hasPrev: false });
   });
 
   it('geeft een nieuwe boeking terug als concept met het totaalbedrag', async () => {
     const { id, transactionNumber } = await maakBoeking();
 
     const res = await alsAdmin('get', '/transactions');
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0]).toMatchObject({
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0]).toMatchObject({
       id,
       transactionNumber,
       transactionDate: '2026-03-15',
@@ -134,7 +135,7 @@ describe('Het boekingsoverzicht', () => {
       isPosted: false,
       isReconciled: false,
     });
-    expect(res.body[0].createdByName).toBe('Admin User');
+    expect(res.body.data[0].createdByName).toBe('Admin User');
   });
 
   it('nummert de boekingen doorlopend en niet per boekjaar opnieuw', async () => {
@@ -149,8 +150,8 @@ describe('Het boekingsoverzicht', () => {
     await maakBoeking({ transactionType: 'receipt' });
 
     const res = await alsAdmin('get', '/transactions?transactionType=receipt');
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].transactionType).toBe('receipt');
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].transactionType).toBe('receipt');
   });
 
   it('filtert op een periode en laat de grenzen zelf meedoen', async () => {
@@ -159,20 +160,20 @@ describe('Het boekingsoverzicht', () => {
     await maakBoeking({ transactionDate: '2026-03-31', description: 'Maart' });
 
     const res = await alsAdmin('get', '/transactions?startDate=2026-01-31&endDate=2026-03-31');
-    expect(res.body).toHaveLength(3);
+    expect(res.body.data).toHaveLength(3);
 
     const binnen = await alsAdmin('get', '/transactions?startDate=2026-02-01&endDate=2026-02-28');
-    expect(binnen.body.map((t: { description: string }) => t.description)).toEqual(['Februari']);
+    expect(binnen.body.data.map((t: { description: string }) => t.description)).toEqual(['Februari']);
   });
 
   it('zoekt in zowel de omschrijving als de referentie', async () => {
     await maakBoeking({ description: 'Huur zaal', reference: 'FCT-100' });
     await maakBoeking({ description: 'Bladmuziek', reference: 'ZAAL-9' });
 
-    expect((await alsAdmin('get', '/transactions?search=zaal')).body).toHaveLength(2);
-    expect((await alsAdmin('get', '/transactions?search=Bladmuziek')).body).toHaveLength(1);
-    expect((await alsAdmin('get', '/transactions?search=FCT')).body).toHaveLength(1);
-    expect((await alsAdmin('get', '/transactions?search=nietsvanditalles')).body).toHaveLength(0);
+    expect((await alsAdmin('get', '/transactions?search=zaal')).body.data).toHaveLength(2);
+    expect((await alsAdmin('get', '/transactions?search=Bladmuziek')).body.data).toHaveLength(1);
+    expect((await alsAdmin('get', '/transactions?search=FCT')).body.data).toHaveLength(1);
+    expect((await alsAdmin('get', '/transactions?search=nietsvanditalles')).body.data).toHaveLength(0);
   });
 
   it('filtert op een rekening via de boekingsregels', async () => {
@@ -187,9 +188,9 @@ describe('Het boekingsoverzicht', () => {
     ]);
 
     // De bank zit in beide boekingen, de kas en de huur elk in een.
-    expect((await alsAdmin(`get`, `/transactions?accountId=${bank}`)).body).toHaveLength(2);
-    expect((await alsAdmin('get', `/transactions?accountId=${kas}`)).body).toHaveLength(1);
-    const opHuur = (await alsAdmin('get', `/transactions?accountId=${huur}`)).body;
+    expect((await alsAdmin('get', `/transactions?accountId=${bank}`)).body.data).toHaveLength(2);
+    expect((await alsAdmin('get', `/transactions?accountId=${kas}`)).body.data).toHaveLength(1);
+    const opHuur = (await alsAdmin('get', `/transactions?accountId=${huur}`)).body.data;
     expect(opHuur).toHaveLength(1);
     expect(opHuur[0].description).toBe('Huur');
   });
@@ -198,8 +199,8 @@ describe('Het boekingsoverzicht', () => {
     await maakBoeking();
     const boekjaar = (await alsAdmin('get', '/fiscal-years')).body[0].id;
 
-    expect((await alsAdmin('get', `/transactions?fiscalYearId=${boekjaar}`)).body).toHaveLength(1);
-    expect((await alsAdmin('get', `/transactions?fiscalYearId=${uuidv4()}`)).body).toHaveLength(0);
+    expect((await alsAdmin('get', `/transactions?fiscalYearId=${boekjaar}`)).body.data).toHaveLength(1);
+    expect((await alsAdmin('get', `/transactions?fiscalYearId=${uuidv4()}`)).body.data).toHaveLength(0);
   });
 
   it('combineert filters in plaats van de laatste te laten winnen', async () => {
@@ -208,16 +209,67 @@ describe('Het boekingsoverzicht', () => {
     await maakBoeking({ transactionDate: '2026-05-01', transactionType: 'receipt', description: 'Verkeerde maand' });
 
     const res = await alsAdmin('get', '/transactions?transactionType=receipt&startDate=2026-01-01&endDate=2026-02-28');
-    expect(res.body.map((t: { description: string }) => t.description)).toEqual(['Wel']);
+    expect(res.body.data.map((t: { description: string }) => t.description)).toEqual(['Wel']);
   });
 
   it('toont de boekingen van een andere vereniging niet', async () => {
     await maakBoeking();
-    expect((await alsB('get', '/transactions')).body).toEqual([]);
+    expect((await alsB('get', '/transactions')).body.data).toEqual([]);
   });
 
   it('laat een gewoon lid niet bij het overzicht', async () => {
     expect((await alsLid('get', '/transactions')).status).toBe(403);
+  });
+
+  /**
+   * Het grootboek wordt nooit korter. Zonder grens gaat hier op termijn alles
+   * over de lijn wat een vereniging ooit heeft geboekt.
+   */
+  describe('paginering', () => {
+    it('geeft standaard hoogstens vijfentwintig boekingen terug', async () => {
+      for (let i = 0; i < 30; i++) await maakBoeking({ description: `Boeking ${i}` });
+
+      const res = await alsAdmin('get', '/transactions');
+      expect(res.body.data).toHaveLength(25);
+      expect(res.body.pagination).toMatchObject({
+        page: 1,
+        limit: 25,
+        total: 30,
+        totalPages: 2,
+        hasNext: true,
+        hasPrev: false,
+      });
+    });
+
+    it('geeft de rest op de tweede pagina, zonder overlap', async () => {
+      for (let i = 0; i < 30; i++) await maakBoeking({ description: `Boeking ${i}` });
+
+      const eerste = await alsAdmin('get', '/transactions?page=1');
+      const tweede = await alsAdmin('get', '/transactions?page=2');
+
+      expect(tweede.body.data).toHaveLength(5);
+      expect(tweede.body.pagination).toMatchObject({ page: 2, hasNext: false, hasPrev: true });
+
+      const ids = new Set(eerste.body.data.map((t: { id: string }) => t.id));
+      for (const boeking of tweede.body.data) expect(ids.has(boeking.id)).toBe(false);
+    });
+
+    it('telt wat er na het filter overblijft, niet alles', async () => {
+      await maakBoeking({ transactionType: 'receipt' });
+      for (let i = 0; i < 5; i++) await maakBoeking({ transactionType: 'journal' });
+
+      const res = await alsAdmin('get', '/transactions?transactionType=receipt');
+      // Zou de telling de WHERE missen, dan stond hier 6 en beloofde de
+      // paginering pagina's die niet bestaan.
+      expect(res.body.pagination.total).toBe(1);
+      expect(res.body.pagination.totalPages).toBe(1);
+    });
+
+    it('kapt een veel te hoge limiet af', async () => {
+      await maakBoeking();
+      const res = await alsAdmin('get', '/transactions?limit=100000');
+      expect(res.body.pagination.limit).toBe(100);
+    });
   });
 });
 
@@ -314,7 +366,7 @@ describe('Bedragen bij het boeken', () => {
       ],
     });
     expect(res.status).toBe(400);
-    expect((await alsAdmin('get', '/transactions')).body).toEqual([]);
+    expect((await alsAdmin('get', '/transactions')).body.data).toEqual([]);
   });
 
   it('laat een boeking van nul door en houdt het totaal op nul', async () => {
@@ -441,7 +493,7 @@ describe('Bedragen bij het boeken', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('boekjaar');
-    expect((await alsAdmin('get', '/transactions')).body).toEqual([]);
+    expect((await alsAdmin('get', '/transactions')).body.data).toEqual([]);
   });
 });
 
@@ -555,7 +607,7 @@ describe('Een boeking verwijderen', () => {
     const kas = await rekeningId('1000');
 
     expect((await alsAdmin('delete', `/transactions/${id}`)).status).toBe(200);
-    expect((await alsAdmin('get', '/transactions')).body).toEqual([]);
+    expect((await alsAdmin('get', '/transactions')).body.data).toEqual([]);
 
     // De regels gaan mee. Bleven ze staan, dan zou de rekening voorgoed
     // "heeft transacties" zijn en nooit meer te verwijderen.
@@ -571,7 +623,7 @@ describe('Een boeking verwijderen', () => {
 
     const res = await alsAdmin('delete', `/transactions/${id}`);
     expect(res.status).toBe(400);
-    expect((await alsAdmin('get', '/transactions')).body).toHaveLength(1);
+    expect((await alsAdmin('get', '/transactions')).body.data).toHaveLength(1);
   });
 
   it('laat een geboekte transactie ook niet bijwerken', async () => {
@@ -600,13 +652,13 @@ describe('Een boeking verwijderen', () => {
   it('verwijdert geen boeking van een andere vereniging', async () => {
     const { id } = await maakBoeking();
     expect((await alsB('delete', `/transactions/${id}`)).status).toBe(404);
-    expect((await alsAdmin('get', '/transactions')).body).toHaveLength(1);
+    expect((await alsAdmin('get', '/transactions')).body.data).toHaveLength(1);
   });
 
   it('laat een gewoon lid geen boeking verwijderen', async () => {
     const { id } = await maakBoeking();
     expect((await alsLid('delete', `/transactions/${id}`)).status).toBe(403);
-    expect((await alsAdmin('get', '/transactions')).body).toHaveLength(1);
+    expect((await alsAdmin('get', '/transactions')).body.data).toHaveLength(1);
   });
 });
 
@@ -897,7 +949,7 @@ describe('Bankafschriften inlezen en boeken', () => {
     expect(res.body.totalCredit).toBeCloseTo(1234.56, 2);
     expect(res.body.totalDebit).toBeCloseTo(250, 2);
 
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regels = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries;
     expect(regels).toHaveLength(2);
     expect(regels[0]).toMatchObject({ amount: 1234.56, description: 'Contributie maart', status: 'pending' });
@@ -929,7 +981,7 @@ describe('Bankafschriften inlezen en boeken', () => {
 
     await alsAdmin('post', '/bank-import').send({ accountId: bankRekening, format: 'mt940', content: mt940 });
 
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regels = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries;
 
     expect(regels).toHaveLength(1);
@@ -941,7 +993,7 @@ describe('Bankafschriften inlezen en boeken', () => {
     const mt940 = [':20:STARTUP', ':60F:C260301EUR1000,00', ':61:2603050305D250,00N123NONREF'].join('\n');
 
     await alsAdmin('post', '/bank-import').send({ accountId: bankRekening, format: 'mt940', content: mt940 });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regels = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries;
 
     expect(regels).toHaveLength(1);
@@ -955,7 +1007,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;100,00\n',
     });
 
-    const afschriften = (await alsAdmin('get', '/bank-statements')).body;
+    const afschriften = (await alsAdmin('get', '/bank-statements')).body.data;
     expect(afschriften).toHaveLength(1);
     expect(afschriften[0]).toMatchObject({
       accountId: bankRekening,
@@ -966,6 +1018,28 @@ describe('Bankafschriften inlezen en boeken', () => {
       totalCredit: 100,
       totalDebit: 0,
     });
+  });
+
+  it('geeft afschriften per pagina terug met de telling van alles', async () => {
+    for (const dag of ['01', '02', '03']) {
+      await alsAdmin('post', '/bank-import').send({
+        accountId: bankRekening,
+        format: 'csv',
+        content: `datum;omschrijving;bedrag\n2026-03-${dag};Contributie;100,00\n`,
+      });
+    }
+
+    const eerste = await alsAdmin('get', '/bank-statements').query({ limit: 2 });
+    expect(eerste.status).toBe(200);
+    expect(eerste.body.data).toHaveLength(2);
+    expect(eerste.body.pagination).toMatchObject({ page: 1, limit: 2, total: 3, totalPages: 2, hasNext: true });
+
+    const tweede = await alsAdmin('get', '/bank-statements').query({ limit: 2, page: 2 });
+    expect(tweede.body.data).toHaveLength(1);
+    expect(tweede.body.pagination).toMatchObject({ page: 2, hasNext: false, hasPrev: true });
+
+    const ids = [...eerste.body.data, ...tweede.body.data].map((a: { id: string }) => a.id);
+    expect(new Set(ids).size).toBe(3);
   });
 
   it('weigert een onbekende bestandsvorm', async () => {
@@ -1003,7 +1077,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;100,00\n',
     });
     expect(res.status).toBe(404);
-    expect((await alsAdmin('get', '/bank-statements')).body).toEqual([]);
+    expect((await alsAdmin('get', '/bank-statements')).body.data).toEqual([]);
   });
 
   it('slaat een regel met te weinig kolommen over in plaats van er onzin van te maken', async () => {
@@ -1027,10 +1101,10 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;100,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
 
     expect((await alsB('get', `/bank-statements/${afschrift.id}/entries`)).status).toBe(404);
-    expect((await alsB('get', '/bank-statements')).body).toEqual([]);
+    expect((await alsB('get', '/bank-statements')).body.data).toEqual([]);
   });
 
   it('boekt een ontvangst debet op de bank en credit op de tegenrekening', async () => {
@@ -1039,7 +1113,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
     const contributie = await rekeningId('8000');
 
@@ -1066,7 +1140,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Huur zaal;-400,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
     expect(regel.amount).toBe(-400);
     const huur = await rekeningId('4200');
@@ -1091,7 +1165,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
     const contributie = await rekeningId('8000');
 
@@ -1107,7 +1181,7 @@ describe('Bankafschriften inlezen en boeken', () => {
     expect(tweede.body.error).toContain('al verwerkt');
 
     // En er staat maar een boeking, niet twee.
-    expect((await alsAdmin('get', '/transactions')).body).toHaveLength(1);
+    expect((await alsAdmin('get', '/transactions')).body.data).toHaveLength(1);
   });
 
   it('eist een tegenrekening', async () => {
@@ -1116,12 +1190,12 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
 
     const res = await alsAdmin('post', `/bank-statements/${afschrift.id}/lines/${regel.id}/book`).send({});
     expect(res.status).toBe(400);
-    expect((await alsAdmin('get', '/transactions')).body).toEqual([]);
+    expect((await alsAdmin('get', '/transactions')).body.data).toEqual([]);
   });
 
   it('meldt netjes dat een onbekende bankregel niet bestaat', async () => {
@@ -1130,7 +1204,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const contributie = await rekeningId('8000');
 
     const res = await alsAdmin('post', `/bank-statements/${afschrift.id}/lines/${uuidv4()}/book`).send({
@@ -1145,7 +1219,7 @@ describe('Bankafschriften inlezen en boeken', () => {
       format: 'csv',
       content: 'datum;omschrijving;bedrag\n2026-03-01;Contributie;250,00\n',
     });
-    const afschrift = (await alsAdmin('get', '/bank-statements')).body[0];
+    const afschrift = (await alsAdmin('get', '/bank-statements')).body.data[0];
     const regel = (await alsAdmin('get', `/bank-statements/${afschrift.id}/entries`)).body.entries[0];
     const contributie = await rekeningId('8000');
 

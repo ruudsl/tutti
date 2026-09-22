@@ -8,6 +8,7 @@ import {
   createFiscalYear,
   getAccounts,
   getInvoices,
+  getInvoiceSummary,
   deleteAccount,
   initializeAccounts,
   getBalanceReport,
@@ -166,17 +167,42 @@ export default function Accounting() {
     enabled: ['overview', 'chart', 'transactions', 'invoices', 'budgets'].includes(activeTab),
   });
 
-  const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: () => getInvoices(),
+  // Ook facturen komen per pagina binnen; het paginanummer hoort in de
+  // queryKey, anders blijft React Query pagina 1 teruggeven.
+  const [facturenPagina, setFacturenPagina] = useState(1);
+
+  const { data: facturenPagineerd, isLoading: loadingInvoices } = useQuery({
+    queryKey: ['invoices', facturenPagina],
+    queryFn: () => getInvoices({ page: facturenPagina }),
     enabled: activeTab === 'invoices' || activeTab === 'overview',
   });
 
-  const { data: transactions = [], isLoading: loadingTransactions } = useQuery({
-    queryKey: ['transactions', selectedFiscalYear],
-    queryFn: () => getTransactions({ fiscalYearId: selectedFiscalYear }),
+  const invoices = facturenPagineerd?.data ?? [];
+  const facturenPaginas = facturenPagineerd?.totalPages ?? 0;
+
+  // De kaart telt de openstaande facturen. Dat kan niet meer uit `invoices`:
+  // dat is één pagina. De server telt ze allemaal.
+  const { data: factuurTotalen } = useQuery({
+    queryKey: ['invoiceSummary'],
+    queryFn: getInvoiceSummary,
+    enabled: activeTab === 'invoices' || activeTab === 'overview',
+  });
+
+  // Het grootboek wordt nooit korter, dus het komt per pagina binnen. Het
+  // paginanummer hoort in de queryKey: zonder dat blijft React Query het
+  // antwoord van pagina 1 teruggeven terwijl de gebruiker verder bladert.
+  const [boekingenPagina, setBoekingenPagina] = useState(1);
+
+  const { data: boekingenPagineerd, isLoading: loadingTransactions } = useQuery({
+    queryKey: ['transactions', selectedFiscalYear, boekingenPagina],
+    queryFn: () => getTransactions({ fiscalYearId: selectedFiscalYear, page: boekingenPagina }),
     enabled: activeTab === 'transactions' || activeTab === 'overview',
   });
+
+  const transactions = boekingenPagineerd?.data ?? [];
+  // Het totaal komt van de server: transactions.length is hoogstens één pagina.
+  const boekingenTotaal = boekingenPagineerd?.total ?? 0;
+  const boekingenPaginas = boekingenPagineerd?.totalPages ?? 0;
 
   const { data: relations = [], isLoading: loadingRelations } = useQuery({
     queryKey: ['accounting-relations'],
@@ -339,7 +365,13 @@ export default function Accounting() {
               <select
                 className="select select-bordered select-sm"
                 value={selectedFiscalYear || currentFiscalYear?.id || ''}
-                onChange={(e) => setSelectedFiscalYear(e.target.value || undefined)}
+                onChange={(e) => {
+                  setSelectedFiscalYear(e.target.value || undefined);
+                  // Terug naar de eerste pagina: een ander boekjaar heeft
+                  // minder pagina's kunnen hebben dan waar je nu staat, en dan
+                  // kijk je naar een lege lijst zonder te zien waarom.
+                  setBoekingenPagina(1);
+                }}
               >
                 {fiscalYears.map((fy) => (
                   <option key={fy.id} value={fy.id}>
@@ -431,7 +463,7 @@ export default function Accounting() {
             >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.journalEntries')}</div>
-                <div className="text-2xl font-bold">{transactions.length}</div>
+                <div className="text-2xl font-bold">{boekingenTotaal}</div>
               </div>
             </div>
 
@@ -441,9 +473,7 @@ export default function Accounting() {
             >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.openInvoices')}</div>
-                <div className="text-2xl font-bold">
-                  {invoices.filter((i) => ['draft', 'sent', 'partial', 'overdue'].includes(i.status)).length}
-                </div>
+                <div className="text-2xl font-bold">{factuurTotalen?.open ?? 0}</div>
               </div>
             </div>
 
@@ -719,6 +749,9 @@ export default function Accounting() {
           boekingVerwijderMutatie={boekingVerwijderMutatie}
           openBewerken={openBewerken}
           setShowTransactionModal={setShowTransactionModal}
+          pagina={boekingenPagina}
+          paginas={boekingenPaginas}
+          setPagina={setBoekingenPagina}
         />
       )}
 
@@ -727,6 +760,9 @@ export default function Accounting() {
         <FacturenTab
           invoices={invoices}
           loadingInvoices={loadingInvoices}
+          pagina={facturenPagina}
+          paginas={facturenPaginas}
+          setPagina={setFacturenPagina}
           factuurVerzendMutatie={factuurVerzendMutatie}
           factuurBetaaldMutatie={factuurBetaaldMutatie}
           factuurVerwijderMutatie={factuurVerwijderMutatie}

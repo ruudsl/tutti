@@ -33,6 +33,28 @@ import * as boekhoudApi from '../../api/accounting';
 import type { Account, FiscalYear, Invoice, Transaction } from '../../api/accounting';
 import { showSuccess, showError } from '../../utils/toast';
 
+/** Een lijst facturen in de vorm waarin de server hem levert: per pagina. */
+function facturenPagina(facturen: Invoice[]) {
+  return {
+    data: facturen,
+    total: facturen.length,
+    page: 1,
+    pageSize: Math.max(facturen.length, 1),
+    totalPages: facturen.length === 0 ? 0 : 1,
+  };
+}
+
+/** Een lijst boekingen in de vorm waarin de server hem levert: per pagina. */
+function boekingenPagina(boekingen: Transaction[]) {
+  return {
+    data: boekingen,
+    total: boekingen.length,
+    page: 1,
+    pageSize: Math.max(boekingen.length, 1),
+    totalPages: boekingen.length === 0 ? 0 : 1,
+  };
+}
+
 vi.mock('../../api/accounting');
 
 vi.mock('../../hooks/useDocumentTitle', () => ({ useDocumentTitle: () => {} }));
@@ -190,8 +212,9 @@ function zetApiKlaar(): void {
   }
   vi.mocked(boekhoudApi.getFiscalYears).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getAccounts).mockResolvedValue([]);
-  vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([]);
-  vi.mocked(boekhoudApi.getTransactions).mockResolvedValue([]);
+  vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([]));
+  vi.mocked(boekhoudApi.getInvoiceSummary).mockResolvedValue({ total: 0, open: 0 });
+  vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([]));
   vi.mocked(boekhoudApi.getRelations).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getCostCenters).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getBudgets).mockResolvedValue([]);
@@ -325,25 +348,28 @@ describe('boekhouding - het overzicht rekent op', () => {
     expect(screen.queryByText('accounting.bankAccounts')).not.toBeInTheDocument();
   });
 
-  it('telt alleen de nog niet afgeronde facturen als openstaand', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([
-      factuur({ id: 'f-1', status: 'draft' }),
-      factuur({ id: 'f-2', status: 'sent' }),
-      factuur({ id: 'f-3', status: 'partial' }),
-      factuur({ id: 'f-4', status: 'overdue' }),
-      factuur({ id: 'f-5', status: 'paid' }),
-      factuur({ id: 'f-6', status: 'cancelled' }),
-      factuur({ id: 'f-7', status: 'written_off' }),
-    ]);
+  /**
+   * Het aantal openstaande facturen komt van de server, niet uit de lijst.
+   *
+   * Die lijst is sinds de paginering nog maar één pagina van hoogstens
+   * vijfentwintig. Zou de kaart hem blijven filteren, dan telde hij bij een
+   * vereniging met honderd facturen alleen de eerste vijfentwintig mee en
+   * toonde hij stilzwijgend een te laag getal.
+   */
+  it('haalt het aantal openstaande facturen bij de server op', async () => {
+    vi.mocked(boekhoudApi.getInvoiceSummary).mockResolvedValue({ total: 120, open: 37 });
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-1', status: 'paid' })]));
     await toonPagina();
 
-    // Zeven facturen, vier openstaand.
     await screen.findByText('accounting.recentTransactions');
-    expect(within(telkaart('accounting.openInvoices')).getByText('4')).toBeInTheDocument();
+    // Eén betaalde factuur op de pagina, en toch zevenendertig openstaand.
+    expect(within(telkaart('accounting.openInvoices')).getByText('37')).toBeInTheDocument();
   });
 
   it('zet in de telkaarten de aantallen van elk onderdeel', async () => {
-    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue([boeking({ id: 'b-1' }), boeking({ id: 'b-2' })]);
+    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(
+      boekingenPagina([boeking({ id: 'b-1' }), boeking({ id: 'b-2' })]),
+    );
     vi.mocked(boekhoudApi.getRelations).mockResolvedValue([{ id: 'rel-1' }, { id: 'rel-2' }, { id: 'rel-3' }] as never);
     vi.mocked(boekhoudApi.getCostCenters).mockResolvedValue([{ id: 'kp-1' }] as never);
     vi.mocked(boekhoudApi.getBudgets).mockResolvedValue([]);
@@ -359,8 +385,10 @@ describe('boekhouding - het overzicht rekent op', () => {
 
   it('toont hoogstens vijf recente boekingen, met hun bedrag', async () => {
     vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(
-      Array.from({ length: 7 }, (_, i) =>
-        boeking({ id: `b-${i}`, transactionNumber: `BK-000${i}`, totalAmount: (i + 1) * 10.5 }),
+      boekingenPagina(
+        Array.from({ length: 7 }, (_, i) =>
+          boeking({ id: `b-${i}`, transactionNumber: `BK-000${i}`, totalAmount: (i + 1) * 10.5 }),
+        ),
       ),
     );
     await toonPagina();
@@ -496,8 +524,42 @@ describe('boekhouding - het rekeningschema', () => {
 });
 
 describe('boekhouding - boekingen en facturen afhandelen', () => {
+  /**
+   * Het grootboek komt per pagina binnen. Zou de pagineerknop het paginanummer
+   * niet meesturen, dan bleef de lijst op pagina 1 staan en leek de rest van de
+   * boekingen te ontbreken.
+   */
+  it('haalt bij het doorbladeren de volgende pagina op', async () => {
+    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue({
+      data: [boeking({ id: 'b-1' })],
+      total: 30,
+      page: 1,
+      pageSize: 25,
+      totalPages: 2,
+    });
+    const gebruiker = await toonPagina();
+
+    await gebruiker.click(tabblad('accounting.journalEntries'));
+
+    // De pagineerknoppen dragen een vertaalde aria-label, dus zoeken op opschrift.
+    const naarTwee = (await screen.findAllByRole('button')).find((knop) => knop.textContent?.trim() === '2')!;
+    await gebruiker.click(naarTwee);
+
+    await waitFor(() => expect(boekhoudApi.getTransactions).toHaveBeenCalledWith(expect.objectContaining({ page: 2 })));
+  });
+
+  it('toont geen pagineerknoppen als alles op één pagina past', async () => {
+    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([boeking({ id: 'b-1' })]));
+    const gebruiker = await toonPagina();
+
+    await gebruiker.click(tabblad('accounting.journalEntries'));
+    await screen.findByText('BK-0001');
+
+    expect(screen.queryByRole('navigation', { name: 'accessibility.pagination' })).toBeNull();
+  });
+
   it('boekt een concept en meldt dat het geboekt is', async () => {
-    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue([boeking({ id: 'b-7' })]);
+    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([boeking({ id: 'b-7' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.journalEntries'));
@@ -508,7 +570,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('meldt het als boeken mislukt', async () => {
-    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue([boeking({ id: 'b-7' })]);
+    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([boeking({ id: 'b-7' })]));
     vi.mocked(boekhoudApi.postTransaction).mockRejectedValue({
       response: { data: { error: 'boeking is niet in balans' } },
     });
@@ -521,7 +583,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('verwijdert een concept na bevestiging', async () => {
-    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue([boeking({ id: 'b-7' })]);
+    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([boeking({ id: 'b-7' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.journalEntries'));
@@ -532,7 +594,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('haalt de regels van een boeking op voordat het bewerkvenster opengaat', async () => {
-    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue([boeking({ id: 'b-7' })]);
+    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([boeking({ id: 'b-7' })]));
     vi.mocked(boekhoudApi.getTransaction).mockResolvedValue(
       boeking({ id: 'b-7', description: 'Volledige boeking met regels' }),
     );
@@ -548,7 +610,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('meldt het als de regels van een boeking niet op te halen zijn', async () => {
-    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue([boeking({ id: 'b-7' })]);
+    vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([boeking({ id: 'b-7' })]));
     vi.mocked(boekhoudApi.getTransaction).mockRejectedValue({ response: { data: { error: 'boeking is weg' } } });
     const gebruiker = await toonPagina();
 
@@ -569,7 +631,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('verstuurt een conceptfactuur', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-3', status: 'draft' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-3', status: 'draft' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -580,7 +642,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('meldt een verstuurde factuur betaald, en biedt dat niet aan bij een concept', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-4', status: 'sent' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-4', status: 'sent' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -592,7 +654,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('verwijdert een conceptfactuur na bevestiging', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-5', status: 'draft' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-5', status: 'draft' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -603,7 +665,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('meldt het als een factuur niet verstuurd kan worden', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-6', status: 'draft' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-6', status: 'draft' })]));
     vi.mocked(boekhoudApi.sendInvoice).mockRejectedValue({ response: { data: { error: 'geen e-mailadres' } } });
     const gebruiker = await toonPagina();
 
@@ -614,9 +676,9 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('toont het factuurbedrag zoals de server het gaf', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([
-      factuur({ id: 'f-8', subtotal: 1000, vatAmount: 210, total: 1210 }),
-    ]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(
+      facturenPagina([factuur({ id: 'f-8', subtotal: 1000, vatAmount: 210, total: 1210 })]),
+    );
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -627,7 +689,7 @@ describe('boekhouding - boekingen en facturen afhandelen', () => {
   });
 
   it('opent en sluit de afdrukweergave van een factuur', async () => {
-    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([factuur({ id: 'f-9' })]);
+    vi.mocked(boekhoudApi.getInvoices).mockResolvedValue(facturenPagina([factuur({ id: 'f-9' })]));
     const gebruiker = await toonPagina();
 
     await gebruiker.click(tabblad('accounting.invoices'));
@@ -692,7 +754,9 @@ describe('boekhouding - boekjaren', () => {
 
     await gebruiker.selectOptions(await screen.findByRole('combobox'), 'bj-2025');
 
-    await waitFor(() => expect(boekhoudApi.getTransactions).toHaveBeenCalledWith({ fiscalYearId: 'bj-2025' }));
+    // Het grootboek komt per pagina binnen; bij een ander boekjaar hoort de
+    // teller terug naar 1.
+    await waitFor(() => expect(boekhoudApi.getTransactions).toHaveBeenCalledWith({ fiscalYearId: 'bj-2025', page: 1 }));
     await waitFor(() => expect(boekhoudApi.getBudgets).toHaveBeenCalledWith({ fiscalYearId: 'bj-2025' }));
   });
 });

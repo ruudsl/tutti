@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { Transaction } from '../../api/accounting';
 import { Icon } from '../../components/Icon';
 import { SkeletonTable } from '../../components/Skeleton';
+import { Pagination } from '../../components/Pagination';
 import { formatCurrency } from './formatteer';
 import type { MutatieMetId } from './types';
 
@@ -13,13 +14,20 @@ export function BoekingenTab({
   boekingVerwijderMutatie,
   openBewerken,
   setShowTransactionModal,
+  pagina,
+  paginas,
+  setPagina,
 }: {
+  /** Eén pagina van het grootboek, niet het hele grootboek. */
   transactions: Transaction[];
   loadingTransactions: boolean;
   boekingMutatie: MutatieMetId;
   boekingVerwijderMutatie: MutatieMetId;
   openBewerken: (id: string) => void;
   setShowTransactionModal: (open: boolean) => void;
+  pagina: number;
+  paginas: number;
+  setPagina: (pagina: number) => void;
 }) {
   const { t } = useTranslation();
 
@@ -119,6 +127,8 @@ export function BoekingenTab({
           </div>
         </div>
       )}
+
+      {paginas > 1 && <Pagination page={pagina} totalPages={paginas} onPageChange={setPagina} />}
     </div>
   );
 }

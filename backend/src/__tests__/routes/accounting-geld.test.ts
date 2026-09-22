@@ -337,8 +337,8 @@ describe('Bankimport', () => {
 
     const overzicht = await alsAdmin('get', '/bank-statements');
     expect(overzicht.status).toBe(200);
-    expect(overzicht.body).toHaveLength(1);
-    expect(overzicht.body[0].accountCode).toBe('1100');
+    expect(overzicht.body.data).toHaveLength(1);
+    expect(overzicht.body.data[0].accountCode).toBe('1100');
 
     const regels = await alsAdmin('get', `/bank-statements/${imported.body.id}/entries`);
     expect(regels.status).toBe(200);

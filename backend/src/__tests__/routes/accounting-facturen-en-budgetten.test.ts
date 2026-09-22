@@ -297,7 +297,8 @@ describe('Het factuuroverzicht', () => {
   it('begint leeg', async () => {
     const res = await alsAdmin('get', '/invoices');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body.data).toEqual([]);
+    expect(res.body.pagination).toMatchObject({ page: 1, total: 0, totalPages: 0 });
   });
 
   it('toont het openstaande bedrag naast het totaal', async () => {
@@ -305,7 +306,7 @@ describe('Het factuuroverzicht', () => {
     await alsAdmin('post', `/invoices/${factuur}/mark-paid`).send({ amount: 50 });
 
     const res = await alsAdmin('get', '/invoices');
-    expect(res.body[0]).toMatchObject({
+    expect(res.body.data[0]).toMatchObject({
       total: 200,
       amountPaid: 50,
       amountDue: 150,
@@ -319,8 +320,8 @@ describe('Het factuuroverzicht', () => {
     await maakFactuur(relatieEen, 200);
     await alsAdmin('post', `/invoices/${eerste}/send`);
 
-    expect((await alsAdmin('get', '/invoices?status=draft')).body).toHaveLength(1);
-    const verzonden = (await alsAdmin('get', '/invoices?status=sent')).body;
+    expect((await alsAdmin('get', '/invoices?status=draft')).body.data).toHaveLength(1);
+    const verzonden = (await alsAdmin('get', '/invoices?status=sent')).body.data;
     expect(verzonden).toHaveLength(1);
     expect(verzonden[0].id).toBe(eerste);
   });
@@ -330,9 +331,9 @@ describe('Het factuuroverzicht', () => {
     await maakFactuur(relatieEen, 200, 'purchase');
     await maakFactuur(relatieEen, 300, 'credit_note');
 
-    expect((await alsAdmin('get', '/invoices?type=sales')).body).toHaveLength(1);
-    expect((await alsAdmin('get', '/invoices?type=purchase')).body).toHaveLength(1);
-    expect((await alsAdmin('get', '/invoices?type=credit_note')).body).toHaveLength(1);
+    expect((await alsAdmin('get', '/invoices?type=sales')).body.data).toHaveLength(1);
+    expect((await alsAdmin('get', '/invoices?type=purchase')).body.data).toHaveLength(1);
+    expect((await alsAdmin('get', '/invoices?type=credit_note')).body.data).toHaveLength(1);
   });
 
   it('filtert op relatie', async () => {
@@ -340,16 +341,16 @@ describe('Het factuuroverzicht', () => {
     await maakFactuur(relatieTwee, 200);
 
     const res = await alsAdmin('get', `/invoices?relationId=${relatieTwee}`);
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].relationName).toBe('Zaalverhuur');
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].relationName).toBe('Zaalverhuur');
   });
 
   it('filtert op boekjaar', async () => {
     await maakFactuur(relatieEen, 100);
     const boekjaar = (await alsAdmin('get', '/fiscal-years')).body[0].id;
 
-    expect((await alsAdmin('get', `/invoices?fiscalYearId=${boekjaar}`)).body).toHaveLength(1);
-    expect((await alsAdmin('get', `/invoices?fiscalYearId=${uuidv4()}`)).body).toHaveLength(0);
+    expect((await alsAdmin('get', `/invoices?fiscalYearId=${boekjaar}`)).body.data).toHaveLength(1);
+    expect((await alsAdmin('get', `/invoices?fiscalYearId=${uuidv4()}`)).body.data).toHaveLength(0);
   });
 
   it('combineert soort en relatie', async () => {
@@ -358,17 +359,70 @@ describe('Het factuuroverzicht', () => {
     await maakFactuur(relatieTwee, 300, 'sales');
 
     const res = await alsAdmin('get', `/invoices?type=sales&relationId=${relatieEen}`);
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].total).toBe(100);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].total).toBe(100);
   });
 
   it('toont de facturen van een andere vereniging niet', async () => {
     await maakFactuur(relatieEen, 100);
-    expect((await alsB('get', '/invoices')).body).toEqual([]);
+    expect((await alsB('get', '/invoices')).body.data).toEqual([]);
   });
 
   it('laat een gewoon lid niet bij het overzicht', async () => {
     expect((await alsLid('get', '/invoices')).status).toBe(403);
+  });
+
+  describe('samenvatting', () => {
+    it('telt alle facturen en de openstaande, ook voorbij de eerste pagina', async () => {
+      for (let i = 0; i < 30; i++) await maakFactuur(relatieEen, 100 + i);
+
+      // Helemaal betalen, niet deels: een deelbetaling zet de factuur op
+      // 'partial' en die telt nog steeds als openstaand.
+      const eerste = (await alsAdmin('get', '/invoices')).body.data[0];
+      await alsAdmin('post', `/invoices/${eerste.id}/mark-paid`).send({ amount: eerste.total });
+
+      const res = await alsAdmin('get', '/invoices/summary');
+      expect(res.status).toBe(200);
+      // Dertig facturen, waarvan er een betaald is. Telde dit uit de lijst,
+      // dan stond hier 25 - de lengte van de eerste pagina.
+      expect(res.body.total).toBe(30);
+      expect(res.body.open).toBe(29);
+    });
+
+    it('wordt niet als factuur-id gelezen', async () => {
+      // '/invoices/summary' staat vóór '/invoices/:id'; andersom kwam hier 404.
+      expect((await alsAdmin('get', '/invoices/summary')).status).toBe(200);
+    });
+
+    it('telt de facturen van een andere vereniging niet mee', async () => {
+      await maakFactuur(relatieEen, 100);
+      const res = await alsB('get', '/invoices/summary');
+      expect(res.body).toEqual({ total: 0, open: 0 });
+    });
+
+    it('laat een gewoon lid er niet bij', async () => {
+      expect((await alsLid('get', '/invoices/summary')).status).toBe(403);
+    });
+  });
+
+  /** Facturen worden niet opgeruimd: elk seizoen komt er een stapel bij. */
+  describe('paginering', () => {
+    it('geeft standaard hoogstens vijfentwintig facturen terug', async () => {
+      for (let i = 0; i < 28; i++) await maakFactuur(relatieEen, 100 + i);
+
+      const res = await alsAdmin('get', '/invoices');
+      expect(res.body.data).toHaveLength(25);
+      expect(res.body.pagination).toMatchObject({ page: 1, total: 28, totalPages: 2, hasNext: true });
+    });
+
+    it('telt wat er na het filter overblijft, niet alles', async () => {
+      await maakFactuur(relatieEen, 100, 'sales');
+      await maakFactuur(relatieEen, 200, 'purchase');
+      await maakFactuur(relatieEen, 300, 'purchase');
+
+      const res = await alsAdmin('get', '/invoices?type=sales');
+      expect(res.body.pagination.total).toBe(1);
+    });
   });
 });
 
