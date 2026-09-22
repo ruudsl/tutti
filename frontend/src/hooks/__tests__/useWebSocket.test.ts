@@ -95,6 +95,41 @@ async function laadHook() {
   return renderHook(() => useWebSocket());
 }
 
+describe('waar de verbinding heen gaat', () => {
+  it('verbindt achter nginx of Traefik met de server van de pagina, niet met localhost', async () => {
+    // docker-compose.yml bouwt met VITE_API_URL=/api. Dat werd eerst
+    // http://localhost:3001: de computer van de bezoeker, niet de server.
+    const { bepaalSocketUrl } = await import('../useWebSocket');
+    expect(bepaalSocketUrl(undefined, '/api')).toBeUndefined();
+  });
+
+  it('verbindt tijdens het ontwikkelen via de Vite-proxy', async () => {
+    const { bepaalSocketUrl } = await import('../useWebSocket');
+    expect(bepaalSocketUrl(undefined, '')).toBeUndefined();
+    expect(bepaalSocketUrl(undefined, undefined)).toBeUndefined();
+  });
+
+  it('volgt een volledige API-URL naar dezelfde server', async () => {
+    const { bepaalSocketUrl } = await import('../useWebSocket');
+    expect(bepaalSocketUrl(undefined, 'https://tutti-backend.onrender.com/api')).toBe(
+      'https://tutti-backend.onrender.com',
+    );
+    expect(bepaalSocketUrl(undefined, 'https://tutti-backend.onrender.com/api/')).toBe(
+      'https://tutti-backend.onrender.com',
+    );
+  });
+
+  it('knipt alleen /api aan het eind weg, niet ergens middenin', async () => {
+    const { bepaalSocketUrl } = await import('../useWebSocket');
+    expect(bepaalSocketUrl(undefined, 'https://api.voorbeeld.org/api')).toBe('https://api.voorbeeld.org');
+  });
+
+  it('geeft een opgegeven VITE_WS_URL altijd voorrang', async () => {
+    const { bepaalSocketUrl } = await import('../useWebSocket');
+    expect(bepaalSocketUrl('wss://ws.voorbeeld.org', '/api')).toBe('wss://ws.voorbeeld.org');
+  });
+});
+
 describe('verbinden', () => {
   it('verbindt zodra er een aangemelde gebruiker met een token is', async () => {
     await laadHook();

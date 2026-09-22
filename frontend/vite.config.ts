@@ -92,6 +92,13 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      // De websocket gaat naar dezelfde herkomst als de pagina (zie
+      // bepaalSocketUrl), net als achter nginx en Traefik.
+      '/socket.io': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
   // `preview` serveert de productiebuild en erft de instellingen van `server`
@@ -104,6 +111,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+      },
+      '/socket.io': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        ws: true,
       },
     },
   },
