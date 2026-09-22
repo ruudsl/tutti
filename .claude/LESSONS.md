@@ -87,6 +87,24 @@ stoppen gooit `TypeError: Cannot read properties of undefined (reading
 valt om terwijl de applicatie niets mankeert. `jsdom` staat daarom op een vaste
 `30.0.1` in `frontend/package.json` en op de negeerlijst in `dependabot.yml`.
 
+**vitest en @vitest/coverage-v8 horen in één keer omhoog.** De coverage-plugin
+pint vitest op een _exacte_ versie (`"vitest": "5.0.1"`, geen bereik), dus een
+losse PR voor een van de twee kan per definitie niet installeren. Dependabot
+biedt ze wel los aan.
+
+Bij die sprong lopen de types van de matchers achter op het runnerpakket:
+vitest 5 geeft `Assertion` twee typeparameters en daardoor vielen alle
+`toBeInTheDocument` en verwanten buiten de samenvoeging - 3807 typefouten,
+terwijl de tests gewoon draaiden. `@testing-library/jest-dom` 7 repareert dat;
+voor `toHaveNoViolations` van jest-axe staat er een eigen aangifte in
+`frontend/src/test/jest-axe.d.ts`.
+
+Controleer na zo'n sprong dat de runner niet stilletjes minder bestanden pakt:
+
+```bash
+cd backend && npx vitest list --filesOnly | wc -l
+```
+
 **TypeScript 7 kan nog niet.** Het is de native herschrijving, en
 `typescript-eslint` accepteert tot en met 8.70.1 alleen `>=4.8.4 <6.1.0`. De
 linter kan de bron dan niet meer ontleden. Controleer dat met
