@@ -239,6 +239,30 @@ describe('CAPTCHA bij het bestellen', () => {
     expect(res.body.error).toBe('CAPTCHA verkeerd');
   });
 
+  it('telt per adres van de verbinding, niet per adres dat de koper zelf opgeeft', async () => {
+    // Met elke bestelling een ander verzonnen X-Forwarded-For begon de teller
+    // voor "te veel bestellingen vanaf één adres" steeds opnieuw bij nul.
+    const kaartsoortId = maakKaartsoort();
+    const gevraagdVoor: string[] = [];
+    overgenomen.shouldRequireCaptcha = (ip) => {
+      gevraagdVoor.push(ip);
+      return false;
+    };
+
+    const eerste = await bestel(kaartsoortId).set('X-Forwarded-For', '203.0.113.1');
+    const tweede = await bestel(kaartsoortId).set('X-Forwarded-For', '203.0.113.2');
+    expect(eerste.status).toBe(201);
+    expect(tweede.status).toBe(201);
+
+    expect(gevraagdVoor).toHaveLength(2);
+    expect(gevraagdVoor[0]).toBe(gevraagdVoor[1]);
+    expect(gevraagdVoor[0]).not.toMatch(/203\.0\.113/);
+    const opgeslagen = db.prepare('SELECT ip_address FROM ticket_orders WHERE id = ?').get(eerste.body.orderId) as {
+      ip_address: string;
+    };
+    expect(opgeslagen.ip_address).toBe(gevraagdVoor[0]);
+  });
+
   it('laat de bestelling door bij een geldige CAPTCHA en legt dat vast', async () => {
     const kaartsoortId = maakKaartsoort();
     overgenomen.shouldRequireCaptcha = () => true;

@@ -8,10 +8,12 @@
  *
  *  1. Bij een lege of kapotte lijst gaat de deur DICHT, niet open. Ook als de
  *     tabel ontbreekt of de database een fout geeft.
- *  2. `X-Forwarded-For` komt van de client. Deze code vertrouwt hem
- *     onvoorwaardelijk en neemt het meest linkse adres - precies het adres dat
- *     de aanvrager zelf verzint. Dat is een openstaande omweg; de tests die
- *     dat vastleggen zeggen dat er met zoveel woorden bij.
+ *  2. Het clientadres is `req.ip`, niet wat er in een kopregel staat. Het
+ *     meest linkse adres in `X-Forwarded-For` verzint de aanvrager zelf; tot
+ *     september 2026 werd precies dat adres geloofd en was de hele lijst met
+ *     één kopregel te omzeilen. De testapp staat daarom, net als productie,
+ *     achter één vertrouwde proxy: een `X-Forwarded-For` met één adres is
+ *     hier het adres dat die proxy erbij heeft gezet.
  *  3. CIDR-bereiken werken alleen goed sinds ipToNumber niet meer via een
  *     32-bits signed shift rekent. Zie de test over 192.168.0.0/16.
  */
@@ -33,9 +35,13 @@ import {
 } from '../../middleware/ipWhitelist';
 import { createTestAssociation } from '../testUtils';
 
-/** Een minimale app met alleen de whitelist ervoor. */
-function maakApp(middleware: express.RequestHandler) {
+/**
+ * Een minimale app met alleen de whitelist ervoor, achter het aantal proxy's
+ * dat productie ook heeft (`config.trustProxy`, standaard 1).
+ */
+function maakApp(middleware: express.RequestHandler, proxys = 1) {
   const app = express();
+  if (proxys > 0) app.set('trust proxy', proxys);
   app.get('/beheer', middleware, (_req, res) => {
     res.json({ ok: true });
   });
@@ -171,61 +177,63 @@ describe('ipWhitelistMiddleware - de deur staat standaard dicht', () => {
 });
 
 describe('ipWhitelistMiddleware - het clientadres', () => {
-  it('BEVINDING: vertrouwt X-Forwarded-For van de client zelf', async () => {
-    // Deze omweg staat OPEN. De verbinding komt van de loopback, maar de
-    // client zegt zelf dat hij 203.0.113.7 is en dat wordt geloofd.
-    //
-    // Dat is geen fout in de test maar in getClientIp: het meest linkse adres
-    // uit X-Forwarded-For is per definitie het adres dat de aanvrager erin
-    // heeft gezet. Achter een proxy die de header overschrijft klopt het; komt
-    // er ooit een verzoek rechtstreeks binnen, of laat de proxy een bestaande
-    // header staan, dan is de hele whitelist met één header te omzeilen.
-    //
-    // Niet gerepareerd: de app draait in productie achter een proxy en zet
-    // `trust proxy` (index.ts). De juiste oplossing is req.ip gebruiken met een
-    // kloppende trust-proxy-instelling, en dat raakt bestanden buiten deze
-    // middleware. Valt deze test om omdat de header niet meer vertrouwd wordt,
-    // dan is dat goed nieuws - pas hem aan.
+  it('laat een zelfverzonnen adres links in X-Forwarded-For niet binnen', async () => {
+    // De aanvrager stuurt `X-Forwarded-For: 203.0.113.7` mee; de proxy plakt
+    // zijn echte adres erachter. Tot september 2026 werd het linkse geloofd.
     config.adminAllowedIps = ['203.0.113.7'];
 
-    const res = await request(app).get('/beheer').set('X-Forwarded-For', '203.0.113.7');
-
-    expect(res.status).toBe(200);
-  });
-
-  it('neemt bij meerdere adressen het meest linkse - dus dat van de client, niet dat van de proxy', async () => {
-    config.adminAllowedIps = ['203.0.113.7'];
-
-    const eerste = await request(app).get('/beheer').set('X-Forwarded-For', '203.0.113.7, 198.51.100.9, 10.0.0.1');
-    expect(eerste.status).toBe(200);
-
-    // Staat het toegestane adres rechts (waar de proxy het zou schrijven), dan
-    // wordt het niet gezien. Dat bevestigt dat er links wordt gekeken.
-    const tweede = await request(app).get('/beheer').set('X-Forwarded-For', '198.51.100.9, 203.0.113.7');
-    expect(tweede.status).toBe(403);
-  });
-
-  it('gebruikt X-Real-IP als X-Forwarded-For ontbreekt', async () => {
-    config.adminAllowedIps = ['203.0.113.7'];
-
-    const res = await request(app).get('/beheer').set('X-Real-IP', '203.0.113.7');
-
-    expect(res.status).toBe(200);
-  });
-
-  it('geeft X-Forwarded-For voorrang boven X-Real-IP', async () => {
-    config.adminAllowedIps = ['203.0.113.7'];
-
-    const res = await request(app)
-      .get('/beheer')
-      .set('X-Forwarded-For', '198.51.100.9')
-      .set('X-Real-IP', '203.0.113.7');
+    const res = await request(app).get('/beheer').set('X-Forwarded-For', '203.0.113.7, 198.51.100.9');
 
     expect(res.status).toBe(403);
   });
 
-  it('valt terug op het socketadres als er geen enkele header staat', () => {
-    const nep = { headers: {}, ip: '203.0.113.7', socket: {} } as unknown as express.Request;
+  it('kijkt naar het adres dat de proxy erbij heeft gezet - het meest rechtse', async () => {
+    config.adminAllowedIps = ['203.0.113.7'];
+
+    const res = await request(app).get('/beheer').set('X-Forwarded-For', '198.51.100.9, 203.0.113.7');
+
+    expect(res.status).toBe(200);
+  });
+
+  it('laat zich niet binnenpraten met X-Real-IP', async () => {
+    // Zonder X-Forwarded-For is het adres dat van de verbinding zelf: de
+    // loopback. X-Real-IP zet nginx, maar een client kan hem net zo goed
+    // meesturen, en de proxy van Render laat hem staan.
+    config.adminAllowedIps = ['203.0.113.7'];
+
+    const res = await request(app).get('/beheer').set('X-Real-IP', '203.0.113.7');
+
+    expect(res.status).toBe(403);
+  });
+
+  it('gelooft zonder vertrouwde proxy geen enkele kopregel', async () => {
+    // Buiten productie staat trust proxy uit. Een verzoek dat rechtstreeks
+    // binnenkomt is dan het adres van de verbinding, wat er ook in de kop staat.
+    config.adminAllowedIps = ['203.0.113.7'];
+    const zonderProxy = maakApp(ipWhitelistMiddleware, 0);
+
+    const res = await request(zonderProxy).get('/beheer').set('X-Forwarded-For', '203.0.113.7');
+
+    expect(res.status).toBe(403);
+  });
+
+  it('kijkt bij twee proxy’s een adres verder naar links - daarvoor is TRUST_PROXY', async () => {
+    // Cloudflare vóór Traefik: de binnenste proxy zet het adres van de
+    // buitenste erbij, de buitenste dat van de bezoeker.
+    config.adminAllowedIps = ['203.0.113.7'];
+    const achterTwee = maakApp(ipWhitelistMiddleware, 2);
+
+    const res = await request(achterTwee).get('/beheer').set('X-Forwarded-For', '198.51.100.9, 203.0.113.7, 10.0.0.1');
+
+    expect(res.status).toBe(200);
+  });
+
+  it('neemt req.ip en valt terug op het socketadres', () => {
+    const nep = {
+      headers: { 'x-forwarded-for': '198.51.100.66', 'x-real-ip': '198.51.100.77' },
+      ip: '203.0.113.7',
+      socket: {},
+    } as unknown as express.Request;
     expect(getClientIp(nep)).toBe('203.0.113.7');
 
     const zonderIp = { headers: {}, socket: { remoteAddress: '198.51.100.2' } } as unknown as express.Request;
@@ -233,14 +241,6 @@ describe('ipWhitelistMiddleware - het clientadres', () => {
 
     const onbekend = { headers: {}, socket: {} } as unknown as express.Request;
     expect(getClientIp(onbekend)).toBe('unknown');
-  });
-
-  it('haalt spaties weg rondom het adres in de header', async () => {
-    config.adminAllowedIps = ['203.0.113.7'];
-
-    const res = await request(app).get('/beheer').set('X-Forwarded-For', '   203.0.113.7   , 10.0.0.1');
-
-    expect(res.status).toBe(200);
   });
 });
 

@@ -178,24 +178,14 @@ function getWhitelistedIpsFromDb(associationId?: string | null): string[] {
 }
 
 /**
- * Get client IP from request
- * Handles various proxy scenarios
+ * Het adres van de aanvrager, zoals Express het uitrekent met `trust proxy`.
+ *
+ * Nooit zelf X-Forwarded-For of X-Real-IP lezen. Het meest linkse adres in
+ * X-Forwarded-For zet de aanvrager er zelf in, en X-Real-IP komt ongewijzigd
+ * door zolang de proxy hem niet overschrijft - met één kopregel stond je
+ * anders op de witlijst.
  */
 function getClientIp(req: Request): string {
-  // Check X-Forwarded-For header (behind proxy/load balancer)
-  const forwardedFor = req.headers['x-forwarded-for'];
-  if (forwardedFor) {
-    const ips = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor).split(',');
-    return ips[0].trim();
-  }
-
-  // Check X-Real-IP header (nginx)
-  const realIp = req.headers['x-real-ip'];
-  if (realIp) {
-    return Array.isArray(realIp) ? realIp[0] : realIp;
-  }
-
-  // Fall back to socket address
   return req.ip || req.socket.remoteAddress || 'unknown';
 }
 

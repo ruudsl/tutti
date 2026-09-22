@@ -33,16 +33,25 @@ ingevuld: ze vragen een keuze die van de omgeving of van de bedoeling afhangt,
 niet van de code. Ze staan hier zodat ze niet in een samengevoegde
 pull request achterblijven.
 
-1. **`X-Forwarded-For` wordt op twee plekken nog rechtstreeks gelezen.**
-   `app.set('trust proxy', 1)` staat er inmiddels wel (`index.ts`, alleen in
-   productie), dus `req.ip` klopt achter de proxy van Render. Maar
-   `middleware/ipWhitelist.ts` en `routes/tickets.ts` lezen de kopregel zelf uit
-   en nemen het meest linkse adres — en dat is per definitie het adres dat de
-   aanvrager erin heeft gezet. Daarmee is de IP-witlijst voor het beheerscherm
-   met één kopregel te omzeilen. De reparatie is `req.ip` gebruiken op beide
-   plekken; wat de juiste waarde voor `trust proxy` is hangt af van hoeveel
-   proxy's er vóór de applicatie staan, en een verkeerde waarde is net zo fout
-   als geen waarde. Vastgelegd in `__tests__/middleware/ip-whitelist.test.ts`
+1. ~~`X-Forwarded-For` wordt op twee plekken nog rechtstreeks gelezen.~~
+   **Opgelost op 22-09-2026.** `middleware/ipWhitelist.ts` en
+   `routes/tickets.ts` namen het meest linkse adres uit de kopregel — het adres
+   dat de aanvrager er zelf in zet — waardoor de IP-witlijst voor het
+   beheerscherm met één kopregel te omzeilen was, en de teller voor verdachte
+   bestellingen bij elk verzonnen adres opnieuw begon. Beide lezen nu `req.ip`.
+
+   De open vraag was hoeveel proxy's er vóór de applicatie staan. Dat bleek
+   voor alle drie de meegeleverde opstellingen hetzelfde: precies één (Render;
+   nginx in `docker-compose.yml`; Traefik in `docker-compose.prod.yml`), dus
+   `1` blijft de standaard. Wie er zelf nog een laag vóór zet, stelt
+   `TRUST_PROXY` in — zie `docs/SELF_HOSTING.md`. Alleen een getal is
+   toegestaan: `true` zou het lek via de achterdeur terugbrengen.
+
+   Bij het nalopen bleek nog een tweede achterdeur: `docker-compose.yml` zette
+   de backendpoort open op alle interfaces, en `docker-compose.prod.yml` nam
+   dat over. Rechtstreeks op 3001 sla je de proxy over en kies je alsnog je
+   eigen adres. Die poort luistert nu alleen op `127.0.0.1`
+
 2. **`payment_settings` heeft Mollie-sleutels per vereniging die nergens
    gebruikt worden.** Alle betalingen lopen over één sleutel uit de omgeving.
    Ofwel de tabel gaat weg, ofwel de code gaat hem gebruiken — nu wekt hij de

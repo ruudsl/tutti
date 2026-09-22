@@ -189,17 +189,45 @@ docker compose logs -f
 
 ### Environment Variables
 
-| Variable                 | Required | Default  | Description                               |
-| ------------------------ | -------- | -------- | ----------------------------------------- |
-| `DOMAIN`                 | Yes*     | -        | Your domain name (production only)        |
-| `ACME_EMAIL`             | Yes*     | -        | Email for Let's Encrypt (production only) |
-| `JWT_SECRET`             | Yes      | -        | Secret key for JWT tokens                 |
-| `JWT_EXPIRES_IN`         | No       | `7d`     | JWT token expiration                      |
-| `ADMIN_INIT_PASSWORD`    | No       | (random) | Initial admin password                    |
-| `LOG_LEVEL`              | No       | `info`   | Log level: debug, info, warn, error       |
-| `TRAEFIK_DASHBOARD_AUTH` | Yes*     | -        | Traefik dashboard auth (production only)  |
+| Variable                 | Required | Default  | Description                                    |
+| ------------------------ | -------- | -------- | ---------------------------------------------- |
+| `DOMAIN`                 | Yes*     | -        | Your domain name (production only)             |
+| `ACME_EMAIL`             | Yes*     | -        | Email for Let's Encrypt (production only)      |
+| `JWT_SECRET`             | Yes      | -        | Secret key for JWT tokens                      |
+| `JWT_EXPIRES_IN`         | No       | `7d`     | JWT token expiration                           |
+| `ADMIN_INIT_PASSWORD`    | No       | (random) | Initial admin password                         |
+| `LOG_LEVEL`              | No       | `info`   | Log level: debug, info, warn, error            |
+| `TRAEFIK_DASHBOARD_AUTH` | Yes*     | -        | Traefik dashboard auth (production only)       |
+| `TRUST_PROXY`            | No       | `1`      | Aantal proxy's vóór de backend — zie hieronder |
 
 *Required for production deployment with `docker-compose.prod.yml`
+
+### Achter een extra proxy (`TRUST_PROXY`)
+
+De backend bepaalt het adres van een bezoeker uit `X-Forwarded-For`, en telt
+daarvoor vanaf rechts het aantal proxy's terug dat in `TRUST_PROXY` staat. De
+IP-witlijst voor beheer, de afremming van inlogpogingen en de controle op
+bestellingen gaan allemaal uit van dat adres.
+
+Beide compose-bestanden hebben precies één proxy vóór de backend — nginx in
+`docker-compose.yml`, Traefik in `docker-compose.prod.yml` — en daar hoort de
+standaardwaarde `1` bij. Zet je er zelf nog iets vóór, zoals Cloudflare of een
+load balancer van je hostingpartij, verhoog het dan met één per laag:
+
+```bash
+TRUST_PROXY=2   # Cloudflare → Traefik → backend
+```
+
+Te laag en elke bezoeker krijgt het adres van je buitenste proxy: de witlijst
+laat niemand meer door, en iedereen deelt één teller voor de afremming. Te hoog
+en een bezoeker kan zelf een adres opgeven dat geloofd wordt. Alleen een getal
+is toegestaan; `true` wordt geweigerd, omdat Express dan het meest linkse adres
+gelooft — en dat zet de bezoeker er zelf in.
+
+Om dezelfde reden luistert poort 3001 van de backend alleen op `127.0.0.1`. Wie
+van buitenaf rechtstreeks op de backend uitkomt, slaat de proxy over en mag dan
+zelf het adres opgeven dat de backend gelooft. Zet die poort dus niet open naar
+buiten; alles loopt via nginx of Traefik.
 
 ### Data Storage
 

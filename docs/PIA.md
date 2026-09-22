@@ -231,11 +231,16 @@ Feitelijk, zonder oordeel over of het genoeg is:
 
 Twee dingen die het bestuur moet weten omdat ze een keuze vragen:
 
-1. **`X-Forwarded-For` wordt onvoorwaardelijk vertrouwd.** Wie die kopregel zelf
-   meestuurt kiest daarmee zijn eigen ip-adres, en dus wat er in het auditlogboek
-   komt te staan en hoe de snelheidsbegrenzer telt. De reparatie is één regel
-   `trust proxy`, maar de juiste waarde hangt af van hoeveel proxy's er vóór de
-   applicatie staan. Staat ook in de openstaande beslissingen van de roadmap.
+1. ~~`X-Forwarded-For` wordt onvoorwaardelijk vertrouwd.~~ **Opgelost op
+   22-09-2026**, en kleiner dan hier eerst stond. Auditlogboek, sessies en de
+   snelheidsbegrenzer gebruikten al het adres dat Express via `trust proxy`
+   uitrekent, en dat klopte. Twee plekken lazen de kopregel zelf: de IP-witlijst
+   voor beheer, en het plaatsen van een kaartbestelling. Die laatste bewaart het
+   adres in `ticket_orders.ip_address` — **bestellingen van vóór die datum
+   kunnen daar een adres hebben staan dat de koper zelf heeft opgegeven**. Dat
+   maakt het voor die rijen een minder betrouwbaar gegeven, niet een gevoeliger
+   een. Het aantal vertrouwde proxy's is in te stellen met `TRUST_PROXY`
+   (`docs/SELF_HOSTING.md`).
 2. **De database is één bestand.** Wie toegang heeft tot de schijf van de server
    heeft alles. Versleuteling in rust is niet ingericht; dat is bij een
    zelf-gehoste opzet een keuze van degene die host.

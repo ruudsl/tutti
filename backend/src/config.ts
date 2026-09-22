@@ -37,6 +37,11 @@ const envSchema = z.object({
   CSRF_COOKIE_NAME: z.string().optional().default('csrf_token'),
   CSRF_HEADER_NAME: z.string().optional().default('x-csrf-token'),
 
+  // Het aantal proxy's vóór de applicatie. Alleen een getal: `true` laat
+  // Express het meest linkse adres uit X-Forwarded-For geloven, en dat zet de
+  // aanvrager er zelf in.
+  TRUST_PROXY: z.string().regex(/^\d+$/, "TRUST_PROXY is het aantal proxy's vóór de applicatie").optional(),
+
   // IP Whitelisting
   IP_WHITELIST_ENABLED: z.enum(['true', 'false']).optional().default('false'),
   ADMIN_ALLOWED_IPS: z.string().optional(),
@@ -127,6 +132,12 @@ export const config = {
   csrfEnabled: validatedEnv.CSRF_ENABLED === 'true',
   csrfCookieName: validatedEnv.CSRF_COOKIE_NAME || 'csrf_token',
   csrfHeaderName: validatedEnv.CSRF_HEADER_NAME || 'x-csrf-token',
+
+  // Render, nginx uit docker-compose.yml en Traefik uit docker-compose.prod.yml
+  // zijn elk precies één proxy. Wie daar zelf nog iets vóór zet (Cloudflare,
+  // een load balancer) verhoogt dit, anders krijgen alle bezoekers het adres
+  // van die buitenste proxy. Zie docs/SELF_HOSTING.md.
+  trustProxy: getEnvNumber(validatedEnv.TRUST_PROXY, validatedEnv.NODE_ENV === 'production' ? 1 : 0),
 
   // IP Whitelisting
   ipWhitelistEnabled: validatedEnv.IP_WHITELIST_ENABLED === 'true',
