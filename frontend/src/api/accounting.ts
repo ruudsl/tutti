@@ -1,4 +1,32 @@
 import api from './client';
+import type { PaginatedResponse } from './music';
+
+/**
+ * Het `{ data, pagination }` van de backend platslaan naar `PaginatedResponse`.
+ *
+ * `createPaginatedResult` in `backend/src/utils/database.ts` antwoordt met een
+ * genest `pagination`-object; de frontend rekent met een plat type. Zie
+ * `api/users.ts` voor dezelfde vertaling.
+ *
+ * De array-tak is er voor een server die nog niet pagineert: dan is wat er
+ * binnenkomt de hele lijst.
+ */
+function naarPagina<T>(antwoord: unknown): PaginatedResponse<T> {
+  if (Array.isArray(antwoord)) {
+    return { data: antwoord as T[], total: antwoord.length, page: 1, pageSize: antwoord.length, totalPages: 1 };
+  }
+  const p = antwoord as { data?: T[]; pagination?: { total: number; page: number; limit: number; totalPages: number } };
+  if (p?.pagination) {
+    return {
+      data: p.data ?? [],
+      total: p.pagination.total,
+      page: p.pagination.page,
+      pageSize: p.pagination.limit,
+      totalPages: p.pagination.totalPages,
+    };
+  }
+  return { data: [], total: 0, page: 1, pageSize: 0, totalPages: 0 };
+}
 
 // =====================================================
 // TYPES
@@ -423,9 +451,11 @@ export interface TransactionFilters {
   endDate?: string;
   transactionType?: TransactionType;
   search?: string;
+  page?: number;
+  limit?: number;
 }
 
-export async function getTransactions(filters?: TransactionFilters): Promise<Transaction[]> {
+export async function getTransactions(filters?: TransactionFilters): Promise<PaginatedResponse<Transaction>> {
   const params = new URLSearchParams();
   if (filters?.fiscalYearId) params.append('fiscalYearId', filters.fiscalYearId);
   if (filters?.accountId) params.append('accountId', filters.accountId);
@@ -433,9 +463,11 @@ export async function getTransactions(filters?: TransactionFilters): Promise<Tra
   if (filters?.endDate) params.append('endDate', filters.endDate);
   if (filters?.transactionType) params.append('transactionType', filters.transactionType);
   if (filters?.search) params.append('search', filters.search);
+  if (filters?.page) params.append('page', String(filters.page));
+  if (filters?.limit) params.append('limit', String(filters.limit));
 
   const response = await api.get(`/accounting/transactions?${params.toString()}`);
-  return response.data;
+  return naarPagina<Transaction>(response.data);
 }
 
 export async function getTransaction(id: string): Promise<Transaction> {

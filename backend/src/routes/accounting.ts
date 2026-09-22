@@ -7,6 +7,7 @@ import { logAuditEvent } from './audit-logs';
 import logger from '../utils/logger';
 import { z } from 'zod';
 import { csvBestand } from '../utils/csv';
+import { getPaginationParams, createPaginatedResult } from '../utils/database';
 
 const router = Router();
 
@@ -2083,60 +2084,83 @@ router.get(
 
     const { fiscalYearId, accountId, startDate, endDate, transactionType, search } = req.query;
 
-    let query = `
-        SELECT t.*, u.first_name || ' ' || u.last_name AS created_by_name
-        FROM transactions t
-        LEFT JOIN users u ON t.created_by = u.id
-        WHERE t.association_id = ?
-    `;
+    // De voorwaarden staan los van de SELECT, zodat de telling en de pagina
+    // gegarandeerd dezelfde rijen bekijken. Twee keer dezelfde WHERE uitschrijven
+    // is hoe een totaal gaat afwijken van wat er in de lijst staat.
+    let voorwaarden = 'WHERE t.association_id = ?';
     const params: any[] = [associationId];
 
     if (fiscalYearId) {
-      query += ' AND t.fiscal_year_id = ?';
+      voorwaarden += ' AND t.fiscal_year_id = ?';
       params.push(fiscalYearId);
     }
     if (transactionType) {
-      query += ' AND t.transaction_type = ?';
+      voorwaarden += ' AND t.transaction_type = ?';
       params.push(transactionType);
     }
     if (startDate) {
-      query += ' AND t.transaction_date >= ?';
+      voorwaarden += ' AND t.transaction_date >= ?';
       params.push(startDate);
     }
     if (endDate) {
-      query += ' AND t.transaction_date <= ?';
+      voorwaarden += ' AND t.transaction_date <= ?';
       params.push(endDate);
     }
     if (search) {
-      query += ' AND (t.description LIKE ? OR t.reference LIKE ?)';
+      voorwaarden += ' AND (t.description LIKE ? OR t.reference LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
     }
     if (accountId) {
-      query += ' AND EXISTS (SELECT 1 FROM transaction_lines tl WHERE tl.transaction_id = t.id AND tl.account_id = ?)';
+      voorwaarden +=
+        ' AND EXISTS (SELECT 1 FROM transaction_lines tl WHERE tl.transaction_id = t.id AND tl.account_id = ?)';
       params.push(accountId);
     }
 
-    query += ' ORDER BY t.transaction_date DESC, t.created_at DESC';
+    // Het grootboek groeit met elke boeking en wordt nooit korter. Zonder grens
+    // stuurt dit eindpunt na een paar seizoenen alles wat de vereniging ooit
+    // heeft geboekt in één antwoord over de lijn, en mag de browser dat
+    // allemaal ontleden en tekenen.
+    const { offset, limit, page } = getPaginationParams(req.query);
 
-    const transactions = db.prepare(query).all(...params);
+    const telling = db.prepare(`SELECT COUNT(*) as total FROM transactions t ${voorwaarden}`).get(...params) as {
+      total: number;
+    };
+
+    const transactions = db
+      .prepare(
+        `
+        SELECT t.*, u.first_name || ' ' || u.last_name AS created_by_name
+        FROM transactions t
+        LEFT JOIN users u ON t.created_by = u.id
+        ${voorwaarden}
+        ORDER BY t.transaction_date DESC, t.created_at DESC
+        LIMIT ? OFFSET ?
+    `,
+      )
+      .all(...params, limit, offset);
 
     res.json(
-      transactions.map((t: any) => ({
-        id: t.id,
-        transactionNumber: t.transaction_number,
-        transactionDate: t.transaction_date,
-        transactionType: t.transaction_type,
-        reference: t.reference,
-        description: t.description,
-        totalAmount: t.amount,
-        isPosted: !!t.is_posted,
-        isReconciled: !!t.is_reconciled,
-        invoiceId: t.invoice_id,
-        bankStatementId: t.bank_statement_id,
-        createdBy: t.created_by,
-        createdByName: t.created_by_name,
-        createdAt: t.created_at,
-      })),
+      createPaginatedResult(
+        transactions.map((t: any) => ({
+          id: t.id,
+          transactionNumber: t.transaction_number,
+          transactionDate: t.transaction_date,
+          transactionType: t.transaction_type,
+          reference: t.reference,
+          description: t.description,
+          totalAmount: t.amount,
+          isPosted: !!t.is_posted,
+          isReconciled: !!t.is_reconciled,
+          invoiceId: t.invoice_id,
+          bankStatementId: t.bank_statement_id,
+          createdBy: t.created_by,
+          createdByName: t.created_by_name,
+          createdAt: t.created_at,
+        })),
+        telling.total,
+        page,
+        limit,
+      ),
     );
   }),
 );

@@ -30,6 +30,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import Accounting from '../Accounting';
 import * as boekhoudApi from '../../api/accounting';
+import type { Transaction } from '../../api/accounting';
+
+/** Een lijst boekingen in de vorm waarin de server hem levert: per pagina. */
+function boekingenPagina(boekingen: Transaction[]) {
+  return {
+    data: boekingen,
+    total: boekingen.length,
+    page: 1,
+    pageSize: Math.max(boekingen.length, 1),
+    totalPages: boekingen.length === 0 ? 0 : 1,
+  };
+}
 
 vi.mock('../../api/accounting');
 
@@ -80,7 +92,7 @@ function zetApiKlaar(): void {
   vi.mocked(boekhoudApi.getFiscalYears).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getAccounts).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getInvoices).mockResolvedValue([]);
-  vi.mocked(boekhoudApi.getTransactions).mockResolvedValue([]);
+  vi.mocked(boekhoudApi.getTransactions).mockResolvedValue(boekingenPagina([]));
   vi.mocked(boekhoudApi.getRelations).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getCostCenters).mockResolvedValue([]);
   vi.mocked(boekhoudApi.getBudgets).mockResolvedValue([]);
