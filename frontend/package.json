@@ -56,7 +56,7 @@
     "@types/react-dom": "^19.2.5",
     "@types/ua-parser-js": "^0.7.39",
     "@vitejs/plugin-react": "^4.7.0",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.1",
     "axe-core": "^4.11.4",
     "chrome-launcher": "^1.2.1",
     "jest-axe": "^11.0.0",
