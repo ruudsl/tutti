@@ -1,21 +1,67 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import config from '../config';
 import db from '../database/connection';
+import { validateSession, DecodedToken } from '../middleware/auth';
 import logger from '../utils/logger';
 
-interface AuthenticatedSocket extends Socket {
+export interface AuthenticatedSocket extends Socket {
   userId?: string;
   associationId?: string;
   orchestraIds?: string[];
 }
 
-interface JwtPayload {
-  id: string;
-  associationId: string;
-}
-
 let io: Server | null = null;
+
+/**
+ * Laat een socket alleen binnen met hetzelfde soort token en onder dezelfde
+ * voorwaarden als een gewoon API-verzoek.
+ *
+ * Dat was niet zo. De sleutel viel buiten productie terug op 'dev-secret' in
+ * plaats van die uit config, dus lokaal zonder JWT_SECRET weigerde realtime
+ * iedereen. Belangrijker: er werd geen sessie nagekeken. Na afmelden of een
+ * wachtwoordwijziging bleef een token hier werken, zodat wie het had nog
+ * chatberichten en meldingen binnenkreeg. Download- en gastbestel-tokens
+ * zijn met dezelfde sleutel ondertekend en hebben geen sessie; die horen hier
+ * evenmin.
+ */
+export function authenticeerSocket(socket: AuthenticatedSocket, next: (fout?: Error) => void): void {
+  const token: unknown = socket.handshake.auth?.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
+
+  if (typeof token !== 'string' || !token) {
+    return next(new Error('Authentication required'));
+  }
+
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret) as DecodedToken & { purpose?: unknown; type?: unknown };
+
+    if (typeof decoded.id !== 'string' || decoded.purpose !== undefined || decoded.type !== undefined) {
+      return next(new Error('Invalid token'));
+    }
+
+    const sessieFout = validateSession(token, decoded, {
+      ip: socket.handshake.address,
+      userAgent: socket.handshake.headers['user-agent'],
+    });
+    if (sessieFout) {
+      return next(new Error('Invalid token'));
+    }
+
+    socket.userId = decoded.id;
+    socket.associationId = decoded.associationId ?? undefined;
+
+    const orchestras = db.prepare('SELECT orchestra_id FROM user_orchestras WHERE user_id = ?').all(decoded.id) as {
+      orchestra_id: string;
+    }[];
+    socket.orchestraIds = orchestras.map((o) => o.orchestra_id);
+
+    next();
+  } catch (err) {
+    logger.warn('WebSocket authentication failed', { error: (err as Error).message });
+    next(new Error('Invalid token'));
+  }
+}
 
 export function initWebSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
@@ -28,30 +74,7 @@ export function initWebSocket(httpServer: HttpServer): Server {
     pingInterval: 25000,
   });
 
-  io.use(async (socket: AuthenticatedSocket, next) => {
-    try {
-      const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
-
-      if (!token) {
-        return next(new Error('Authentication required'));
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as JwtPayload;
-      socket.userId = decoded.id;
-      socket.associationId = decoded.associationId;
-
-      // Get user's orchestra memberships
-      const orchestras = db.prepare('SELECT orchestra_id FROM user_orchestras WHERE user_id = ?').all(decoded.id) as {
-        orchestra_id: string;
-      }[];
-      socket.orchestraIds = orchestras.map((o) => o.orchestra_id);
-
-      next();
-    } catch (err) {
-      logger.warn('WebSocket authentication failed', { error: (err as Error).message });
-      next(new Error('Invalid token'));
-    }
-  });
+  io.use(authenticeerSocket);
 
   io.on('connection', (socket: AuthenticatedSocket) => {
     logger.info('WebSocket client connected', { userId: socket.userId });
