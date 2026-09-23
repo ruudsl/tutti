@@ -490,6 +490,22 @@ describe('meldingen rond de opstelling - instellingen en verzending', () => {
       expect(logRegels(repetitie)[0].error_message).toContain('ENOTFOUND');
     });
 
+    it.each([
+      ['de server zelf', 'http://127.0.0.1:3001/api/admin'],
+      ['het metadata-adres van de hostingomgeving', 'http://169.254.169.254/latest/meta-data/'],
+      ['het Docker-netwerk', 'http://172.17.0.2:3001/'],
+    ])('belt geen webhook naar %s aan', async (_naam, adres) => {
+      // Het antwoord van de webhook gaat terug naar de aanvrager. Zonder deze
+      // controle las een dirigent zo via de server een intern adres uit.
+      const repetitie = klaarVoorVerzending({ webhookUrl: adres });
+
+      const antwoord = await als(beheerderToken, 'post', `/send/${repetitie}`);
+
+      expect(webhookAanroepen).not.toHaveBeenCalled();
+      expect(antwoord.status).toBe(500);
+      expect(logRegels(repetitie)[0].error_message).toMatch(/eigen of lokaal netwerk/);
+    });
+
     it('meldt het als er helemaal geen webhook-url staat', async () => {
       const repetitie = klaarVoorVerzending({ webhookUrl: null });
 
