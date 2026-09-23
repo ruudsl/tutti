@@ -5,6 +5,28 @@
 
 import db from '../database/connection';
 import logger from './logger';
+import { beschermdeFetch, DienstFout } from './veerkracht';
+
+/** Methoden die hetzelfde opleveren als je ze nog eens doet. */
+const HERHAALBARE_METHODEN = new Set(['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * Een aanroep naar Microsoft (login of Graph), met tijdslimiet en
+ * stroomonderbreker.
+ *
+ * Of opnieuw proberen veilig is, volgt uit de aanroep zelf. Lezen, bijwerken en
+ * verwijderen mag nog eens, en een app- of ververstoken opvragen ook. Een POST
+ * die iets aanmaakt - een gebruiker, een licentie, een groepslid, een
+ * postvakregel - krijgt één poging, want een tweede kan een tweede zijn. Een
+ * inlogcode inwisselen gaat naar hetzelfde adres als een token opvragen maar
+ * is eenmalig; daarom telt `grant_type`, niet de URL.
+ */
+export function graphFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const methode = (init.method ?? 'GET').toUpperCase();
+  const grant = init.body instanceof URLSearchParams ? init.body.get('grant_type') : null;
+  const herhaalbaar = HERHAALBARE_METHODEN.has(methode) || grant === 'client_credentials' || grant === 'refresh_token';
+  return beschermdeFetch('microsoft', url, init, { tijdslimietMs: 15_000, pogingen: herhaalbaar ? 3 : 1 });
+}
 
 export interface MicrosoftConfig {
   microsoft_client_id: string | null;
@@ -43,7 +65,9 @@ export function getMicrosoftConfig(associationId: string | null): MicrosoftConfi
  * Get app-only access token for Microsoft Graph API
  */
 export async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
-  const tokenResponse = await fetch(
+  // Een app-token opvragen mag nog eens: er wordt niets aangemaakt.
+  const tokenResponse = await beschermdeFetch(
+    'microsoft',
     `https://login.microsoftonline.com/${msConfig.microsoft_tenant_id}/oauth2/v2.0/token`,
     {
       method: 'POST',
@@ -84,17 +108,21 @@ async function tryExchangeAdminForwarding(
   forwardingAddress: string,
 ): Promise<{ success: boolean; notSupported?: boolean; error?: string }> {
   try {
-    const response = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${userId}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+    const response = await beschermdeFetch(
+      'microsoft',
+      `https://graph.microsoft.com/beta/admin/exchange/mailboxes/${userId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          forwardingSmtpAddress: `smtp:${forwardingAddress}`,
+          deliverToMailboxAndForward: true,
+        }),
       },
-      body: JSON.stringify({
-        forwardingSmtpAddress: `smtp:${forwardingAddress}`,
-        deliverToMailboxAndForward: true,
-      }),
-    });
+    );
 
     if (response.ok) {
       logger.info(`Email forwarding set via Exchange Admin API for user ${userId} to ${forwardingAddress}`);
@@ -140,7 +168,10 @@ async function createInboxForwardingRule(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const ruleResponse = await fetch(
+      // Eén poging per ronde: deze lus wacht zelf op een mailbox die nog niet
+      // klaar is, en twee herkansingsmechanismen over elkaar vermenigvuldigen.
+      const ruleResponse = await beschermdeFetch(
+        'microsoft',
         `https://graph.microsoft.com/v1.0/users/${userId}/mailFolders/inbox/messageRules`,
         {
           method: 'POST',
@@ -165,6 +196,7 @@ async function createInboxForwardingRule(
             },
           }),
         },
+        { pogingen: 1 },
       );
 
       if (ruleResponse.ok) {
@@ -201,7 +233,11 @@ async function createInboxForwardingRule(
       return { success: false, error: lastError };
     } catch (err) {
       lastError = err instanceof Error ? err.message : 'Unknown error';
-      if (attempt < maxRetries) {
+      // Na een timeout weten we niet of de regel er al staat. Nog een poging
+      // kan een tweede regel opleveren, en dan krijgt het lid elke mail dubbel.
+      const misschienAangekomen =
+        err instanceof DienstFout && err.cause instanceof Error && err.cause.name === 'TimeoutError';
+      if (attempt < maxRetries && !misschienAangekomen) {
         const delay = initialDelayMs * Math.pow(2, attempt - 1);
         logger.warn(`Error creating forwarding rule, retrying in ${delay}ms`, { error: err });
         await sleep(delay);
@@ -226,7 +262,7 @@ export async function setupEmailForwarding(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // First set otherMails as a backup/reference
-    const updateResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}`, {
+    const updateResponse = await beschermdeFetch('microsoft', `https://graph.microsoft.com/v1.0/users/${userId}`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${accessToken}`,

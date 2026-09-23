@@ -11,6 +11,8 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { revokeUserSessions } from '../utils/sessionStore';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
+import { graphFetch } from '../utils/m365';
+import { DienstFout } from '../utils/veerkracht';
 import { logAuditEvent } from './audit-logs';
 import multer from 'multer';
 
@@ -98,7 +100,7 @@ function getMicrosoftConfig(associationId: string | null): MicrosoftConfig | nul
 }
 
 async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
-  const tokenResponse = await fetch(
+  const tokenResponse = await graphFetch(
     `https://login.microsoftonline.com/${msConfig.microsoft_tenant_id}/oauth2/v2.0/token`,
     {
       method: 'POST',
@@ -153,7 +155,7 @@ const SUPPORTED_LICENSE_SKUS = [
 async function assignM365License(accessToken: string, userId: string): Promise<boolean> {
   try {
     // First, get available licenses (SKUs) in the tenant
-    const skuResponse = await fetch('https://graph.microsoft.com/v1.0/subscribedSkus', {
+    const skuResponse = await graphFetch('https://graph.microsoft.com/v1.0/subscribedSkus', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -205,7 +207,7 @@ async function assignM365License(accessToken: string, userId: string): Promise<b
     }
 
     // Assign the license to the user
-    const assignResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}/assignLicense`, {
+    const assignResponse = await graphFetch(`https://graph.microsoft.com/v1.0/users/${userId}/assignLicense`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -255,7 +257,7 @@ async function addUserToM365Groups(
       // Note: OData filter values should have single quotes escaped as ''
       const escapedGroupName = groupName.replace(/'/g, "''");
       const filterParam = encodeURIComponent(`displayName eq '${escapedGroupName}'`);
-      const searchResponse = await fetch(`https://graph.microsoft.com/v1.0/groups?$filter=${filterParam}`, {
+      const searchResponse = await graphFetch(`https://graph.microsoft.com/v1.0/groups?$filter=${filterParam}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
@@ -280,7 +282,7 @@ async function addUserToM365Groups(
       const groupId = searchData.value[0].id;
 
       // Add user to the group
-      const addResponse = await fetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/members/$ref`, {
+      const addResponse = await graphFetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/members/$ref`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -346,7 +348,7 @@ async function tryExchangeAdminForwarding(
   forwardingAddress: string,
 ): Promise<{ success: boolean; notSupported?: boolean }> {
   try {
-    const response = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${userId}`, {
+    const response = await graphFetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${userId}`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -398,7 +400,7 @@ async function createInboxForwardingRule(
 ): Promise<boolean> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const ruleResponse = await fetch(
+      const ruleResponse = await graphFetch(
         `https://graph.microsoft.com/v1.0/users/${userId}/mailFolders/inbox/messageRules`,
         {
           method: 'POST',
@@ -457,7 +459,11 @@ async function createInboxForwardingRule(
       });
       return false;
     } catch (err) {
-      if (attempt < maxRetries) {
+      // Na een timeout weten we niet of de regel er al staat. Nog een poging
+      // kan een tweede regel opleveren, en dan krijgt het lid elke mail dubbel.
+      const misschienAangekomen =
+        err instanceof DienstFout && err.cause instanceof Error && err.cause.name === 'TimeoutError';
+      if (attempt < maxRetries && !misschienAangekomen) {
         const delay = initialDelayMs * Math.pow(2, attempt - 1);
         logger.warn(`Error creating forwarding rule, retrying in ${delay}ms`, { error: err });
         await sleep(delay);
@@ -473,7 +479,7 @@ async function createInboxForwardingRule(
 async function setupEmailForwarding(accessToken: string, userId: string, forwardingAddress: string): Promise<boolean> {
   try {
     // First set otherMails as a backup/reference
-    const updateResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}`, {
+    const updateResponse = await graphFetch(`https://graph.microsoft.com/v1.0/users/${userId}`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -526,7 +532,7 @@ async function setupEmailForwarding(accessToken: string, userId: string, forward
  */
 async function uploadProfilePhotoToM365(accessToken: string, userId: string, photoBuffer: Buffer): Promise<boolean> {
   try {
-    const uploadResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}/photo/$value`, {
+    const uploadResponse = await graphFetch(`https://graph.microsoft.com/v1.0/users/${userId}/photo/$value`, {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -770,7 +776,7 @@ router.post(
           const accessToken = await getAppAccessToken(msConfig);
 
           // Get the domain from the tenant
-          const orgResponse = await fetch('https://graph.microsoft.com/v1.0/organization', {
+          const orgResponse = await graphFetch('https://graph.microsoft.com/v1.0/organization', {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
 
@@ -813,7 +819,7 @@ router.post(
           }
 
           // Create user in M365 with job information
-          const createResponse = await fetch('https://graph.microsoft.com/v1.0/users', {
+          const createResponse = await graphFetch('https://graph.microsoft.com/v1.0/users', {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -1371,7 +1377,7 @@ router.post(
         try {
           const accessToken = await getAppAccessToken(msConfig);
 
-          const deleteResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${user.microsoft_id}`, {
+          const deleteResponse = await graphFetch(`https://graph.microsoft.com/v1.0/users/${user.microsoft_id}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${accessToken}` },
           });

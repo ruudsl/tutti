@@ -272,10 +272,21 @@ describe('synchroniseren met Microsoft Entra', () => {
 
     it.each(GRAPHFOUTEN)('meldt %s met een uitleg over de rechten', async (_naam, status) => {
       zetMicrosoftAan(vereniging.id);
-      gebruikersPaginas = [{ status, body: { error: { code: 'Authorization_RequestDenied' } } }];
+      // Drie keer hetzelfde antwoord: 429 en 500 worden herkanst, en deze test
+      // gaat over een Graph dat blijft weigeren, niet over één hik.
+      const weigering = { status, body: { error: { code: 'Authorization_RequestDenied' } } };
+      gebruikersPaginas = [weigering, weigering, weigering];
 
       const res = await als(beheerderToken, 'get', '/users');
       expect(res.body.error).toContain('User.Read.All');
+    });
+
+    it('haalt de lijst alsnog op als Graph één keer te druk was', async () => {
+      zetMicrosoftAan(vereniging.id);
+      gebruikersPaginas = [{ status: 429, body: { error: { code: 'TooManyRequests' } } }, ledenlijst([])];
+
+      const res = await als(beheerderToken, 'get', '/users');
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
     });
 
     it('gaat goed om met een lege lijst', async () => {
