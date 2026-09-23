@@ -112,7 +112,7 @@ describe('importeren uit de cloud', () => {
         .post('/api/cloud-import/onedrive')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          files: [{ downloadUrl: 'https://graph.microsoft.com/x', name: 'Trompet 1.pdf' }],
+          files: [{ id: 'item-1', name: 'Trompet 1.pdf' }],
           accessToken: 'test-token',
           listId,
         });

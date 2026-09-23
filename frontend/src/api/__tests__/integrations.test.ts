@@ -378,7 +378,7 @@ describe('cloudimport', () => {
   it('importFromOneDrive post bestanden, sleutel en lijst', async () => {
     antwoordMet({ message: 'Geimporteerd', uploaded: [] });
     await importFromOneDrive({
-      files: [{ id: 'f1', name: 'partij.pdf', downloadUrl: 'https://nep.example/f1' }],
+      files: [{ id: 'f1', name: 'partij.pdf' }],
       accessToken: 'nep-toegangssleutel',
       listId: 'l1',
     });
@@ -387,7 +387,7 @@ describe('cloudimport', () => {
     expect(verzoek.methode).toBe('post');
     expect(verzoek.pad).toBe('/cloud-import/onedrive');
     expect(verzoek.body).toEqual({
-      files: [{ id: 'f1', name: 'partij.pdf', downloadUrl: 'https://nep.example/f1' }],
+      files: [{ id: 'f1', name: 'partij.pdf' }],
       accessToken: 'nep-toegangssleutel',
       listId: 'l1',
     });

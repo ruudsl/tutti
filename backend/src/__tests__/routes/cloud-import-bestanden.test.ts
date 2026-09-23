@@ -118,8 +118,8 @@ describe('een bestand uit de cloud binnenhalen', () => {
   const googleDrive = (token: string, body: Record<string, unknown>) =>
     request(app).post('/api/cloud-import/google-drive').set('Authorization', `Bearer ${token}`).send(body);
 
-  const eenBestand = (naam: string, downloadUrl = 'https://graph.microsoft.com/v1.0/x/content') => ({
-    files: [{ id: 'drive-id-1', name: naam, downloadUrl }],
+  const eenBestand = (naam: string) => ({
+    files: [{ id: 'drive-id-1', name: naam }],
     accessToken: 'ms-token',
   });
 
@@ -231,70 +231,45 @@ describe('een bestand uit de cloud binnenhalen', () => {
   });
 
   describe('welke adressen de server mag ophalen', () => {
-    /** Importeer een bestand met dit downloadadres en geef de foutmelding terug. */
-    async function foutBij(url: string): Promise<{ status: number; fout: string | undefined }> {
-      const antwoord = await onedrive(beheerderToken, eenBestand('Mars.pdf', url));
-      return { status: antwoord.status, fout: antwoord.body.errors?.[0]?.error };
+    // De route haalde eerder een `downloadUrl` uit de aanvraag op, begrensd
+    // door een lijst met hosts van Microsoft en Google. De eigen frontend
+    // stuurt er nooit een mee; de route bouwt het adres nu altijd zelf en
+    // negeert het veld, zoals /google-drive al deed.
+
+    /** Importeer een bestand met dit meegestuurde adres en geef terug wat er is opgehaald. */
+    async function opgehaaldBij(downloadUrl: string): Promise<URL> {
+      const antwoord = await onedrive(beheerderToken, {
+        files: [{ id: 'item-42', name: 'Mars.pdf', downloadUrl }],
+        accessToken: 'ms-token',
+      });
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(201);
+      expect(nep).toHaveBeenCalledTimes(1);
+      return new URL(String(nep.mock.calls[0][0]));
     }
 
-    it('accepteert de hosts van Microsoft en Google', async () => {
-      for (const url of [
-        'https://graph.microsoft.com/v1.0/x/content',
-        'https://onedrive.live.com/download?x=1',
-        'https://harmonie.sharepoint.com/x.pdf',
-        'https://abc.1drv.com/x.pdf',
-        'https://www.googleapis.com/drive/v3/files/x?alt=media',
-        'https://drive.google.com/uc?id=x',
-      ]) {
-        const { status, fout } = await foutBij(url);
-        expect(status, url).toBe(201);
-        expect(fout, url).toBeUndefined();
-      }
+    it.each([
+      ['een willekeurige andere host', 'https://kwaadaardig.example/mars.pdf'],
+      ['de machine zelf', 'https://127.0.0.1/admin'],
+      ['het metadata-adres van een cloudomgeving', 'https://169.254.169.254/latest/meta-data/'],
+      ['een host die de toegestane naam als voorvoegsel draagt', 'https://graph.microsoft.com.kwaadaardig.example/x'],
+      ['een toegestane host met een ander pad', 'https://graph.microsoft.com/v1.0/users'],
+      ['iets dat helemaal geen adres is', 'dit is geen adres'],
+    ])('negeert een meegestuurd adres naar %s', async (_naam, downloadUrl) => {
+      const adres = await opgehaaldBij(downloadUrl);
+      expect(adres.origin).toBe('https://graph.microsoft.com');
+      expect(adres.pathname).toBe('/v1.0/me/drive/items/item-42/content');
     });
 
-    it('weigert een willekeurige andere host', async () => {
-      const { fout } = await foutBij('https://kwaadaardig.example/mars.pdf');
-      expect(fout).toMatch(/host is not allowed/);
-    });
+    it('codeert een bestands-id zodat het het adres niet kan omzetten', async () => {
+      await onedrive(beheerderToken, {
+        files: [{ id: '../../../users?x=', name: 'Mars.pdf' }],
+        accessToken: 'ms-token',
+      });
 
-    it('weigert een adres binnen het eigen netwerk', async () => {
-      for (const url of [
-        'https://127.0.0.1/admin',
-        'https://169.254.169.254/latest/meta-data/',
-        'https://localhost/',
-      ]) {
-        expect((await foutBij(url)).fout, url).toMatch(/host is not allowed/);
-      }
-    });
-
-    it('weigert een host die de toegestane naam alleen als voorvoegsel draagt', async () => {
-      // graph.microsoft.com.kwaadaardig.example is een adres van de aanvaller;
-      // de lijst mag daar niet in trappen.
-      expect((await foutBij('https://graph.microsoft.com.kwaadaardig.example/x')).fout).toMatch(/host is not allowed/);
-      expect((await foutBij('https://nietsharepoint.com/x')).fout).toMatch(/host is not allowed/);
-    });
-
-    it('weigert een adres zonder https', async () => {
-      expect((await foutBij('http://graph.microsoft.com/x')).fout).toMatch(/HTTPS/);
-      expect((await foutBij('file:///etc/passwd')).fout).toMatch(/HTTPS/);
-    });
-
-    it('weigert een adres met inloggegevens erin', async () => {
-      expect((await foutBij('https://gebruiker:geheim@graph.microsoft.com/x')).fout).toMatch(/credentials/);
-    });
-
-    it('weigert iets dat helemaal geen adres is', async () => {
-      expect((await foutBij('dit is geen adres')).fout).toMatch(/Invalid download URL/);
-    });
-
-    it('haalt een geweigerd adres niet op', async () => {
-      await foutBij('https://kwaadaardig.example/mars.pdf');
-      expect(nep).not.toHaveBeenCalled();
-    });
-
-    it('laat geen stuk achter voor een geweigerd adres', async () => {
-      await foutBij('https://kwaadaardig.example/mars.pdf');
-      expect(stukken()).toHaveLength(0);
+      const adres = new URL(String(nep.mock.calls[0][0]));
+      expect(adres.origin).toBe('https://graph.microsoft.com');
+      expect(adres.pathname).toBe('/v1.0/me/drive/items/..%2F..%2F..%2Fusers%3Fx%3D/content');
+      expect(adres.search).toBe('');
     });
   });
 
@@ -306,11 +281,14 @@ describe('een bestand uit de cloud binnenhalen', () => {
       expect(nep.mock.calls[0][1].headers.Authorization).toBe('Bearer ms-token');
     });
 
-    it('gaat niet mee naar een adres dat de aanvrager zelf aanlevert', async () => {
-      // De aanvrager geeft hier zelf een downloadadres op. Dat adres komt uit
-      // de body en de route stuurt er bewust geen token naartoe.
-      await onedrive(beheerderToken, eenBestand('Mars.pdf'));
-      expect(nep.mock.calls[0][1].headers.Authorization).toBeUndefined();
+    it('gaat alleen naar Microsoft, ook als de aanvrager een eigen adres meestuurt', async () => {
+      await onedrive(beheerderToken, {
+        files: [{ id: 'item-42', name: 'Mars.pdf', downloadUrl: 'https://kwaadaardig.example/x' }],
+        accessToken: 'ms-token',
+      });
+
+      expect(new URL(String(nep.mock.calls[0][0])).hostname).toBe('graph.microsoft.com');
+      expect(nep.mock.calls[0][1].headers.Authorization).toBe('Bearer ms-token');
     });
 
     it('gaat bij Google Drive wel mee, want de route bouwt daar altijd zelf het adres', async () => {
@@ -401,8 +379,8 @@ describe('een bestand uit de cloud binnenhalen', () => {
 
       const antwoord = await onedrive(beheerderToken, {
         files: [
-          { id: '1', name: 'Goed.pdf', downloadUrl: 'https://graph.microsoft.com/a' },
-          { id: '2', name: 'Fout.pdf', downloadUrl: 'https://graph.microsoft.com/b' },
+          { id: '1', name: 'Goed.pdf' },
+          { id: '2', name: 'Fout.pdf' },
         ],
         accessToken: 'ms-token',
       });
