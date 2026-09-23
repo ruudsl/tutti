@@ -8,6 +8,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import { isPdf } from '../utils/fileValidation';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 import { logAuditEvent } from './audit-logs';
 import { notifyOrchestra } from './notifications';
 
@@ -134,7 +135,7 @@ async function downloadAndSave(
   }
 
   const safeUrl = validateCloudDownloadUrl(url);
-  const response = await fetch(safeUrl, { headers });
+  const response = await beschermdeFetch('cloud-import', safeUrl, { headers }, { tijdslimietMs: 120_000 });
   if (!response.ok) {
     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
   }

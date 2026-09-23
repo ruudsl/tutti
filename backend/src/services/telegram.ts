@@ -591,10 +591,16 @@ export async function processUpdate(update: TelegramUpdate, associationId?: stri
   if (update.callback_query) {
     const config = getTelegramConfig(associationId);
     if (config) {
-      await axios.post(
-        `${config.apiUrl}/answerCallbackQuery`,
-        { callback_query_id: update.callback_query.id },
-        { timeout: TELEGRAM_TIMEOUT_MS },
+      const callbackId = update.callback_query.id;
+      await beschermd(
+        'telegram',
+        () =>
+          axios.post(
+            `${config.apiUrl}/answerCallbackQuery`,
+            { callback_query_id: callbackId },
+            { timeout: TELEGRAM_TIMEOUT_MS },
+          ),
+        TELEGRAM_VEERKRACHT,
       );
     }
   }
@@ -617,14 +623,19 @@ export async function setWebhook(webhookUrl: string, associationId?: string): Pr
       return false;
     }
 
-    const response = await axios.post(
-      `${config.apiUrl}/setWebhook`,
-      {
-        url: webhookUrl,
-        allowed_updates: ['message', 'callback_query'],
-        secret_token: geheim,
-      },
-      { timeout: TELEGRAM_TIMEOUT_MS },
+    const response = await beschermd(
+      'telegram',
+      () =>
+        axios.post(
+          `${config.apiUrl}/setWebhook`,
+          {
+            url: webhookUrl,
+            allowed_updates: ['message', 'callback_query'],
+            secret_token: geheim,
+          },
+          { timeout: TELEGRAM_TIMEOUT_MS },
+        ),
+      TELEGRAM_VEERKRACHT,
     );
 
     if (response.data.ok) {
@@ -650,7 +661,11 @@ export async function deleteWebhook(associationId?: string): Promise<boolean> {
   }
 
   try {
-    const response = await axios.post(`${config.apiUrl}/deleteWebhook`, {}, { timeout: TELEGRAM_TIMEOUT_MS });
+    const response = await beschermd(
+      'telegram',
+      () => axios.post(`${config.apiUrl}/deleteWebhook`, {}, { timeout: TELEGRAM_TIMEOUT_MS }),
+      TELEGRAM_VEERKRACHT,
+    );
     return response.data.ok;
   } catch (error: any) {
     // Zie getBotUsername: het foutobject draagt de api-url met het token erin.
