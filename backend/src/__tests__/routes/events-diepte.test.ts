@@ -671,6 +671,34 @@ describe('vervoer', () => {
     expect(teveel.body.error).toBe('Vervoer zit vol.');
   });
 
+  it('zet hetzelfde lid niet twee keer op dezelfde rit', async () => {
+    // Twee keer op "rijd mee" drukken gaf twee plekken voor één lid, en die
+    // telden allebei mee voor de capaciteit.
+    const id = maakEvenementIn(vereniging.id, beheerder.id);
+    const rit = await maakVervoer(id, { capacity: 4 });
+
+    const eerste = await alsLid('post', `/${id}/transport/${rit}/passengers`).send({ userId: lid.id });
+    expect(eerste.status).toBe(201);
+
+    const nogmaals = await alsLid('post', `/${id}/transport/${rit}/passengers`).send({ userId: lid.id });
+    expect(nogmaals.status).toBe(409);
+
+    const res = await alsLid('get', `/${id}/transport`);
+    expect(res.body.find((t: any) => t.id === rit).passengers).toHaveLength(1);
+  });
+
+  it('laat twee losse passagiers met dezelfde naam wel toe', async () => {
+    // Zonder account is er niets om ze aan te herkennen: twee keer "Jan" kunnen
+    // twee mensen zijn.
+    const id = maakEvenementIn(vereniging.id, beheerder.id);
+    const rit = await maakVervoer(id, { capacity: 4 });
+
+    for (let i = 0; i < 2; i++) {
+      const res = await alsLid('post', `/${id}/transport/${rit}/passengers`).send({ passengerName: 'Jan' });
+      expect(res.status).toBe(201);
+    }
+  });
+
   it('laat een rit zonder opgegeven aantal plaatsen wel doorlopen', async () => {
     const id = maakEvenementIn(vereniging.id, beheerder.id);
     const rit = await maakVervoer(id, { transportType: 'bus', capacity: undefined });
