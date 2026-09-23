@@ -315,6 +315,30 @@ async function voerUit(rij: TaakRij, definitie: TaakDefinitie<any>, nu: () => Da
   }
 }
 
+/**
+ * Zet een mislukte taak terug in de wachtrij, voor het beheerscherm.
+ *
+ * Alleen een taak in het eindstation: een wachtende of lopende taak opnieuw
+ * inplannen zou hem twee keer laten draaien. De teller begint opnieuw, zodat
+ * een herhaalbare taak weer al zijn pogingen heeft. De laatste fout blijft
+ * staan tot de volgende poging, zodat zichtbaar blijft waarom hij vastliep.
+ *
+ * @returns false als de taak niet bestaat of niet mislukt is.
+ */
+export function probeerOpnieuw(id: string, nu: Date = new Date()): boolean {
+  const tekst = nu.toISOString();
+  return (
+    db
+      .prepare(
+        `UPDATE achtergrondtaken
+            SET status = 'wachtend', pogingen = 0, gepland_op = ?, eigenaar = NULL, vergrendeld_tot = NULL,
+                afgerond_op = NULL, bijgewerkt_op = ?
+          WHERE id = ? AND status = 'mislukt'`,
+      )
+      .run(tekst, tekst, id).changes === 1
+  );
+}
+
 /** Ruim afgeronde taken op die hun bewaartermijn voorbij zijn. */
 export function ruimOp(nu: Date = new Date()): number {
   const gelukt = new Date(nu.getTime() - BEWAAR_GELUKT_MS).toISOString();

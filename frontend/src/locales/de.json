@@ -4439,7 +4439,8 @@
       "partnerships": "Partnerschaften",
       "members": "Mitglieder",
       "superadmins": "Super-Admins",
-      "activity": "Aktivität"
+      "activity": "Aktivität",
+      "achtergrondtaken": "Hintergrundaufgaben"
     },
     "associations": {
       "title": "Alle Vereine",
@@ -5953,5 +5954,38 @@
     "pending_changes_other": "{{count}} Änderungen warten auf Synchronisierung",
     "clear_offline_data": "Offline-Daten löschen",
     "confirm_clear": "Möchten Sie wirklich alle Offline-Daten löschen?"
+  },
+  "achtergrondtaken": {
+    "titel": "Hintergrundaufgaben",
+    "uitleg": "Arbeit, die außerhalb einer Anfrage läuft: Benachrichtigungen, Bereinigung und Sicherungen. Eine fehlgeschlagene Aufgabe bleibt hier, bis jemand sie erneut versucht.",
+    "filterOpStatus": "Nach Status filtern",
+    "alle": "Alle",
+    "geen": "Es sind keine Aufgaben in der Warteschlange.",
+    "geenMetStatus": "Keine Aufgaben mit diesem Status.",
+    "opnieuw": "Erneut versuchen",
+    "opnieuwVoor": "{{soort}} erneut versuchen",
+    "opnieuwIngepland": "Die Aufgabe ist wieder in der Warteschlange.",
+    "paginas": "Seiten",
+    "paginaVan": "Seite {{pagina}} von {{totaal}}",
+    "status": {
+      "wachtend": "Wartend",
+      "bezig": "Läuft",
+      "gelukt": "Erfolgreich",
+      "mislukt": "Fehlgeschlagen"
+    },
+    "kolommen": {
+      "soort": "Aufgabe",
+      "status": "Status",
+      "pogingen": "Versuche",
+      "bijgewerkt": "Zuletzt aktualisiert",
+      "fout": "Letzter Fehler",
+      "acties": "Aktionen"
+    },
+    "soorten": {
+      "opstelling-meldingen": "Sitzplan-Benachrichtigungen",
+      "mail-doorsturen-opnieuw": "E-Mail-Weiterleitung (erneut)",
+      "avg-opschonen": "DSGVO-Bereinigung",
+      "database-back-up": "Datenbanksicherung"
+    }
   }
 }

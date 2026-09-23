@@ -4439,7 +4439,8 @@
       "partnerships": "Partnerschappen",
       "members": "Leden",
       "superadmins": "Super Admins",
-      "activity": "Activiteit"
+      "activity": "Activiteit",
+      "achtergrondtaken": "Achtergrondtaken"
     },
     "associations": {
       "title": "Alle Verenigingen",
@@ -5953,5 +5954,38 @@
     "pending_changes_other": "{{count}} wijzigingen wachten op synchronisatie",
     "clear_offline_data": "Offline gegevens wissen",
     "confirm_clear": "Weet je zeker dat je alle offline gegevens wilt wissen?"
+  },
+  "achtergrondtaken": {
+    "titel": "Achtergrondtaken",
+    "uitleg": "Werk dat buiten een verzoek draait: meldingen, opschonen en back-ups. Een mislukte taak blijft hier staan tot iemand hem opnieuw probeert.",
+    "filterOpStatus": "Filter op status",
+    "alle": "Alle",
+    "geen": "Er staan geen taken in de wachtrij.",
+    "geenMetStatus": "Geen taken met deze status.",
+    "opnieuw": "Opnieuw proberen",
+    "opnieuwVoor": "{{soort}} opnieuw proberen",
+    "opnieuwIngepland": "De taak staat weer in de wachtrij.",
+    "paginas": "Pagina's",
+    "paginaVan": "Pagina {{pagina}} van {{totaal}}",
+    "status": {
+      "wachtend": "Wachtend",
+      "bezig": "Bezig",
+      "gelukt": "Gelukt",
+      "mislukt": "Mislukt"
+    },
+    "kolommen": {
+      "soort": "Taak",
+      "status": "Status",
+      "pogingen": "Pogingen",
+      "bijgewerkt": "Laatst bijgewerkt",
+      "fout": "Laatste fout",
+      "acties": "Acties"
+    },
+    "soorten": {
+      "opstelling-meldingen": "Opstellingsmeldingen",
+      "mail-doorsturen-opnieuw": "Mail doorsturen (opnieuw)",
+      "avg-opschonen": "AVG-opschoning",
+      "database-back-up": "Back-up van de database"
+    }
   }
 }

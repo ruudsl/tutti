@@ -150,6 +150,7 @@ export * from './streaming';
 
 // Other
 export * from './backup';
+export * from './achtergrondtaken';
 export * from './issues';
 export * from './loans';
 export * from './activity';

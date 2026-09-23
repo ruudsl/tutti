@@ -582,7 +582,7 @@ status = 'wachtend'`; wordt het er meer, dan hoort dit werk na de
 - [x] De vier draaiende planners omgezet — _`backend/src/taken/index.ts`. Elke periodieke taak heeft een sleutel per tijdvak en draait daardoor één keer per vak, ook na een herstart. Dat was bij de AVG-opschoning niet zo: die draaide opnieuw als er binnen het opschoonuur werd uitgerold. En een mislukte back-up staat nu als mislukt in de wachtrij in plaats van alleen in het logboek_
 - [ ] `workflow-runner` en `email-digest` aangezet of weggehaald, met een reden — _vraagt een keuze: aanzetten betekent dat leden vanaf dan een wekelijkse mail krijgen en dat door beheerders ingestelde workflows ineens gaan lopen_
 - [x] `backgroundQueue.ts` vervangen of verwijderd — _verwijderd, met zijn test; hij werd nergens gebruikt en de wachtrij vervangt hem_
-- [ ] Beheerscherm voor de wachtrij en de mislukte taken
+- [x] Beheerscherm voor de wachtrij en de mislukte taken — _tabblad Achtergrondtaken op de superbeheerderspagina, met `GET /api/achtergrondtaken` en `POST /api/achtergrondtaken/:id/opnieuw`. Alleen superbeheerders: de taken van nu horen bij geen vereniging_
 - [ ] Zwaar werk binnen een verzoek naar de wachtrij
 - [x] Documentatie in `docs/` en een regel in `CLAUDE.md` — _`docs/ACHTERGRONDTAKEN.md`, regel 21_
 
