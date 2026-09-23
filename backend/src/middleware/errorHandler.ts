@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import logger from '../utils/logger';
 import { FileValidationError } from '../utils/errors';
+import { DienstFout, StroomonderbrekerOpenFout, statusIsTijdelijk } from '../utils/veerkracht';
+
+/** Geen status (timeout, netwerk) of een tijdelijke: de dienst was er niet. */
+function isStoring(fout: DienstFout): boolean {
+  return fout.status === undefined || statusIsTijdelijk(fout.status);
+}
 
 // Custom error class for API errors
 export class ApiError extends Error {
@@ -141,6 +147,20 @@ export function errorHandler(err: Error | ApiError, req: Request, res: Response,
       error: 'Validatiefout.',
       details: (err as any).issues ?? (err as any).errors,
     });
+    return;
+  }
+
+  // Een externe dienst (Mollie, Microsoft, Google, Spond) die niet reageert of
+  // plat ligt. Dat is geen fout van ons en geen fout van de gebruiker: 503 zegt
+  // "straks nog eens", en een 500 liet het lijken alsof Tutti zelf stuk was.
+  // Een DienstFout met een blijvende status (401, 404) is een antwoord dat
+  // niet klopte, geen storing: 502.
+  if (err instanceof StroomonderbrekerOpenFout || (err instanceof DienstFout && isStoring(err))) {
+    res.status(503).json({ error: 'Een externe dienst reageert nu niet. Probeer het over een paar minuten opnieuw.' });
+    return;
+  }
+  if (err instanceof DienstFout) {
+    res.status(502).json({ error: 'Een externe dienst gaf een onverwacht antwoord.' });
     return;
   }
 
