@@ -82,11 +82,8 @@ import discountCodesRoutes from './routes/discount-codes';
 import venueLayoutsRoutes, { concertSeatsRouter } from './routes/venue-layouts';
 import { createServer, Server as HttpServer } from 'http';
 import { initWebSocket, getIO } from './websocket';
-import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
-import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
-import { startScheduler as startGdprCleanupScheduler } from './scheduler/gdpr-cleanup';
-import { stopAllSchedulers } from './scheduler';
-import { startScheduler as startBackupScheduler } from './scheduler/backup';
+import { registreerStandaardTaken } from './taken';
+import { startWerker, stopWerker } from './taken/wachtrij';
 import healthRoutes from './routes/health';
 import analyticsRoutes from './routes/analytics';
 import maintenanceRoutes from './routes/maintenance';
@@ -567,11 +564,10 @@ async function startServer() {
         logger.info(`   Swagger docs: http://localhost:${config.port}/api/docs`);
       }
 
-      // Start schedulers
-      startSeatingScheduler();
-      startEmailForwardingScheduler();
-      startGdprCleanupScheduler();
-      startBackupScheduler();
+      // Achtergrondtaken: de periodieke planners en alles wat in de wachtrij
+      // staat, ook wat er voor een herstart nog lag (src/taken/).
+      registreerStandaardTaken();
+      startWerker();
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
@@ -598,11 +594,13 @@ async function shutdown(signal: string): Promise<void> {
   }, 10_000);
   forceExitTimer.unref();
 
-  // 1. Stop background schedulers (clears their pending timeouts)
+  // 1. Geen nieuwe achtergrondtaken meer oppakken. Een taak die nu loopt en
+  // niet op tijd af is, verloopt vanzelf en wordt na de herstart opgepakt of
+  // als onderbroken gemarkeerd (src/taken/wachtrij.ts).
   try {
-    stopAllSchedulers();
+    stopWerker();
   } catch (err) {
-    logger.error('Failed to stop schedulers on shutdown', { error: err });
+    logger.error('Failed to stop the background worker on shutdown', { error: err });
   }
 
   // 2. Stop accepting new connections and wait for in-flight requests

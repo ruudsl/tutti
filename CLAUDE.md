@@ -127,6 +127,15 @@ Deze staan hier omdat ze in deze repository al eens zijn overtreden.
     eigen bestand.
 20. Tests mogen niet van elkaars volgorde afhangen en niet van het netwerk.
 
+### Achtergrondwerk
+
+21. **Werk buiten een verzoek gaat via de wachtrij in `backend/src/taken/`**,
+    niet via een eigen `setTimeout`- of `setInterval`-lus. Een taak in de
+    wachtrij overleeft een herstart, draait met een sleutel hooguit één keer,
+    en staat als mislukt in de database in plaats van alleen in het logboek.
+    Elke taak zegt of hij `herhaalbaar` is: iets versturen of aanmaken is dat
+    niet. Zie `docs/ACHTERGRONDTAKEN.md`.
+
 ## Wat je niet zomaar doet
 
 - **Een test overslaan, uitzetten of aanpassen om groen te worden.** Een rode
@@ -142,19 +151,19 @@ Deze staan hier omdat ze in deze repository al eens zijn overtreden.
 
 ## Waar dingen staan
 
-| Wat                             | Waar                                                                     |
-| ------------------------------- | ------------------------------------------------------------------------ |
-| Databaseverbinding              | `backend/src/database/connection.ts`                                     |
-| Schema verse installatie        | `backend/src/database/schema.ts`                                         |
-| Migraties                       | `backend/src/migrations/` (`npm run migrate:create --workspace=backend`) |
-| Authenticatie                   | `backend/src/middleware/auth.ts`                                         |
-| Foutafhandeling                 | `backend/src/middleware/errorHandler.ts`                                 |
-| Validatie                       | `backend/src/middleware/validate.ts`                                     |
-| Cache                           | `backend/src/middleware/cache.ts`                                        |
-| Modules                         | `backend/src/modules/registry.ts`, `frontend/src/utils/modules.ts`       |
-| Achtergrondtaken                | `backend/src/scheduler/`, `backend/src/utils/backgroundQueue.ts`         |
-| Externe koppelingen             | `backend/src/services/`                                                  |
-| Herkansen en stroomonderbrekers | `backend/src/utils/veerkracht.ts`, `docs/VEERKRACHT.md`                  |
-| Logboek                         | `backend/src/utils/logger.ts`, `backend/src/logging/requestLogger.ts`    |
-| Vertalingen                     | `frontend/src/locales/{nl,en,de}.json`                                   |
-| API-laag frontend               | `frontend/src/api/` (niet langs `fetch` heen)                            |
+| Wat                             | Waar                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| Databaseverbinding              | `backend/src/database/connection.ts`                                       |
+| Schema verse installatie        | `backend/src/database/schema.ts`                                           |
+| Migraties                       | `backend/src/migrations/` (`npm run migrate:create --workspace=backend`)   |
+| Authenticatie                   | `backend/src/middleware/auth.ts`                                           |
+| Foutafhandeling                 | `backend/src/middleware/errorHandler.ts`                                   |
+| Validatie                       | `backend/src/middleware/validate.ts`                                       |
+| Cache                           | `backend/src/middleware/cache.ts`                                          |
+| Modules                         | `backend/src/modules/registry.ts`, `frontend/src/utils/modules.ts`         |
+| Achtergrondtaken                | `backend/src/taken/` (wachtrij), het werk zelf in `backend/src/scheduler/` |
+| Externe koppelingen             | `backend/src/services/`                                                    |
+| Herkansen en stroomonderbrekers | `backend/src/utils/veerkracht.ts`, `docs/VEERKRACHT.md`                    |
+| Logboek                         | `backend/src/utils/logger.ts`, `backend/src/logging/requestLogger.ts`      |
+| Vertalingen                     | `frontend/src/locales/{nl,en,de}.json`                                     |
+| API-laag frontend               | `frontend/src/api/` (niet langs `fetch` heen)                              |

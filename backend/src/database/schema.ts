@@ -3675,4 +3675,33 @@ CREATE TABLE IF NOT EXISTS association_modules (
 );
 
 CREATE INDEX IF NOT EXISTS idx_association_modules_association ON association_modules(association_id);
+
+-- ===========================================
+-- ACHTERGRONDTAKEN
+-- ===========================================
+-- De wachtrij voor werk buiten een verzoek; de werker staat in
+-- backend/src/taken/wachtrij.ts. Een taak met een sleutel wordt één keer
+-- ingepland, hoe vaak dat ook wordt geprobeerd. eigenaar + vergrendeld_tot
+-- zijn de sluis. association_id is leeg voor systeemtaken.
+CREATE TABLE IF NOT EXISTS achtergrondtaken (
+    id TEXT PRIMARY KEY,
+    soort TEXT NOT NULL,
+    sleutel TEXT UNIQUE,
+    gegevens TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'wachtend'
+        CHECK (status IN ('wachtend', 'bezig', 'gelukt', 'mislukt')),
+    pogingen INTEGER NOT NULL DEFAULT 0,
+    gepland_op TEXT NOT NULL,
+    eigenaar TEXT,
+    vergrendeld_tot TEXT,
+    laatste_fout TEXT,
+    association_id TEXT,
+    aangemaakt_op TEXT NOT NULL,
+    bijgewerkt_op TEXT NOT NULL,
+    afgerond_op TEXT,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_achtergrondtaken_aan_de_beurt ON achtergrondtaken(status, gepland_op);
+CREATE INDEX IF NOT EXISTS idx_achtergrondtaken_vereniging ON achtergrondtaken(association_id);
 `;
