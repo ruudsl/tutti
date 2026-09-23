@@ -11,9 +11,7 @@ export function PosterGeneratorTab() {
       <div className="card-body" style={{ padding: 0 }}>
         <ConcertPosterGenerator
           onDownload={(format, data) => {
-            showSuccess(
-              t('concerts.posterDownloaded', `Poster "${data.title}" gedownload als ${format.toUpperCase()}`),
-            );
+            showSuccess(t('concerts.posterDownloaded', { title: data.title, format: format.toUpperCase() }));
           }}
         />
       </div>

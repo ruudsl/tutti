@@ -2581,7 +2581,9 @@
     },
     "instrument": "Instrument",
     "setlistBuilder": "Setlist",
-    "posterGenerator": "Poster"
+    "posterGenerator": "Poster",
+    "posterDownloaded": "Poster \"{{title}}\" als {{format}} heruntergeladen",
+    "setlistSaved": "Setlist \"{{name}}\" gespeichert"
   },
   "onboarding": {
     "menuItem": "Rundgang starten",
@@ -3801,7 +3803,9 @@
     "log": "Protokollieren",
     "deleteGoalTitle": "Ziel löschen",
     "deleteLogTitle": "Sitzung löschen",
-    "quickLog": "Erfassen"
+    "quickLog": "Erfassen",
+    "timerSessionEnded_one": "Übungssitzung von {{count}} Minute beendet!",
+    "timerSessionEnded_other": "Übungssitzung von {{count}} Minuten beendet!"
   },
   "recent": {
     "title": "Zuletzt angesehen",

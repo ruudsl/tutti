@@ -21,7 +21,7 @@ export function SetlistBuilderTab({ musicTitles }: { musicTitles: MusicTitle[] }
               }) as SetlistPiece,
           )}
           onSave={(setlist: Setlist) => {
-            showSuccess(t('concerts.setlistSaved', `Setlist "${setlist.name}" opgeslagen`));
+            showSuccess(t('concerts.setlistSaved', { name: setlist.name }));
           }}
         />
       </div>

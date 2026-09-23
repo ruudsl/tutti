@@ -139,20 +139,13 @@ describe('vertaalsleutels in de broncode', () => {
  * rood wordt bij een níeuw gat. Wie een van deze sleutels vertaalt, haalt hem
  * hier weg; de tweede test hieronder dwingt dat af.
  *
- * Wat er nog op staat heeft steeds dezelfde reden: de aanroep zet de tekst zelf
- * al in elkaar met een sjabloonstring als terugvalwaarde, en geeft er géén
- * waarden bij. Een vertaling met {{...}} erin zou daar letterlijk als
- * "{{title}}" op het scherm komen, en een vertaling zónder de waarden laat de
- * gebruiker juist het enige weg wat de melding iets zegt - welke poster, welke
- * setlijst, hoeveel minuten. Deze drie zijn dus pas te vertalen samen met een
- * wijziging in het aanroepende bestand, en die valt buiten deze ronde:
- *
- *   pages/Concerts/PosterGeneratorTab.tsx:15
- *     t('concerts.posterDownloaded', `Poster "${data.title}" gedownload als ...`)
- *   pages/Concerts/SetlistBuilderTab.tsx:24
- *     t('concerts.setlistSaved', `Setlist "${setlist.name}" opgeslagen`)
- *   pages/Practice.tsx:213
- *     t('practice.timerSessionEnded', `Oefensessie van ${durationMinutes} minuten...`)
+ * Sinds september 2026 is de lijst leeg. De laatste drie (`posterDownloaded`,
+ * `setlistSaved`, `timerSessionEnded`) zetten hun tekst zelf in elkaar met een
+ * sjabloonstring als terugvalwaarde en gaven géén waarden aan t() mee; een
+ * vertaling met {{title}} erin zou letterlijk zo op het scherm zijn gekomen.
+ * Die aanroepen geven hun waarden nu mee, en de minuten gaan via _one/_other.
+ * Het mechanisme blijft staan: zet hier een sleutel op als er ooit een bewust
+ * gat moet blijven, en zeg er dan bij waarom.
  *
  * Twee sleutels zijn van de lijst gegaan zonder dat er een tekst bij kwam.
  * `locale` wordt niet meer opgevraagd: `pages/Availability.tsx` gaf de uitkomst
@@ -162,7 +155,7 @@ describe('vertaalsleutels in de broncode', () => {
  * `hiddenPages_one` en `hiddenPages_other`, wat `bestaat()` hierboven nu
  * meerekent.
  */
-const ACHTERSTAND = ['concerts.posterDownloaded', 'concerts.setlistSaved', 'practice.timerSessionEnded'];
+const ACHTERSTAND: string[] = [];
 
 /**
  * WAT DEZE CONTROLE WEL EN NIET ZIET.

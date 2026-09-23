@@ -13,7 +13,7 @@ export interface UserPayload {
   associationId: string | null;
 }
 
-type DecodedToken = UserPayload & { iat?: number; exp?: number };
+export type DecodedToken = UserPayload & { iat?: number; exp?: number };
 
 export interface AuthRequest extends Request {
   user?: UserPayload;
@@ -35,9 +35,18 @@ export interface AuthRequest extends Request {
  * change-password) remain valid via their session record; all other sessions
  * are revoked explicitly at password change/reset time.
  *
+ * Ook de websocket gebruikt deze regels (websocket/index.ts): een sessie die
+ * hier is beëindigd, mag daar ook geen chat of meldingen meer ontvangen.
+ *
+ * @param herkomst - adres en browser, alleen gebruikt om een onbekende
+ *   sessie alsnog te registreren.
  * @returns null when valid, otherwise a 401 error message.
  */
-function validateSession(req: AuthRequest, token: string, decoded: DecodedToken): string | null {
+export function validateSession(
+  token: string,
+  decoded: DecodedToken,
+  herkomst: { ip?: string; userAgent?: string },
+): string | null {
   const tokenHash = hashToken(token);
   const session = findSessionByTokenHash(tokenHash);
 
@@ -73,8 +82,8 @@ function validateSession(req: AuthRequest, token: string, decoded: DecodedToken)
   registerSession(
     decoded.id,
     token,
-    req.ip,
-    req.get('user-agent'),
+    herkomst.ip,
+    herkomst.userAgent,
     7,
     decoded.exp !== undefined ? new Date(decoded.exp * 1000) : undefined,
   );
@@ -149,7 +158,10 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 
   try {
-    const sessionError = validateSession(req, token, decoded);
+    // De kopregel rechtstreeks lezen en niet via req.get(): dat is een aanroep
+    // die kan gooien, en een fout hier valt in de catch hieronder - die de
+    // sessiecontrole overslaat. Een ingetrokken sessie zou dan doorkomen.
+    const sessionError = validateSession(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] });
     if (sessionError) {
       return res.status(401).json({ error: sessionError });
     }

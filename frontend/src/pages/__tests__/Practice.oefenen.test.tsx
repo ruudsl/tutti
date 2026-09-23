@@ -30,16 +30,22 @@ import { showSuccess, showError } from '../../utils/toast';
 vi.mock('../../api');
 vi.mock('../../utils/toast', () => ({ showSuccess: vi.fn(), showError: vi.fn() }));
 
+// Een echte i18next met de Nederlandse teksten, geen nagebootste t(): de
+// melding na de klok rekent met {{count}} en kiest tussen _one en _other, en
+// dat moet hier net zo gaan als in de applicatie.
 vi.mock('react-i18next', async () => {
-  const teksten = ((await import('../../locales/nl.json')) as { default: Record<string, unknown> }).default;
-  const zoek = (sleutel: string): string | undefined =>
-    sleutel.split('.').reduce<any>((deel, stuk) => (deel == null ? undefined : deel[stuk]), teksten);
+  const { createInstance } = await import('i18next');
+  const nl = ((await import('../../locales/nl.json')) as { default: Record<string, unknown> }).default;
+  const i18n = createInstance();
+  await i18n.init({
+    lng: 'nl',
+    fallbackLng: false,
+    resources: { nl: { translation: nl } },
+    interpolation: { escapeValue: false },
+  });
 
   return {
-    useTranslation: () => ({
-      t: (sleutel: string, standaard?: string) => zoek(sleutel) ?? standaard ?? sleutel,
-      i18n: { language: 'nl' },
-    }),
+    useTranslation: () => ({ t: i18n.t.bind(i18n), i18n: { language: 'nl' } }),
     initReactI18next: { type: '3rdParty', init: () => {} },
   };
 });
@@ -206,7 +212,7 @@ describe('Practice: overzicht', () => {
 
     await gebruiker.click(screen.getByRole('button', { name: 'klok-afgelopen' }));
 
-    expect(showSuccess).toHaveBeenCalledWith('Oefensessie van 42 minuten beeindigd!');
+    expect(showSuccess).toHaveBeenCalledWith('Oefensessie van 42 minuten beëindigd!');
   });
 });
 
