@@ -5,6 +5,7 @@
 
 import crypto from 'crypto';
 import { config } from '../config';
+import { beschermdeFetch } from '../utils/veerkracht';
 
 export interface CalendarEvent {
   id: string;
@@ -420,19 +421,25 @@ export async function exchangeGoogleCode(
   clientSecret: string,
   redirectUri: string,
 ): Promise<{ accessToken: string; refreshToken: string; expiresAt: Date }> {
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+  // Eén poging: een autorisatiecode is eenmalig.
+  const response = await beschermdeFetch(
+    'google',
+    'https://oauth2.googleapis.com/token',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
     },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
-    }),
-  });
+    { pogingen: 1 },
+  );
 
   if (!response.ok) {
     const error = await response.text();
@@ -457,7 +464,8 @@ export async function refreshGoogleToken(
   clientId: string,
   clientSecret: string,
 ): Promise<{ accessToken: string; expiresAt: Date }> {
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  // Een token vernieuwen mag nog eens: het oude blijft geldig tot het verloopt.
+  const response = await beschermdeFetch('google', 'https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -520,7 +528,9 @@ export async function createGoogleCalendarEvent(
     };
   }
 
-  const response = await fetch(
+  // Eén poging: een tweede keer aanmaken is een tweede afspraak in de agenda.
+  const response = await beschermdeFetch(
+    'google',
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
     {
       method: 'POST',
@@ -530,6 +540,7 @@ export async function createGoogleCalendarEvent(
       },
       body: JSON.stringify(googleEvent),
     },
+    { pogingen: 1 },
   );
 
   if (!response.ok) {
@@ -574,7 +585,8 @@ export async function updateGoogleCalendarEvent(
     };
   }
 
-  const response = await fetch(
+  const response = await beschermdeFetch(
+    'google',
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
     {
       method: 'PUT',
@@ -600,7 +612,8 @@ export async function deleteGoogleCalendarEvent(
   calendarId: string,
   eventId: string,
 ): Promise<void> {
-  const response = await fetch(
+  const response = await beschermdeFetch(
+    'google',
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
     {
       method: 'DELETE',
@@ -610,8 +623,9 @@ export async function deleteGoogleCalendarEvent(
     },
   );
 
-  // 404 is ok - event might already be deleted
-  if (!response.ok && response.status !== 404) {
+  // Al weg is ook goed. Google zegt dat met 410 Gone, en dat is precies wat een
+  // herkansing ziet als de eerste poging wel aankwam maar te laat antwoordde.
+  if (!response.ok && response.status !== 404 && response.status !== 410) {
     const error = await response.text();
     throw new Error(`Google Calendar API error: ${error}`);
   }
