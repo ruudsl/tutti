@@ -623,6 +623,18 @@ describe('in- en uitschrijven met Microsoft 365', () => {
       expect(res.body.emailForwardingSet).toBe(true);
     });
 
+    it('gaat ook door als het nevenadres een foutpagina in HTML oplevert', async () => {
+      // Een proxy of gateway tussen ons en Graph antwoordt niet altijd met
+      // JSON. De kopie van deze stap in onboarding.ts las dat antwoord met
+      // .json(), gooide, en probeerde het doorsturen daarna niet meer - de
+      // versie in utils/m365.ts had dat al opgelost.
+      tenant.overigeAdressen = antwoord(400, '<html><body>Bad Request</body></html>');
+      const res = await metPriveadres();
+
+      expect(res.body.emailForwardingSet).toBe(true);
+      expect(aanroepen().some((a) => a.adres.includes('/beta/admin/exchange'))).toBe(true);
+    });
+
     it('meldt het eerlijk als beide manieren mislukken', async () => {
       tenant.exchangeDoorsturen = antwoord(500, { error: { code: 'InternalServerError', message: 'Oeps' } });
       // Een fout die niets met een nog niet ingerichte postbus te maken heeft,

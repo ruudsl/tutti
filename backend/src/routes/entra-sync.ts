@@ -11,16 +11,9 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
-import { graphFetch } from '../utils/m365';
+import { getAppAccessToken, getMicrosoftConfig, graphFetch } from '../utils/m365';
 
 const router = Router();
-
-interface MicrosoftConfig {
-  microsoft_client_id: string | null;
-  microsoft_client_secret: string | null;
-  microsoft_tenant_id: string | null;
-  microsoft_enabled: number;
-}
 
 interface EntraUser {
   id: string;
@@ -38,58 +31,6 @@ interface EntraUser {
 interface GraphUsersResponse {
   value: EntraUser[];
   '@odata.nextLink'?: string;
-}
-
-function getMicrosoftConfig(associationId: string | null): MicrosoftConfig | null {
-  if (!associationId) return null;
-  const association = db
-    .prepare(
-      `
-        SELECT microsoft_client_id, microsoft_client_secret, microsoft_tenant_id, microsoft_enabled
-        FROM associations WHERE id = ?
-    `,
-    )
-    .get(associationId) as MicrosoftConfig | undefined;
-
-  if (
-    !association ||
-    !association.microsoft_enabled ||
-    !association.microsoft_client_id ||
-    !association.microsoft_tenant_id ||
-    !association.microsoft_client_secret
-  ) {
-    return null;
-  }
-  return association;
-}
-
-/**
- * Get an access token using client credentials flow (app-only)
- * Requires User.Read.All permission in Azure AD
- */
-async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
-  const tokenResponse = await graphFetch(
-    `https://login.microsoftonline.com/${msConfig.microsoft_tenant_id}/oauth2/v2.0/token`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: msConfig.microsoft_client_id!,
-        client_secret: msConfig.microsoft_client_secret!,
-        scope: 'https://graph.microsoft.com/.default',
-        grant_type: 'client_credentials',
-      }),
-    },
-  );
-
-  if (!tokenResponse.ok) {
-    const errorBody = await tokenResponse.text();
-    logger.error('Failed to get app access token', { status: tokenResponse.status, body: errorBody });
-    throw new ApiError(500, 'Kan geen toegangstoken verkrijgen van Microsoft. Controleer de app permissions.');
-  }
-
-  const tokenData = (await tokenResponse.json()) as { access_token: string };
-  return tokenData.access_token;
 }
 
 /**
