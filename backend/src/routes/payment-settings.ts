@@ -5,6 +5,7 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 import { encrypt, decrypt, isEncrypted } from '../utils/encryption';
 
 const router = Router();
@@ -310,7 +311,7 @@ router.post(
 
     // Verify API key by fetching organization info
     try {
-      const orgResponse = await fetch(`${MOLLIE_API_URL}/organizations/me`, {
+      const orgResponse = await beschermdeFetch('mollie', `${MOLLIE_API_URL}/organizations/me`, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
         },
@@ -326,7 +327,7 @@ router.post(
       };
 
       // Check payment methods
-      const methodsResponse = await fetch(`${MOLLIE_API_URL}/methods`, {
+      const methodsResponse = await beschermdeFetch('mollie', `${MOLLIE_API_URL}/methods`, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
         },
@@ -571,7 +572,7 @@ router.get(
   authenticateToken,
   asyncHandler(async (_req: AuthRequest, res: Response) => {
     try {
-      const response = await fetch(MOLLIE_STATUS_API);
+      const response = await beschermdeFetch('mollie-status', MOLLIE_STATUS_API);
 
       if (!response.ok) {
         return res.json({
@@ -664,7 +665,7 @@ router.get(
 
     try {
       // Check organization
-      const orgResponse = await fetch(`${MOLLIE_API_URL}/organizations/me`, {
+      const orgResponse = await beschermdeFetch('mollie', `${MOLLIE_API_URL}/organizations/me`, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
         },
@@ -688,7 +689,7 @@ router.get(
       }
 
       // Check payment methods
-      const methodsResponse = await fetch(`${MOLLIE_API_URL}/methods`, {
+      const methodsResponse = await beschermdeFetch('mollie', `${MOLLIE_API_URL}/methods`, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
         },

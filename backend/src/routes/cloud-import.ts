@@ -8,6 +8,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import { isPdf } from '../utils/fileValidation';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 import { logAuditEvent } from './audit-logs';
 import { notifyOrchestra } from './notifications';
 
@@ -23,7 +24,6 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 interface CloudFile {
   id: string;
   name: string;
-  downloadUrl?: string;
 }
 
 interface ImportResult {
@@ -134,7 +134,7 @@ async function downloadAndSave(
   }
 
   const safeUrl = validateCloudDownloadUrl(url);
-  const response = await fetch(safeUrl, { headers });
+  const response = await beschermdeFetch('cloud-import', safeUrl, { headers }, { tijdslimietMs: 120_000 });
   if (!response.ok) {
     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
   }
@@ -338,11 +338,15 @@ router.post(
       throw new ApiError(400, 'Microsoft Graph access token is required');
     }
 
+    // Het adres bouwt de route altijd zelf, net als bij Google Drive. Een
+    // meegestuurd `downloadUrl` werd hier eerder opgehaald, alleen begrensd
+    // door een lijst met hosts - maar de eigen frontend stuurt er nooit een
+    // mee, en een adres uit de aanvraag dat de server ophaalt blijft een
+    // doorgeefluik, hoe goed de lijst ook is. Het veld wordt genegeerd.
     const downloadFiles = files.map((f) => ({
-      downloadUrl:
-        f.downloadUrl || `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(f.id)}/content`,
+      downloadUrl: `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(f.id)}/content`,
       name: f.name,
-      accessToken: f.downloadUrl ? null : accessToken,
+      accessToken,
     }));
 
     const result = await importFiles(req.user, downloadFiles, listId, 'OneDrive', req);

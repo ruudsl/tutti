@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import config from '../config';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 
 const router = Router();
 
@@ -175,17 +176,24 @@ router.get(
     }
 
     // Exchange code for tokens
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: googleClientId,
-        client_secret: googleClientSecret,
-        code: code as string,
-        redirect_uri: getGoogleRedirectUri(),
-        grant_type: 'authorization_code',
-      }),
-    });
+    // Eén poging: een autorisatiecode is eenmalig; een tweede keer inwisselen
+    // wordt geweigerd en laat de inlog alsnog mislukken.
+    const tokenResponse = await beschermdeFetch(
+      'google',
+      'https://oauth2.googleapis.com/token',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          code: code as string,
+          redirect_uri: getGoogleRedirectUri(),
+          grant_type: 'authorization_code',
+        }),
+      },
+      { pogingen: 1 },
+    );
 
     if (!tokenResponse.ok) {
       const errorBody = await tokenResponse.text();
@@ -196,7 +204,7 @@ router.get(
     const tokenData = (await tokenResponse.json()) as { access_token: string; id_token: string };
 
     // Get user profile from Google
-    const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    const profileResponse = await beschermdeFetch('google', 'https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
 
@@ -337,7 +345,14 @@ router.get(
       redirect_uri: getFacebookRedirectUri(),
     });
 
-    const tokenResponse = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?${tokenParams}`);
+    // Eén poging: een autorisatiecode is eenmalig; een tweede keer inwisselen
+    // wordt geweigerd en laat de inlog alsnog mislukken.
+    const tokenResponse = await beschermdeFetch(
+      'facebook',
+      `https://graph.facebook.com/v18.0/oauth/access_token?${tokenParams}`,
+      {},
+      { pogingen: 1 },
+    );
 
     if (!tokenResponse.ok) {
       const errorBody = await tokenResponse.text();
@@ -353,7 +368,7 @@ router.get(
       access_token: tokenData.access_token,
     });
 
-    const profileResponse = await fetch(`https://graph.facebook.com/v18.0/me?${profileParams}`);
+    const profileResponse = await beschermdeFetch('facebook', `https://graph.facebook.com/v18.0/me?${profileParams}`);
 
     if (!profileResponse.ok) {
       logger.error('Facebook profile fetch failed', { status: profileResponse.status });

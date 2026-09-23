@@ -11,6 +11,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
+import { graphFetch } from '../utils/m365';
 
 const router = Router();
 
@@ -67,7 +68,7 @@ function getMicrosoftConfig(associationId: string | null): MicrosoftConfig | nul
  * Requires User.Read.All permission in Azure AD
  */
 async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
-  const tokenResponse = await fetch(
+  const tokenResponse = await graphFetch(
     `https://login.microsoftonline.com/${msConfig.microsoft_tenant_id}/oauth2/v2.0/token`,
     {
       method: 'POST',
@@ -100,7 +101,7 @@ async function fetchEntraUsers(accessToken: string): Promise<EntraUser[]> {
     'https://graph.microsoft.com/v1.0/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,jobTitle,department&$top=100';
 
   while (nextLink) {
-    const response = await fetch(nextLink, {
+    const response = await graphFetch(nextLink, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -138,7 +139,7 @@ async function fetchEntraUsers(accessToken: string): Promise<EntraUser[]> {
  */
 async function fetchUserPhoto(accessToken: string, userId: string): Promise<Buffer | null> {
   try {
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}/photo/$value`, {
+    const response = await graphFetch(`https://graph.microsoft.com/v1.0/users/${userId}/photo/$value`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 

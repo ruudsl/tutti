@@ -1,5 +1,7 @@
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
+import { controleerUitgaandAdres } from '../utils/uitgaandAdres';
 import { v4 as uuidv4 } from 'uuid';
 import twilio from 'twilio';
 import { isModuleEnabled } from '../modules/service';
@@ -129,11 +131,21 @@ async function sendWebhook(settings: NotificationSettings, payload: Record<strin
   }
 
   try {
-    const response = await fetch(settings.webhook_url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    // Zelfde controle als in routes/seating-notifications.ts: het adres komt van
+    // een gebruiker. Hier gaat het antwoord nergens heen, maar de server belt
+    // er wel naartoe - ook naar adressen die van vóór deze controle zijn.
+    const doel = await controleerUitgaandAdres(settings.webhook_url);
+    const response = await beschermdeFetch(
+      `webhook:${doel.host}`,
+      doel.href,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        redirect: 'manual',
+      },
+      { pogingen: 1 },
+    );
 
     if (response.ok) {
       return true;

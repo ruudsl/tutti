@@ -15,7 +15,7 @@ import '../setup';
 import { v4 as uuidv4 } from 'uuid';
 import testDb from '../testDb';
 import logger from '../../utils/logger';
-import { getMicrosoftConfig, getAppAccessToken, setupEmailForwarding } from '../../utils/m365';
+import { getMicrosoftConfig, getAppAccessToken, setupEmailForwarding, graphFetch } from '../../utils/m365';
 
 const CLIENT_SECRET = 'zeer-geheime-clientsleutel-abc123';
 const TOEGANGSTOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.nep-token';
@@ -472,5 +472,68 @@ describe('setupEmailForwarding', () => {
       expect(await belofte).toEqual({ success: true });
       expect(tellers.regels).toBe(2);
     });
+
+    it('maakt na een time-out geen tweede regel aan', async () => {
+      // Na een time-out weten we niet of Microsoft de regel toch heeft
+      // aangemaakt. Een tweede poging kan een tweede regel zijn, en dan krijgt
+      // het lid elke mail dubbel op zijn privéadres.
+      vi.useFakeTimers();
+      const { tellers } = stubFetch({
+        gebruiker: () => graafAntwoord(204),
+        exchange: () => graafFout(404, 'ResourceNotFound', 'Not found'),
+        regels: () => {
+          throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+        },
+      });
+
+      const belofte = setupEmailForwarding(TOEGANGSTOKEN, GEBRUIKER_ID, DOORSTUURADRES);
+      await vi.advanceTimersByTimeAsync(60_000);
+      const resultaat = await belofte;
+
+      expect(tellers.regels).toBe(1);
+      expect(resultaat.success).toBe(false);
+    });
+  });
+});
+
+describe('graphFetch', () => {
+  /** Telt de aanroepen en geeft steeds een 503: zo blijkt hoe vaak er geprobeerd wordt. */
+  function altijdDruk() {
+    const nep = vi.fn(async () => new Response('{}', { status: 503 }));
+    vi.stubGlobal('fetch', nep);
+    return nep;
+  }
+
+  const tokenAdres = `${TOKEN_URL}/tenant/oauth2/v2.0/token`;
+
+  it('vraagt een app-token opnieuw op na een 503', async () => {
+    const nep = altijdDruk();
+    await graphFetch(tokenAdres, {
+      method: 'POST',
+      body: new URLSearchParams({ grant_type: 'client_credentials' }),
+    });
+    expect(nep).toHaveBeenCalledTimes(3);
+  });
+
+  it('wisselt een inlogcode maar één keer in - zelfde adres, maar eenmalig', async () => {
+    const nep = altijdDruk();
+    await graphFetch(tokenAdres, {
+      method: 'POST',
+      body: new URLSearchParams({ grant_type: 'authorization_code', code: 'eenmalig' }),
+    });
+    expect(nep).toHaveBeenCalledTimes(1);
+  });
+
+  it('maakt een gebruiker maar één keer aan', async () => {
+    const nep = altijdDruk();
+    await graphFetch('https://graph.microsoft.com/v1.0/users', { method: 'POST', body: '{}' });
+    expect(nep).toHaveBeenCalledTimes(1);
+  });
+
+  it('leest en werkt bij met herkansing', async () => {
+    const nep = altijdDruk();
+    await graphFetch('https://graph.microsoft.com/v1.0/users');
+    await graphFetch(`https://graph.microsoft.com/v1.0/users/${GEBRUIKER_ID}`, { method: 'PATCH', body: '{}' });
+    expect(nep).toHaveBeenCalledTimes(6);
   });
 });

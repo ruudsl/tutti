@@ -109,6 +109,38 @@ In het logboek:
 
 ## Zelf gebruiken
 
+Voor een `fetch` is er `beschermdeFetch`. Die zet de tijdslimiet, laat een
+tijdelijke status (429, 5xx) herkansen en meetellen voor de onderbreker, en
+gedraagt zich verder als `fetch`: je krijgt een `Response` terug, ook een 404 of
+
+- na de laatste poging - een 503, en je eigen afhandeling van `!res.ok` blijft
+  werken.
+
+```ts
+import { beschermdeFetch } from '../utils/veerkracht';
+
+// Lezen: herhaalbaar, standaard drie pogingen en tien seconden per poging.
+const res = await beschermdeFetch('naam-van-de-dienst', url, { headers });
+
+// Iets aanmaken of versturen: één poging.
+await beschermdeFetch('naam-van-de-dienst', url, { method: 'POST', body }, { pogingen: 1 });
+
+// Een bestand binnenhalen: de limiet geldt ook voor de inhoud.
+await beschermdeFetch('naam-van-de-dienst', url, {}, { tijdslimietMs: 60_000 });
+```
+
+Ligt de dienst echt plat - een timeout of netwerkfout na de laatste poging, of
+een open onderbreker - dan gooit hij een `DienstFout` of
+`StroomonderbrekerOpenFout`. Laat je die doorlopen naar de foutafhandeling, dan
+wordt dat een 503 ("straks nog eens") in plaats van een 500.
+
+Voor Microsoft is er `graphFetch` in `utils/m365.ts`, die het aantal pogingen
+zelf uit de aanroep afleidt - inclusief het verschil tussen een app-token
+opvragen (herhaalbaar) en een inlogcode inwisselen (eenmalig), die naar
+hetzelfde adres gaan.
+
+Voor iets anders dan `fetch` - axios, een SDK - gebruik je `beschermd` zelf:
+
 ```ts
 import { beschermd, DienstFout, herkansNaUitKop } from '../utils/veerkracht';
 
@@ -143,6 +175,23 @@ Voor een aanroep die **niet** herhaald mag worden geef je `pogingen: 1`. Dan
 blijft alleen de onderbreker over, en die is altijd veilig: hij doet nooit een
 extra aanroep, hij doet er hooguit minder.
 
+## Adressen van gebruikers
+
+Een webhook of koppeling die een gebruiker zelf instelt, is een adres waar de
+server naartoe belt op verzoek van iemand anders. Dat gaat eerst door
+`controleerUitgaandAdres` uit `utils/uitgaandAdres.ts`, en dan met
+`redirect: 'manual'`:
+
+```ts
+const doel = await controleerUitgaandAdres(instellingen.webhook_url);
+await beschermdeFetch(`webhook:${doel.host}`, doel.href, { method: 'POST', body, redirect: 'manual' }, { pogingen: 1 });
+```
+
+De controle zoekt op waar de naam heen wijst en weigert elk intern of speciaal
+adres (127/8, 10/8, 172.16/12, 192.168/16, 169.254/16 en de IPv6-tegenhangers).
+Een stroomonderbreker per host, zodat de kapotte webhook van de ene vereniging
+die van een andere niet stillegt.
+
 ## In tests
 
 De onderbrekers zijn gedeeld over de hele applicatie en dus ook over alle tests
@@ -155,3 +204,7 @@ is niets wat je zelf hoeft te doen.
 
 Wil je de tijd laten verstrijken zonder te wachten, geef dan je eigen `slaap` en
 `nu` mee - zie `backend/src/__tests__/utils/veerkracht.test.ts`.
+
+Namen worden in tests niet echt opgezocht: `setup.ts` laat elke naam naar een
+openbaar documentatieadres wijzen. Een test die het weigeren van een adres
+zelf test, geeft een eigen opzoeker mee aan `controleerUitgaandAdres`.

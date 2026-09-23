@@ -6,6 +6,7 @@ import { registerSession } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import config from '../config';
 import logger from '../utils/logger';
+import { graphFetch } from '../utils/m365';
 
 const router = Router();
 
@@ -192,7 +193,7 @@ router.post(
     const tenantId = msConfig.microsoft_tenant_id!;
 
     // Exchange code for token
-    const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+    const tokenResponse = await graphFetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -214,7 +215,7 @@ router.post(
     const tokenData = (await tokenResponse.json()) as MicrosoftTokenResponse;
 
     // Get user profile from Microsoft Graph
-    const profileResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+    const profileResponse = await graphFetch('https://graph.microsoft.com/v1.0/me', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
 

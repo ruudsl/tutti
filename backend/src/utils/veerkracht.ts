@@ -458,3 +458,77 @@ export function beschermd<T>(
   const onderbreker = stroomonderbreker(dienst, opties.onderbreker);
   return onderbreker.voer(() => metHerkansing(taak, { naam: dienst, ...opties }));
 }
+
+/** Hoe lang één poging naar een externe dienst mag duren als niemand iets anders zegt. */
+export const STANDAARD_TIJDSLIMIET_MS = 10_000;
+
+export interface BeschermdeFetchOpties extends BeschermdOpties {
+  /** Hoe lang één poging mag duren, inclusief het binnenhalen van de inhoud. */
+  tijdslimietMs?: number;
+}
+
+/** Een tijdelijke status bij de laatste poging: het antwoord gaat alsnog terug. */
+class TijdelijkAntwoord extends DienstFout {
+  readonly antwoord: Response;
+
+  constructor(dienst: string, antwoord: Response) {
+    super(`${dienst} gaf ${antwoord.status}`, {
+      dienst,
+      status: antwoord.status,
+      herkansNaMs: herkansNaUitKop(antwoord.headers?.get?.('retry-after')),
+    });
+    this.antwoord = antwoord;
+  }
+}
+
+/**
+ * `fetch` met een tijdslimiet, door `beschermd()`.
+ *
+ * Voor wie hem aanroept gedraagt hij zich als `fetch`: er komt een Response
+ * terug, ook een 404 of een 503, en wat daarmee moet weet de aanroeper - die
+ * maakt er vaak een melding van die de gebruiker iets zegt, en die melding
+ * blijft zo staan. Wat er anders is:
+ *
+ * - Elke poging heeft een tijdslimiet. Zonder limiet hield een trage dienst het
+ *   verzoek vast tot de gebruiker het opgaf.
+ * - Een tijdelijke status (429, 5xx) wordt herkanst en telt voor de
+ *   stroomonderbreker. Is ook de laatste poging tijdelijk, dan gaat dát
+ *   antwoord terug.
+ * - Ligt de dienst plat, dan gooit hij een `DienstFout`: bij een timeout of
+ *   netwerkfout na de laatste poging, en meteen zolang de onderbreker open
+ *   staat. De foutafhandeling maakt daar een 503 van.
+ *
+ * Herkansen alleen voor herhaalbare aanroepen. Iets aanmaken, versturen of een
+ * eenmalige code inwisselen krijgt `pogingen: 1`.
+ */
+export async function beschermdeFetch(
+  dienst: string,
+  url: string | URL,
+  init: RequestInit = {},
+  opties: BeschermdeFetchOpties = {},
+): Promise<Response> {
+  const { tijdslimietMs = STANDAARD_TIJDSLIMIET_MS, ...beschermOpties } = opties;
+
+  try {
+    return await beschermd(
+      dienst,
+      async () => {
+        const tijdslimiet = AbortSignal.timeout(tijdslimietMs);
+        const signal = init.signal ? AbortSignal.any([init.signal, tijdslimiet]) : tijdslimiet;
+        const antwoord = await fetch(url, { ...init, signal });
+        if (statusIsTijdelijk(antwoord.status)) {
+          throw new TijdelijkAntwoord(dienst, antwoord);
+        }
+        return antwoord;
+      },
+      beschermOpties,
+    );
+  } catch (fout) {
+    if (fout instanceof TijdelijkAntwoord) return fout.antwoord;
+    if (fout instanceof DienstFout || fout instanceof StroomonderbrekerOpenFout) throw fout;
+    if (isTijdelijk(fout)) {
+      throw new DienstFout(`${dienst} reageert niet`, { dienst, cause: fout });
+    }
+    throw fout;
+  }
+}

@@ -56,6 +56,13 @@ process.env.CSRF_ENABLED = 'false';
 
 import testDb from './testDb';
 import { herstelAlleStroomonderbrekers } from '../utils/veerkracht';
+import { stelOpzoekerInVoorTests } from '../utils/uitgaandAdres';
+
+// Tests gaan niet het netwerk op, ook niet voor DNS. Adressen die een gebruiker
+// opgeeft (webhooks) worden vóór het aanroepen opgezocht om interne adressen te
+// weigeren; hier wijst elke naam naar een openbaar documentatieadres. Wie het
+// weigeren zelf test, geeft een eigen opzoeker mee.
+stelOpzoekerInVoorTests(async () => [{ address: '203.0.113.10' }]);
 
 beforeAll(async () => {
   await testDb.init();

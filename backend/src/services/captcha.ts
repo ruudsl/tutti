@@ -1,4 +1,5 @@
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 
 // hCaptcha configuration
 const HCAPTCHA_SECRET_KEY = process.env.HCAPTCHA_SECRET_KEY || '';
@@ -69,13 +70,20 @@ export async function verifyCaptcha(token: string, ip: string): Promise<CaptchaR
       params.append('sitekey', HCAPTCHA_SITE_KEY);
     }
 
-    const response = await fetch(HCAPTCHA_VERIFY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+    // Eén poging: een token is eenmalig, een tweede keer controleren geeft
+    // "already seen" en daarmee een koper die ten onrechte wordt geweigerd.
+    const response = await beschermdeFetch(
+      'hcaptcha',
+      HCAPTCHA_VERIFY_URL,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
       },
-      body: params.toString(),
-    });
+      { pogingen: 1 },
+    );
 
     if (!response.ok) {
       logger.error('hCaptcha API error', { status: response.status });

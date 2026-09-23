@@ -81,11 +81,19 @@ Deze staan hier omdat ze in deze repository al eens zijn overtreden.
     **404, niet 403**: een uitgezette module hoort niet te bestaan voor die
     vereniging, en een 403 verklapt dat de functionaliteit er wel is.
 11. Uitgaande HTTP heeft een tijdslimiet en gaat door `beschermd(...)` uit
-    `utils/veerkracht.ts`. Zonder tijdslimiet blijft een trage externe dienst je
-    verzoek vasthouden tot de gebruiker weggaat; zonder stroomonderbreker kost
-    elke aanroep de volle limiet zolang de dienst plat ligt. Herkansen mag
-    alleen als de aanroep herhaalbaar is - iets versturen krijgt `pogingen: 1`.
-    Zie `docs/VEERKRACHT.md`.
+    `utils/veerkracht.ts` - voor `fetch` via `beschermdeFetch(...)`, voor
+    Microsoft via `graphFetch(...)` uit `utils/m365.ts`. Zonder tijdslimiet
+    blijft een trage externe dienst je verzoek vasthouden tot de gebruiker
+    weggaat; zonder stroomonderbreker kost elke aanroep de volle limiet zolang
+    de dienst plat ligt. Herkansen mag alleen als de aanroep herhaalbaar is -
+    iets versturen, aanmaken of een eenmalige code inwisselen krijgt
+    `pogingen: 1`. Zie `docs/VEERKRACHT.md`.
+
+    **Een adres dat een gebruiker opgeeft** (webhook, koppeling) gaat vóór het
+    aanroepen bovendien door `controleerUitgaandAdres(...)` uit
+    `utils/uitgaandAdres.ts`, met `redirect: 'manual'`. Anders laat iemand de
+    server `http://127.0.0.1:3001/…` of het metadata-adres van de
+    hostingomgeving aanroepen - en krijgt hij het antwoord soms terug.
 
 ### Modules
 

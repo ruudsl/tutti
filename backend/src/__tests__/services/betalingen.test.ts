@@ -1137,19 +1137,43 @@ describe('Storingen bij het aanmaken van een betaling', () => {
     expect(nep).toHaveBeenCalled();
   });
 
-  it('zet geen tijdslimiet op het verzoek', async () => {
+  it('zet een tijdslimiet op het verzoek', async () => {
+    // Tot september 2026 ging er geen AbortSignal mee, en hield een hangende
+    // betaaldienst de koper aan het afrekenen vast tot die het opgaf. Stond
+    // hier als bevinding; de gekozen limiet is vijftien seconden per poging.
     const nep = netwerk(antwoord(201, { id: 'tr_1', _links: { checkout: { href: 'https://x' } } }));
     const { createPayment } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
     await createPayment(aanvraag);
 
-    // BEVINDING - vastgelegd zoals het NU is. Er gaat geen AbortSignal mee,
-    // dus een hangende betaaldienst houdt onze eigen aanvraag net zo lang
-    // bezet, met een verbinding en een werker eraan vast. Niet gerepareerd:
-    // een tijdslimiet raakt alle zes de verzoeken in deze dienst en hoort een
-    // bewuste keuze te zijn, met een limiet die bij de betaalstroom past.
     const opties = nep.mock.calls[0][1] as RequestInit;
-    expect(opties.signal).toBeUndefined();
+    expect(opties.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('maakt een betaling maar één keer aan, ook als Mollie een 503 geeft', async () => {
+    // Na een fout weten we niet of de eerste poging toch aankwam. Opnieuw
+    // proberen kan een tweede betaling voor dezelfde bestelling opleveren.
+    const nep = netwerk(antwoord(503, 'onderhoud'));
+    const { createPayment } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
+
+    const uitkomst = await createPayment(aanvraag);
+
+    expect(uitkomst.success).toBe(false);
+    expect(nep).toHaveBeenCalledTimes(1);
+  });
+
+  it('vraagt de status van een betaling opnieuw op na een 503', async () => {
+    // Opvragen verandert niets bij Mollie, dus dat mag nog eens.
+    const nep = netwerk(
+      antwoord(503, 'onderhoud'),
+      antwoord(200, { id: 'tr_echt123', status: 'paid', amount: { value: '25.00' }, method: 'ideal' }),
+    );
+    const { getPaymentStatus } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
+
+    const status = await getPaymentStatus('tr_echt123');
+
+    expect(status?.status).toBe('paid');
+    expect(nep).toHaveBeenCalledTimes(2);
   });
 
   it('stuurt de betaalwijze en de metadata mee naar Mollie', async () => {

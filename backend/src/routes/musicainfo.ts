@@ -3,6 +3,7 @@ import * as cheerio from 'cheerio';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 
 const router = Router();
 
@@ -80,11 +81,12 @@ const MUSICAINFO_TIMEOUT_MS = 15000;
  * Fetch a page from musicainfo.net with browser-like headers
  */
 async function fetchPage(url: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: BROWSER_HEADERS,
-    redirect: 'follow',
-    signal: AbortSignal.timeout(MUSICAINFO_TIMEOUT_MS),
-  });
+  const response = await beschermdeFetch(
+    'musicainfo',
+    url,
+    { headers: BROWSER_HEADERS, redirect: 'follow' },
+    { tijdslimietMs: MUSICAINFO_TIMEOUT_MS },
+  );
 
   if (!response.ok) {
     throw new ApiError(502, `MusicaInfo returned status ${response.status}`);

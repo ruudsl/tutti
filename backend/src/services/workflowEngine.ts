@@ -3,6 +3,8 @@ import { isModuleEnabled } from '../modules/service';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '../utils/email';
 import sanitizeHtml from 'sanitize-html';
+import { beschermdeFetch } from '../utils/veerkracht';
+import { controleerUitgaandAdres } from '../utils/uitgaandAdres';
 
 interface WorkflowAction {
   id: string;
@@ -425,14 +427,24 @@ async function executeWebhook(config: Record<string, any>, context: ExecutionCon
   const processedBody = body ? replaceVariables(JSON.stringify(body), context) : undefined;
 
   try {
-    const response = await fetch(url, {
-      method: method || 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
+    // Het adres komt van een beheerder van een vereniging, niet van wie de
+    // installatie draait. Geen interne adressen, geen omleidingen, en één
+    // poging: een webhook is een actie.
+    const doel = await controleerUitgaandAdres(url);
+    const response = await beschermdeFetch(
+      `webhook:${doel.host}`,
+      doel.href,
+      {
+        method: method || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: processedBody,
+        redirect: 'manual',
       },
-      body: processedBody,
-    });
+      { pogingen: 1 },
+    );
 
     context.log.push(`Webhook ${method || 'POST'} to ${url}: ${response.status}`);
   } catch (error) {

@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
+import { controleerUitgaandAdres } from '../utils/uitgaandAdres';
 import twilio from 'twilio';
 
 const router = Router();
@@ -364,18 +366,33 @@ async function sendWebhook(
   }
 
   try {
-    const response = await fetch(settings.webhook_url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    // Het adres komt van een gebruiker, en het antwoord gaat terug naar die
+    // gebruiker. Zonder controle las je zo via de server een intern adres uit.
+    const doel = await controleerUitgaandAdres(settings.webhook_url);
+
+    // Eén poging: een webhook is een bericht, en een tweede poging is een
+    // tweede bericht. Elke host een eigen stroomonderbreker, zodat de kapotte
+    // webhook van de ene vereniging die van een andere niet stillegt.
+    // Omleidingen niet volgen: dan stuurt een toegestane host de server alsnog
+    // naar binnen.
+    const response = await beschermdeFetch(
+      `webhook:${doel.host}`,
+      doel.href,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        redirect: 'manual',
+      },
+      { pogingen: 1 },
+    );
 
     const responseText = await response.text();
 
     if (response.ok) {
       return { success: true, response: responseText.substring(0, 1000) };
     } else {
-      return { success: false, error: `HTTP ${response.status}: ${responseText}` };
+      return { success: false, error: `HTTP ${response.status}: ${responseText.substring(0, 200)}` };
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';

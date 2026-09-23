@@ -1,4 +1,5 @@
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 
 // IMSLP API base URLs
 const IMSLP_API_BASE = 'https://imslp.org/api.php';
@@ -92,11 +93,16 @@ export async function searchImslp(query: string, composer?: string): Promise<Ims
   logger.info(`IMSLP search: ${url}`);
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+    const response = await beschermdeFetch(
+      'imslp',
+      url,
+      {
+        headers: {
+          'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+        },
       },
-    });
+      { tijdslimietMs: 20_000 },
+    );
 
     if (!response.ok) {
       throw new Error(`IMSLP API error: ${response.status}`);
@@ -165,11 +171,16 @@ async function searchComposerWorks(composerName: string, query?: string): Promis
   const url = `${IMSLP_SEARCH_API}?${params.toString()}`;
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+    const response = await beschermdeFetch(
+      'imslp',
+      url,
+      {
+        headers: {
+          'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+        },
       },
-    });
+      { tijdslimietMs: 20_000 },
+    );
 
     if (!response.ok) return [];
 
@@ -212,11 +223,16 @@ async function searchWorksDirect(query: string, composer?: string): Promise<Imsl
   const url = `${IMSLP_API_BASE}?${params.toString()}`;
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+    const response = await beschermdeFetch(
+      'imslp',
+      url,
+      {
+        headers: {
+          'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+        },
       },
-    });
+      { tijdslimietMs: 20_000 },
+    );
 
     if (!response.ok) return [];
 
@@ -328,11 +344,16 @@ export async function getWorkDetails(workId: string): Promise<ImslpWorkDetail | 
   logger.info(`IMSLP work detail: ${url}`);
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+    const response = await beschermdeFetch(
+      'imslp',
+      url,
+      {
+        headers: {
+          'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+        },
       },
-    });
+      { tijdslimietMs: 20_000 },
+    );
 
     if (!response.ok) {
       throw new Error(`IMSLP API error: ${response.status}`);
@@ -599,12 +620,17 @@ async function haalOpVanImslp(ruweUrl: string): Promise<Response> {
   let huidige = controleerImslpUrl(ruweUrl);
 
   for (let stap = 0; stap <= MAX_DOORVERWIJZINGEN; stap++) {
-    const antwoord = await fetch(huidige, {
-      headers: {
-        'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+    const antwoord = await beschermdeFetch(
+      'imslp',
+      huidige,
+      {
+        headers: {
+          'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+        },
+        redirect: 'manual',
       },
-      redirect: 'manual',
-    });
+      { tijdslimietMs: 60_000 },
+    );
 
     if (antwoord.status < 300 || antwoord.status >= 400) {
       return antwoord;

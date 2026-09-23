@@ -146,7 +146,6 @@ export interface CloudImportConfig {
 export interface CloudImportFile {
   id: string;
   name: string;
-  downloadUrl?: string;
 }
 
 export interface CloudImportResult {
