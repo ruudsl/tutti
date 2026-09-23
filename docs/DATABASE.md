@@ -1629,6 +1629,33 @@ Payment provider configuration.
 
 **Indexes:** `idx_payment_settings_association`
 
+#### achtergrondtaken
+
+De wachtrij voor werk buiten een verzoek. Zie [ACHTERGRONDTAKEN.md](./ACHTERGRONDTAKEN.md).
+
+| Column          | Type    | Description                                                        |
+| --------------- | ------- | ------------------------------------------------------------------ |
+| id              | TEXT    | Primary key (UUID)                                                 |
+| soort           | TEXT    | Welke taak; bepaalt wat de werker uitvoert                         |
+| sleutel         | TEXT    | Uniek, optioneel: één taak per sleutel (bijv. per tijdvak)         |
+| gegevens        | TEXT    | JSON met de invoer van de taak                                     |
+| status          | TEXT    | `wachtend`, `bezig`, `gelukt` of `mislukt`                         |
+| pogingen        | INTEGER | Aantal keer opgepakt                                               |
+| gepland_op      | TEXT    | Vanaf wanneer de taak aan de beurt is (ISO 8601, UTC)              |
+| eigenaar        | TEXT    | Welke werker hem heeft, zolang hij `bezig` is                      |
+| vergrendeld_tot | TEXT    | Tot wanneer die werker hem heeft; daarna geldt hij als onderbroken |
+| laatste_fout    | TEXT    | Foutmelding van de laatste mislukte poging                         |
+| association_id  | TEXT    | FK to associations; leeg voor systeemtaken                         |
+| aangemaakt_op   | TEXT    | Creation timestamp                                                 |
+| bijgewerkt_op   | TEXT    | Last update                                                        |
+| afgerond_op     | TEXT    | Wanneer hij `gelukt` of `mislukt` werd                             |
+
+**Foreign Keys:**
+
+- `association_id` -> `associations(id)` ON DELETE CASCADE
+
+**Indexes:** `idx_achtergrondtaken_aan_de_beurt` (status, gepland_op), `idx_achtergrondtaken_vereniging`, unieke index op `sleutel`
+
 ---
 
 ## Database Views

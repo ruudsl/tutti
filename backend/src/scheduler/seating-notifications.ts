@@ -39,12 +39,6 @@ interface Seat {
   is_conductor: boolean;
 }
 
-// Run every minute to check for upcoming rehearsals
-const CHECK_INTERVAL_MS = 60 * 1000;
-
-let schedulerRunning = false;
-let timeoutHandle: NodeJS.Timeout | null = null;
-
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -383,37 +377,4 @@ export async function runNotificationRound(): Promise<void> {
   } catch (error) {
     logger.error('Error in notification scheduler', { error });
   }
-}
-
-async function checkAndSendNotifications(): Promise<void> {
-  if (!schedulerRunning) return;
-
-  await runNotificationRound();
-
-  // Schedule next check
-  if (schedulerRunning) {
-    timeoutHandle = setTimeout(checkAndSendNotifications, CHECK_INTERVAL_MS);
-  }
-}
-
-export function startScheduler(): void {
-  if (schedulerRunning) {
-    logger.warn('Seating notification scheduler already running');
-    return;
-  }
-
-  schedulerRunning = true;
-  logger.info('Seating notification scheduler started');
-
-  // Start checking after a short delay
-  timeoutHandle = setTimeout(checkAndSendNotifications, 5000);
-}
-
-export function stopScheduler(): void {
-  schedulerRunning = false;
-  if (timeoutHandle) {
-    clearTimeout(timeoutHandle);
-    timeoutHandle = null;
-  }
-  logger.info('Seating notification scheduler stopped');
 }

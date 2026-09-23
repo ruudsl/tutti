@@ -1,11 +1,11 @@
 /**
- * Automated Database Backup Scheduler
+ * Automated Database Backup
  *
  * Periodically copies the SQLite database file to a backup directory and
  * removes backups older than the configured retention period.
  *
  * Configuration (environment variables):
- * - BACKUP_ENABLED:         'false' disables the scheduler (default: true)
+ * - BACKUP_ENABLED:         'false' disables the backup job (default: true)
  * - BACKUP_INTERVAL_HOURS:  hours between backups (default: 24)
  * - BACKUP_RETENTION_DAYS:  days to keep old backups (default: 14)
  * - BACKUP_DIR:             backup directory (default: 'backups/' next to the database)
@@ -20,13 +20,7 @@ import config from '../config';
 const DEFAULT_INTERVAL_HOURS = 24;
 const DEFAULT_RETENTION_DAYS = 14;
 
-// Short delay before the first backup after startup
-const INITIAL_DELAY_MS = 60 * 1000;
-
 const BACKUP_FILE_PATTERN = /^tutti-backup-\d{4}-\d{2}-\d{2}-\d{4}\.sqlite$/;
-
-let schedulerRunning = false;
-let backupTimer: NodeJS.Timeout | null = null;
 
 /**
  * Resolve the backup directory: BACKUP_DIR env var, or 'backups/' next to the database file.
@@ -35,11 +29,11 @@ export function getBackupDir(): string {
   return process.env.BACKUP_DIR || path.join(path.dirname(config.dbPath), 'backups');
 }
 
-function isBackupEnabled(): boolean {
+export function isBackupEnabled(): boolean {
   return process.env.BACKUP_ENABLED !== 'false';
 }
 
-function getIntervalHours(): number {
+export function getIntervalHours(): number {
   const parsed = parseFloat(process.env.BACKUP_INTERVAL_HOURS || '');
   return parsed > 0 ? parsed : DEFAULT_INTERVAL_HOURS;
 }
@@ -127,57 +121,4 @@ export function runBackup(): { file: string | null; removed: number } {
     logger.error('Scheduled database backup failed', { error: err });
     return { file: null, removed: 0 };
   }
-}
-
-function scheduleNextBackup(delayMs: number): void {
-  if (!schedulerRunning) return;
-
-  backupTimer = setTimeout(() => {
-    backupTimer = null;
-    if (!schedulerRunning) return;
-
-    runBackup();
-    scheduleNextBackup(getIntervalHours() * 60 * 60 * 1000);
-  }, delayMs);
-
-  if (typeof backupTimer.unref === 'function') {
-    backupTimer.unref();
-  }
-}
-
-/**
- * Start the backup scheduler
- */
-export function startScheduler(): void {
-  if (!isBackupEnabled()) {
-    logger.info('Database backup scheduler disabled (BACKUP_ENABLED=false)');
-    return;
-  }
-
-  if (schedulerRunning) {
-    logger.warn('Database backup scheduler already running');
-    return;
-  }
-
-  schedulerRunning = true;
-  logger.info('Database backup scheduler started', {
-    intervalHours: getIntervalHours(),
-    retentionDays: getRetentionDays(),
-    backupDir: getBackupDir(),
-  });
-
-  // First backup shortly after startup, then on the configured interval
-  scheduleNextBackup(INITIAL_DELAY_MS);
-}
-
-/**
- * Stop the backup scheduler
- */
-export function stopScheduler(): void {
-  schedulerRunning = false;
-  if (backupTimer) {
-    clearTimeout(backupTimer);
-    backupTimer = null;
-  }
-  logger.info('Database backup scheduler stopped');
 }

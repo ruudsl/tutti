@@ -577,14 +577,14 @@ status = 'wachtend'`; wordt het er meer, dan hoort dit werk na de
 
 ### Deliverables
 
-- [ ] `jobs`-tabel met migratie
-- [ ] Werker met sluis, herkansing en eindstation
-- [ ] De vier draaiende planners omgezet
-- [ ] `workflow-runner` en `email-digest` aangezet of weggehaald, met een reden
-- [ ] `backgroundQueue.ts` vervangen of verwijderd
+- [x] Tabel met migratie — _`achtergrondtaken`, migratie `20260923171135_achtergrondtaken` en `schema.ts`. De tabel heet niet `jobs` maar Nederlands, zoals nieuwe code hier hoort_
+- [x] Werker met sluis, herkansing en eindstation — _`backend/src/taken/wachtrij.ts`. Een niet-herhaalbare taak die door een herstart werd onderbroken, wordt niet opnieuw gedaan maar als mislukt gemarkeerd, met die reden erbij_
+- [x] De vier draaiende planners omgezet — _`backend/src/taken/index.ts`. Elke periodieke taak heeft een sleutel per tijdvak en draait daardoor één keer per vak, ook na een herstart. Dat was bij de AVG-opschoning niet zo: die draaide opnieuw als er binnen het opschoonuur werd uitgerold. En een mislukte back-up staat nu als mislukt in de wachtrij in plaats van alleen in het logboek_
+- [ ] `workflow-runner` en `email-digest` aangezet of weggehaald, met een reden — _vraagt een keuze: aanzetten betekent dat leden vanaf dan een wekelijkse mail krijgen en dat door beheerders ingestelde workflows ineens gaan lopen_
+- [x] `backgroundQueue.ts` vervangen of verwijderd — _verwijderd, met zijn test; hij werd nergens gebruikt en de wachtrij vervangt hem_
 - [ ] Beheerscherm voor de wachtrij en de mislukte taken
 - [ ] Zwaar werk binnen een verzoek naar de wachtrij
-- [ ] Documentatie in `docs/` en een regel in `CLAUDE.md`
+- [x] Documentatie in `docs/` en een regel in `CLAUDE.md` — _`docs/ACHTERGRONDTAKEN.md`, regel 21_
 
 ---
 

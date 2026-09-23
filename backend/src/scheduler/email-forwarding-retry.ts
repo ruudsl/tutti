@@ -5,7 +5,7 @@
  * mailboxes weren't ready during initial onboarding.
  *
  * Retry strategy:
- * - Checks every 2 minutes for pending tasks
+ * - Runs every 2 minutes as a background job (src/taken/index.ts)
  * - Uses exponential backoff: 5min, 15min, 45min, 2h, 6h
  * - Maximum 10 retry attempts over ~9 hours
  * - After max retries, marks task as failed (requires manual intervention)
@@ -15,9 +15,6 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import logger from '../utils/logger';
 import { getMicrosoftConfig, getAppAccessToken, setupEmailForwarding } from '../utils/m365';
-
-// Check every 2 minutes
-const CHECK_INTERVAL_MS = 2 * 60 * 1000;
 
 // Maximum retry attempts
 const MAX_RETRY_ATTEMPTS = 10;
@@ -60,9 +57,6 @@ interface User {
   microsoft_id: string;
   private_email: string;
 }
-
-let schedulerRunning = false;
-let timeoutHandle: NodeJS.Timeout | null = null;
 
 function getNextRetryDelay(retryCount: number): number {
   const index = Math.min(retryCount, RETRY_DELAYS_MS.length - 1);
@@ -304,39 +298,6 @@ export async function processPendingTasks(delayBetweenTasksMs: number = 1000): P
   } catch (err) {
     logger.error('Error in email forwarding retry scheduler', { error: err });
   }
-}
-
-async function checkAndProcessPendingTasks(): Promise<void> {
-  if (!schedulerRunning) return;
-
-  await processPendingTasks();
-
-  // Schedule next check
-  if (schedulerRunning) {
-    timeoutHandle = setTimeout(checkAndProcessPendingTasks, CHECK_INTERVAL_MS);
-  }
-}
-
-export function startScheduler(): void {
-  if (schedulerRunning) {
-    logger.warn('Email forwarding retry scheduler already running');
-    return;
-  }
-
-  schedulerRunning = true;
-  logger.info('Email forwarding retry scheduler started');
-
-  // Start checking after a short delay (30 seconds to let the system initialize)
-  timeoutHandle = setTimeout(checkAndProcessPendingTasks, 30 * 1000);
-}
-
-export function stopScheduler(): void {
-  schedulerRunning = false;
-  if (timeoutHandle) {
-    clearTimeout(timeoutHandle);
-    timeoutHandle = null;
-  }
-  logger.info('Email forwarding retry scheduler stopped');
 }
 
 /**

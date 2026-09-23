@@ -10,9 +10,6 @@ import fs from 'fs';
 import db from '../database/connection';
 import logger from '../utils/logger';
 
-// Run cleanup check every hour
-const CHECK_INTERVAL_MS = 60 * 60 * 1000;
-
 // Default cleanup hour (3 AM)
 const DEFAULT_CLEANUP_HOUR = 3;
 
@@ -21,10 +18,6 @@ const DEFAULT_CLEANUP_HOUR = 3;
 const DEFAULT_SOFT_DELETE_RETENTION_DAYS = 30;
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
-
-let schedulerRunning = false;
-let timeoutHandle: NodeJS.Timeout | null = null;
-let lastCleanupDate: string | null = null;
 
 interface RetentionSetting {
   association_id: string;
@@ -269,7 +262,7 @@ export function purgeSoftDeleted(): CleanupResult[] {
 /**
  * Run the cleanup for all associations with auto_delete enabled
  */
-async function runCleanup(): Promise<CleanupResult[]> {
+export async function runCleanup(): Promise<CleanupResult[]> {
   const results: CleanupResult[] = [];
 
   try {
@@ -402,58 +395,11 @@ async function runCleanup(): Promise<CleanupResult[]> {
 }
 
 /**
- * Check if cleanup should run (once per day at configured hour)
+ * Het uur waarop de dagelijkse opschoning draait (GDPR_CLEANUP_HOUR, standaard
+ * 3 uur 's nachts). De taak zelf staat in src/taken/index.ts.
  */
-async function checkAndRunCleanup(): Promise<void> {
-  if (!schedulerRunning) return;
-
-  const now = new Date();
-  const currentHour = now.getHours();
-  const today = now.toISOString().split('T')[0];
-
-  // Run cleanup at the configured hour, but only once per day
-  const cleanupHour = parseInt(process.env.GDPR_CLEANUP_HOUR || '') || DEFAULT_CLEANUP_HOUR;
-
-  if (currentHour === cleanupHour && lastCleanupDate !== today) {
-    logger.info('Starting scheduled GDPR cleanup');
-    lastCleanupDate = today;
-    await runCleanup();
-  }
-
-  // Schedule next check
-  if (schedulerRunning) {
-    timeoutHandle = setTimeout(checkAndRunCleanup, CHECK_INTERVAL_MS);
-  }
-}
-
-/**
- * Start the GDPR cleanup scheduler
- */
-export function startScheduler(): void {
-  if (schedulerRunning) {
-    logger.warn('GDPR cleanup scheduler already running');
-    return;
-  }
-
-  schedulerRunning = true;
-  logger.info('GDPR cleanup scheduler started', {
-    cleanupHour: process.env.GDPR_CLEANUP_HOUR || DEFAULT_CLEANUP_HOUR,
-  });
-
-  // Start checking after a short delay
-  timeoutHandle = setTimeout(checkAndRunCleanup, 10000);
-}
-
-/**
- * Stop the GDPR cleanup scheduler
- */
-export function stopScheduler(): void {
-  schedulerRunning = false;
-  if (timeoutHandle) {
-    clearTimeout(timeoutHandle);
-    timeoutHandle = null;
-  }
-  logger.info('GDPR cleanup scheduler stopped');
+export function opschoonUur(): number {
+  return parseInt(process.env.GDPR_CLEANUP_HOUR || '') || DEFAULT_CLEANUP_HOUR;
 }
 
 /**
