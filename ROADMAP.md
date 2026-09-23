@@ -98,6 +98,33 @@ pull request achterblijven.
    De achterstandslijst in `src/locales/__tests__/translations.test.ts` is leeg;
    het mechanisme blijft staan zodat een nieuw gat weer opvalt
 
+10. **Kortingscodes zijn half gebouwd.** De backend kan ze aanmaken, wijzigen en
+    controleren (`routes/discount-codes.ts`), maar er is geen scherm voor, de
+    bestelroute in `routes/tickets.ts` neemt geen code aan, en
+    `applyDiscountCode` in `services/ticketing.ts` - die het gebruik vastlegt -
+    wordt nergens aangeroepen. `uses_count` blijft daardoor altijd 0, en
+    "maximaal 50 keer" of "één keer per koper" wordt nooit gehandhaafd. Kwaad
+    kan het nu niet: niemand kan een code gebruiken. Afbouwen of weghalen is
+    een productkeuze. Wordt het afgebouwd, zet dan de grens in het vastleggen
+    zelf: `uses_count` alleen ophogen `WHERE uses_count < max_uses`, en kijken
+    of er een rij veranderde. Anders kunnen twee gelijktijdige bestellingen
+    samen over de grens heen - zie `docs/POSTGRES_MIGRATION.md` §4.H
+11. **Kaartfacturen van twee verenigingen op één dag krijgen hetzelfde nummer.**
+    `services/invoices.ts` telt per vereniging per dag (`INV-20260923-0001`),
+    maar `ticket_invoices.invoice_number` is uniek over de hele installatie. De
+    tweede vereniging die op een dag een kaart verkoopt, krijgt daardoor
+    `UNIQUE constraint failed` en geen factuur. Vandaag slaapt dit:
+    `createInvoice` wordt nergens aangeroepen. Het gaat af zodra kaartfacturen
+    worden aangesloten. Twee oplossingen, en de keuze raakt wat er op de
+    factuur staat:
+    - de vereniging in het nummer opnemen (bijvoorbeeld de slug): geen
+      schemawijziging, maar een lang nummer dat meeverandert met de slug;
+    - de sleutel `(association_id, invoice_number)` maken, zoals bij `invoices`
+      en `transactions`: het juiste model, maar een tabel-herbouw waarbij
+      `invoice_line_items` (met `ON DELETE CASCADE`) mee moet, omdat de
+      migratieloper elke migratie in een transactie draait en de
+      verwijzingscontrole daarbinnen niet uit kan
+
 Daarnaast wachten twee GitHub-instellingen die alleen de eigenaar van de
 repository kan zetten. Zonder deze twee stopt `deploy-staging.yml` met een
 uitleg in plaats van met een fout, en rolt er dus niets uit:

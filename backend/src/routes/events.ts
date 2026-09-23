@@ -1085,6 +1085,18 @@ router.post(
       throw new ApiError(404, 'Vervoer niet gevonden.');
     }
 
+    // Een lid staat hooguit één keer op een rit; twee keer drukken gaf twee
+    // plekken, en die telden allebei mee voor de capaciteit. Losse passagiers
+    // zonder account zijn niet te herkennen: twee keer "Jan" kan twee mensen zijn.
+    if (userId) {
+      const alAanBoord = db
+        .prepare('SELECT 1 FROM event_transport_passengers WHERE transport_id = ? AND user_id = ?')
+        .get(req.params.transportId, userId);
+      if (alAanBoord) {
+        throw new ApiError(409, 'Dit lid rijdt al mee met dit vervoer.');
+      }
+    }
+
     const currentCount = db
       .prepare('SELECT COUNT(*) as count FROM event_transport_passengers WHERE transport_id = ?')
       .get(req.params.transportId) as { count: number };

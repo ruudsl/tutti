@@ -303,6 +303,83 @@ De lijst is opnieuw te maken met een scan die op inspringing bijhoudt of een
 `.prepare(` binnen een lus staat; let erop dat `db` en `.prepare(` op
 verschillende regels kunnen staan, anders telt de scan te laag uit.
 
+### H. Eerst controleren, dan schrijven
+
+_Net als §4.G: vandaag onschuldig, na de overstap niet._
+
+Veel routes controleren eerst iets en schrijven dan: is er nog plaats, heeft dit
+lid al gestemd, wat is het volgende factuurnummer. Twee verzoeken die tegelijk
+binnenkomen kunnen allebei door die controle komen voordat een van beide
+schrijft - tenzij er tussen controle en schrijven niets kan gebeuren.
+
+Met sql.js kán daar niets gebeuren. De database draait in hetzelfde proces,
+elke query is synchroon, en JavaScript voert een handler uit tot aan de eerste
+`await`. Staat er tussen de controle en het schrijven geen `await`, dan is die
+reeks ondeelbaar - zonder dat iemand dat zo bedoeld heeft.
+
+**Nagelopen in september 2026: vandaag gaat het nergens mis.**
+
+- De kaartverkoop reserveert met een voorwaardelijke `UPDATE` binnen een
+  transactie (`reserveTickets`). Dat blijft ook na de overstap goed.
+- Tochten (`routes/tours.ts:545`), vervoer (`routes/events.ts:1104`) en de
+  factuur- en boekingsnummers (`routes/accounting.ts:1098`, `:242`) controleren
+  en schrijven zonder `await` ertussen.
+- Een scan op _controle, dan `await`, dan schrijven_ vond zes plekken. Vijf
+  daarvan controleren iets anders dan wat ze schrijven (is Spond ingesteld, is
+  Google gekoppeld). De zesde, een lid aanmaken met een Microsoft 365-account
+  (`routes/onboarding.ts:726`), staat wel open, maar `users.email` is uniek en
+  Microsoft weigert zelf een tweede account met dezelfde naam. Wat overblijft:
+  de controle negeert hoofdletters, de unieke index niet - twee gelijktijdige
+  aanmeldingen van `Jan@…` en `jan@…` komen er allebei door.
+
+Na de overstap wordt elke query een `await`, en dan is elk van onderstaande een
+race. Wat de database zelf bewaakt komt uit `PRAGMA index_list` op een
+gemigreerde database, niet uit de bron:
+
+| Regel                                        | Waar                    | Bewaakt door                                             | Na de overstap                                                                  |
+| -------------------------------------------- | ----------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Niet meer deelnemers dan `max_participants`  | `routes/tours.ts:545`   | alleen de code                                           | overboeking                                                                     |
+| Eén inschrijving per lid per tocht           | idem                    | uniek `(tour_id, user_id)`                               | goed                                                                            |
+| Niet meer passagiers dan `capacity`          | `routes/events.ts:1104` | alleen de code                                           | overboeking                                                                     |
+| Eén inschrijving per lid per rit             | idem                    | alleen de code¹                                          | dubbele inschrijving                                                            |
+| Eén aanwezigheidsregel per lid per repetitie | `routes/spond.ts`       | niets - alleen `id` is uniek                             | dubbele regels                                                                  |
+| Eén keer stemmen per peiling                 | `routes/polls.ts`       | alleen de code; uniek is `(poll_id, option_id, user_id)` | twee stemmen op verschillende opties                                            |
+| Doorlopende factuur- en boekingsnummers      | `routes/accounting.ts`  | uniek per vereniging                                     | een fout in plaats van een dubbel nummer: veilig, maar de tweede krijgt een 500 |
+| Eén account per e-mailadres                  | `users`                 | uniek, maar hoofdlettergevoelig                          | `Jan@` en `jan@` naast elkaar                                                   |
+
+¹ Tot september 2026 bewaakte ook de code dit niet: twee keer op "rijd mee"
+drukken zette een lid twee keer op de rit, en beide plekken telden mee voor de
+capaciteit. Dat was dus geen race maar een gewone fout, gevonden bij het
+nalopen voor deze paragraaf.
+
+Wat per soort helpt:
+
+- **Een grens** (deelnemers, passagiers): de voorwaarde in het schrijven zelf
+  zetten, zoals `reserveTickets` al doet, en kijken of er een rij veranderde.
+  Of de ouderrij vergrendelen met `SELECT … FOR UPDATE` binnen de transactie.
+- **Eén per combinatie**: een unieke index. Vóór de migratie die hem aanlegt de
+  bestaande gegevens op dubbelen nalopen, anders faalt de migratie bij het
+  opstarten. Bij `rehearsal_attendance` hoort daar een keuze bij: `user_id` is
+  leeg voor Spond-leden zonder account, dus de sleutel is
+  `(rehearsal_id, user_id)` voor leden en `(rehearsal_id, spond_member_id)` voor
+  de rest.
+- **Volgnummers**: geen `SEQUENCE`, die laat gaten bij een teruggedraaide
+  transactie en een factuurreeks hoort doorlopend te zijn. Beter een rij per
+  vereniging met het laatste nummer, opgehoogd met `UPDATE … RETURNING` in
+  dezelfde transactie als de factuur.
+- **E-mail**: een unieke index op `LOWER(email)`.
+
+De unieke indexen horen in fase 0: ze zijn nu goedkoop, beschermen ook tegen
+een toekomstige route met een `await` op de verkeerde plek, en dubbelen
+opruimen gaat nu makkelijker dan midden in een overstap. De grenzen en
+volgnummers horen bij fase 3. Nu herschrijven voegt niets toe, want sql.js
+maakt ze al ondeelbaar.
+
+De scan is opnieuw te draaien: zoek per handler een `SELECT` met binnen een
+paar regels een `throw new ApiError(4xx)`, daarna een `await` (auditlog en
+logger niet meegeteld), daarna een `INSERT`, `UPDATE` of `DELETE`. Kijk bij elke
+treffer of de controle over dezelfde rijen gaat als het schrijven; meestal niet.
+
 ---
 
 ## 5. Een pad in fasen
@@ -321,6 +398,10 @@ vereniging meegroeien. Vandaag scheelt dat anderhalve milliseconde en dus
 niets; na fase 3 scheelt het tientallen. Nu doen is goedkoper dan straks,
 omdat je de lus dan nog los kunt testen zonder dat de halve aanroepketen
 `async` is geworden.
+
+En de unieke indexen uit §4.H: één inschrijving per rit, één aanwezigheidsregel
+per lid per repetitie, e-mail zonder onderscheid in hoofdletters. Dubbelen
+opruimen is nu een losse klus; tijdens de overstap is het er een van vele.
 
 **Fase 1 — één schemabron** _(1-2 weken)_
 Vier bronnen terugbrengen tot één, twee migratiesystemen tot één.
