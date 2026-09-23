@@ -69,8 +69,31 @@ process.on('unhandledRejection', (reden) => {
  * rood zonder dat er iets veranderd is - dat is precies wat er gebeurde toen
  * hier 88 stond.
  *
- * Gemeten op de CI-runner, 24-08-2026: performance 84, accessibility 98,
- * best-practices 100, seo 100. Dezelfde runner mat op `main` 79 en 96.
+ * Gemeten op de CI-runner, 23-09-2026, twee runs van vrijwel dezelfde build:
+ * performance 92 en 90, accessibility 98, best-practices 100, seo 100. FCP
+ * 1,4 s en LCP 3,0 s in beide; het verschil zat in TBT (20 tegen 210 ms), dus
+ * in rekentijd op de runner, niet in de pagina. Dezelfde runner mat op `main`
+ * daarvoor 84-85. De drempel staat op 86: vier punten onder de laagste
+ * meting, dezelfde marge als toen hij op 80 stond bij een gemeten 84. Eerst
+ * stond hier 88, op basis van alleen de run van 92 - twee punten boven de
+ * volgende meting is geen drempel maar een muntworp.
+ *
+ * Van 84 naar 92 zat weer in wat er vóór de eerste weergave binnen moest:
+ *  - index.html heeft een shell (het logo als inline SVG). Tot React tekende
+ *    was #root leeg en de pagina wit. FCP ging daardoor van 2,7 naar 1,4 s.
+ *    De shell bevat bewust geen tekst of <img>: dan telt hij niet als LCP en
+ *    blijft die het echte inlogscherm meten (zie app-shell.test.ts).
+ *  - Van nl.json komt alleen de kern die het inlogscherm gebruikt mee in de
+ *    hoofdbundel, ongeveer 9 van de 243 KB (tekstenKernPlugin.ts). De
+ *    hoofdbundel ging van 96 naar 39 KB ingepakt.
+ *
+ * Wat de LCP nog op 3,0 s houdt: de HTML met alle ingelijnde CSS (25 KB
+ * ingepakt), React en de andere vendorchunks (ongeveer 130 KB) en het
+ * lettertype (49 KB). Wie verder wil: de CSS voor het inlogscherm apart, of
+ * axios eruit. Dat zijn verbouwingen, geen instellingen.
+ *
+ * Eerder, 24-08-2026: performance 84, best-practices 100. Dezelfde runner mat
+ * op `main` toen 79 en 96.
  *
  * De sprong van 79 naar 84 zat in wat de browser moest ophalen en ontleden
  * voordat er iets op het scherm stond. De hoofdbundel ging van 905 KB naar
@@ -97,7 +120,7 @@ process.on('unhandledRejection', (reden) => {
  * onopgemerkt in een cijfer verdwijnt.
  */
 const DREMPELS = {
-  performance: 80,
+  performance: 86,
   accessibility: 95,
   'best-practices': 95,
   seo: 95,
