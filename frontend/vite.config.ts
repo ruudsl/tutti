@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { tekstenKern } from './tekstenKernPlugin';
 
 /**
  * Zet de stylesheet van het schild rechtstreeks in de HTML.
@@ -51,6 +52,7 @@ export default defineConfig({
   plugins: [
     react(),
     stijlenInlijnen(),
+    tekstenKern(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',

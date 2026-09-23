@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { taalGereed } from './i18n';
+import { taalGereed, tekstenGereed } from './i18n';
 import './index.css';
 import './styles/theme-2026.css';
 
@@ -11,6 +11,14 @@ function tekenen(): void {
       <App />
     </React.StrictMode>,
   );
+
+  // De rest van de Nederlandse teksten, zodra de browser na de eerste
+  // weergave even niets te doen heeft. Wie inlogt, heeft ze dan meestal al
+  // binnen voordat de eerste pagina erom vraagt. Niet eerder: dit bestand
+  // concurreert anders om dezelfde verbinding als wat het inlogscherm nodig
+  // heeft, en dat is precies wat de kern moet voorkomen.
+  const straks = window.requestIdleCallback ?? ((terug: () => void) => window.setTimeout(terug, 1));
+  straks(() => void tekstenGereed());
 }
 
 // Nederlands zit in de hoofdbundel, dus daarvoor is dit een al vervulde

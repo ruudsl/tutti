@@ -1431,6 +1431,21 @@ h4,
   }
 }
 
+/*
+ * De shell uit index.html: wat er staat tot React tekent. Deze stylesheet
+ * wordt bij het bouwen in de <head> ingelijnd, dus de shell heeft geen extra
+ * verzoek nodig. Geen animatie en geen doorzichtigheid: iets met opacity 0
+ * telt niet als getekend, en dan helpt de shell niet.
+ */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  color: var(--primary);
+}
+
 /* Login page - iOS HIG-aligned with subtle materials */
 .login-page {
   min-height: 100vh;

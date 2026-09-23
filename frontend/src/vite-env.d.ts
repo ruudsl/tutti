@@ -19,3 +19,9 @@ declare module 'virtual:pwa-register/react' {
     updateServiceWorker: (reloadPage?: boolean) => Promise<void>;
   };
 }
+
+/** Het deel van nl.json dat in de hoofdbundel komt; zie tekstenKernPlugin.ts. */
+declare module 'virtual:teksten-kern' {
+  const kern: { [sleutel: string]: unknown };
+  export default kern;
+}

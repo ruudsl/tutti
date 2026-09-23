@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense, type ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,7 @@ import { InstallPrompt } from './components/InstallPrompt';
 import { AriaLiveProvider } from './components/AriaLiveRegion';
 import { ConfirmProvider } from './hooks/useConfirm';
 import { ROLES } from './utils/constants';
+import { tekstenGereed } from './i18n';
 
 // Alleen wat de eerste weergave echt nodig heeft, staat hier eager.
 //
@@ -26,6 +27,22 @@ import { ROLES } from './utils/constants';
 // typen. Dat is de duurste pagina van de twee, en de enige die je op dat
 // moment zeker niet nodig hebt.
 import Login from './pages/Login';
+
+/**
+ * lazy(), maar de pagina tekent pas als ook de volledige Nederlandse teksten
+ * er zijn.
+ *
+ * In de hoofdbundel zit alleen de kern van nl.json: wat het inlogscherm nodig
+ * heeft (zie tekstenKernPlugin.ts). Elke pagina hieronder gebruikt teksten
+ * daarbuiten. Zonder dit wachten stond zo'n pagina even vol kale sleutels als
+ * `members.title`. Het kost meestal geen tijd: de code van de pagina moet
+ * toch nog binnenkomen, en het vertaalbestand komt tegelijk mee - of is er
+ * al, omdat main.tsx het na de eerste weergave ophaalt.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- zelfde typering als lazy() zelf
+function lui<T extends ComponentType<any>>(laad: () => Promise<{ default: T }>) {
+  return lazy(() => Promise.all([laad(), tekstenGereed()]).then(([module]) => module));
+}
 
 // Layout en de toestemmingspoort stonden hier als gewone import, en dat is
 // duurder dan het lijkt. Layout sleept het hele ingelogde schild mee -
@@ -38,127 +55,127 @@ import Login from './pages/Login';
 // Beide renderen uitsluitend binnen <PrivateRoute>, dus voor wie niet is
 // ingelogd komt er nu niets van binnen. Wie wel inlogt haalt ze op terwijl de
 // Suspense-terugval al op het scherm staat.
-const Layout = lazy(() => import('./components/Layout'));
-const PrivacyConsentGate = lazy(() =>
+const Layout = lui(() => import('./components/Layout'));
+const PrivacyConsentGate = lui(() =>
   import('./components/PrivacyConsentGate').then((m) => ({ default: m.PrivacyConsentGate })),
 );
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Dashboard = lui(() => import('./pages/Dashboard'));
 
 // All other pages are lazy loaded (route-based code-splitting).
 // Chunk-load failures after a deploy are handled by SectionErrorBoundary,
 // which reloads the page once (sessionStorage-guarded).
 
 // Authentication pages
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const MicrosoftCallback = lazy(() => import('./pages/MicrosoftCallback'));
+const ForgotPassword = lui(() => import('./pages/ForgotPassword'));
+const ResetPassword = lui(() => import('./pages/ResetPassword'));
+const MicrosoftCallback = lui(() => import('./pages/MicrosoftCallback'));
 
 // User pages
-const Profile = lazy(() => import('./pages/Profile'));
-const SessionManagement = lazy(() => import('./pages/SessionManagement'));
-const DataExport = lazy(() => import('./pages/DataExport'));
-const MyMusic = lazy(() => import('./pages/MyMusic'));
-const Tools = lazy(() => import('./pages/Tools'));
-const Issues = lazy(() => import('./pages/Issues'));
-const Contacts = lazy(() => import('./pages/Contacts'));
-const CustomFieldsAdmin = lazy(() => import('./pages/CustomFieldsAdmin'));
-const PrivacySettings = lazy(() => import('./pages/PrivacySettings'));
-const Polls = lazy(() => import('./pages/Polls'));
-const Tasks = lazy(() => import('./pages/Tasks'));
-const Posts = lazy(() => import('./pages/Posts'));
-const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'));
-const Accounting = lazy(() => import('./pages/Accounting'));
+const Profile = lui(() => import('./pages/Profile'));
+const SessionManagement = lui(() => import('./pages/SessionManagement'));
+const DataExport = lui(() => import('./pages/DataExport'));
+const MyMusic = lui(() => import('./pages/MyMusic'));
+const Tools = lui(() => import('./pages/Tools'));
+const Issues = lui(() => import('./pages/Issues'));
+const Contacts = lui(() => import('./pages/Contacts'));
+const CustomFieldsAdmin = lui(() => import('./pages/CustomFieldsAdmin'));
+const PrivacySettings = lui(() => import('./pages/PrivacySettings'));
+const Polls = lui(() => import('./pages/Polls'));
+const Tasks = lui(() => import('./pages/Tasks'));
+const Posts = lui(() => import('./pages/Posts'));
+const EmailCampaigns = lui(() => import('./pages/EmailCampaigns'));
+const Accounting = lui(() => import('./pages/Accounting'));
 
 // Phase D: Operations
-const Projects = lazy(() => import('./pages/Projects'));
-const Tours = lazy(() => import('./pages/Tours'));
-const Resources = lazy(() => import('./pages/Resources'));
-const Equipment = lazy(() => import('./pages/Equipment'));
+const Projects = lui(() => import('./pages/Projects'));
+const Tours = lui(() => import('./pages/Tours'));
+const Resources = lui(() => import('./pages/Resources'));
+const Equipment = lui(() => import('./pages/Equipment'));
 
 // Phase E: Automation + Content
-const Outfits = lazy(() => import('./pages/Outfits'));
-const Wiki = lazy(() => import('./pages/Wiki'));
-const Workflows = lazy(() => import('./pages/Workflows'));
-const Performances = lazy(() => import('./pages/Performances'));
+const Outfits = lui(() => import('./pages/Outfits'));
+const Wiki = lui(() => import('./pages/Wiki'));
+const Workflows = lui(() => import('./pages/Workflows'));
+const Performances = lui(() => import('./pages/Performances'));
 
 // Music management
-const MusicPieces = lazy(() => import('./pages/MusicPieces'));
-const MusicTitles = lazy(() => import('./pages/MusicTitles'));
-const Upload = lazy(() => import('./pages/Upload'));
-const PdfTools = lazy(() => import('./pages/PdfTools'));
-const MusicListManager = lazy(() => import('./pages/MusicListManager'));
-const ImslpBrowser = lazy(() => import('./pages/ImslpBrowser'));
+const MusicPieces = lui(() => import('./pages/MusicPieces'));
+const MusicTitles = lui(() => import('./pages/MusicTitles'));
+const Upload = lui(() => import('./pages/Upload'));
+const PdfTools = lui(() => import('./pages/PdfTools'));
+const MusicListManager = lui(() => import('./pages/MusicListManager'));
+const ImslpBrowser = lui(() => import('./pages/ImslpBrowser'));
 
 // Reference data management
-const Genres = lazy(() => import('./pages/Genres'));
-const Loans = lazy(() => import('./pages/Loans'));
+const Genres = lui(() => import('./pages/Genres'));
+const Loans = lui(() => import('./pages/Loans'));
 
 // Statistics and reporting
-const Statistics = lazy(() => import('./pages/Statistics'));
-const AttendanceAnalytics = lazy(() => import('./pages/AttendanceAnalytics'));
-const AuditLogs = lazy(() => import('./pages/AuditLogs'));
+const Statistics = lui(() => import('./pages/Statistics'));
+const AttendanceAnalytics = lui(() => import('./pages/AttendanceAnalytics'));
+const AuditLogs = lui(() => import('./pages/AuditLogs'));
 
 // Admin pages
-const Users = lazy(() => import('./pages/Users'));
-const Orchestras = lazy(() => import('./pages/Orchestras'));
-const Settings = lazy(() => import('./pages/Settings'));
-const Modules = lazy(() => import('./pages/Modules'));
-const ThemeSettings = lazy(() => import('./pages/ThemeSettings'));
-const Changelog = lazy(() => import('./pages/Changelog'));
-const EntraSync = lazy(() => import('./pages/EntraSync'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Users = lui(() => import('./pages/Users'));
+const Orchestras = lui(() => import('./pages/Orchestras'));
+const Settings = lui(() => import('./pages/Settings'));
+const Modules = lui(() => import('./pages/Modules'));
+const ThemeSettings = lui(() => import('./pages/ThemeSettings'));
+const Changelog = lui(() => import('./pages/Changelog'));
+const EntraSync = lui(() => import('./pages/EntraSync'));
+const Onboarding = lui(() => import('./pages/Onboarding'));
 
 // Rehearsals and events
-const Rehearsals = lazy(() => import('./pages/Rehearsals'));
-const Concerts = lazy(() => import('./pages/Concerts'));
-const Availability = lazy(() => import('./pages/Availability'));
-const Practice = lazy(() => import('./pages/Practice'));
-const HolidaySettings = lazy(() => import('./pages/HolidaySettings'));
-const SeasonPlanner = lazy(() => import('./pages/SeasonPlanner'));
+const Rehearsals = lui(() => import('./pages/Rehearsals'));
+const Concerts = lui(() => import('./pages/Concerts'));
+const Availability = lui(() => import('./pages/Availability'));
+const Practice = lui(() => import('./pages/Practice'));
+const HolidaySettings = lui(() => import('./pages/HolidaySettings'));
+const SeasonPlanner = lui(() => import('./pages/SeasonPlanner'));
 
 // Equipment and uniforms
-const Uniforms = lazy(() => import('./pages/Uniforms'));
-const InstrumentAssets = lazy(() => import('./pages/InstrumentAssets'));
-const Events = lazy(() => import('./pages/Events'));
-const MultiAssociation = lazy(() => import('./pages/MultiAssociation'));
-const MusicSharing = lazy(() => import('./pages/MusicSharing'));
+const Uniforms = lui(() => import('./pages/Uniforms'));
+const InstrumentAssets = lui(() => import('./pages/InstrumentAssets'));
+const Events = lui(() => import('./pages/Events'));
+const MultiAssociation = lui(() => import('./pages/MultiAssociation'));
+const MusicSharing = lui(() => import('./pages/MusicSharing'));
 
 // External Musicians Network
-const ExternalMusicians = lazy(() => import('./pages/ExternalMusicians'));
-const ReplacementRequests = lazy(() => import('./pages/ReplacementRequests'));
+const ExternalMusicians = lui(() => import('./pages/ExternalMusicians'));
+const ReplacementRequests = lui(() => import('./pages/ReplacementRequests'));
 
 // Seating management
-const Seating = lazy(() => import('./pages/Seating'));
-const VoiceParts = lazy(() => import('./pages/VoiceParts'));
-const Occupancy = lazy(() => import('./pages/Occupancy'));
-const NeighborPreferences = lazy(() => import('./pages/NeighborPreferences'));
+const Seating = lui(() => import('./pages/Seating'));
+const VoiceParts = lui(() => import('./pages/VoiceParts'));
+const Occupancy = lui(() => import('./pages/Occupancy'));
+const NeighborPreferences = lui(() => import('./pages/NeighborPreferences'));
 
 // Other pages
-const MemberDirectory = lazy(() => import('./pages/MemberDirectory'));
-const UserGuide = lazy(() => import('./pages/UserGuide'));
-const AccessibilityStatement = lazy(() => import('./pages/AccessibilityStatement'));
-const PracticeSchedules = lazy(() => import('./pages/PracticeSchedules'));
-const HealthDashboard = lazy(() => import('./pages/HealthDashboard'));
-const GdprAdmin = lazy(() => import('./pages/GdprAdmin'));
-const ShareTarget = lazy(() => import('./pages/ShareTarget'));
+const MemberDirectory = lui(() => import('./pages/MemberDirectory'));
+const UserGuide = lui(() => import('./pages/UserGuide'));
+const AccessibilityStatement = lui(() => import('./pages/AccessibilityStatement'));
+const PracticeSchedules = lui(() => import('./pages/PracticeSchedules'));
+const HealthDashboard = lui(() => import('./pages/HealthDashboard'));
+const GdprAdmin = lui(() => import('./pages/GdprAdmin'));
+const ShareTarget = lui(() => import('./pages/ShareTarget'));
 
 // Ticketing
-const MyTickets = lazy(() => import('./pages/MyTickets'));
-const TicketScanner = lazy(() => import('./pages/TicketScanner'));
-const TicketSales = lazy(() => import('./pages/TicketSales'));
-const GuestList = lazy(() => import('./pages/GuestList'));
-const PaymentSettings = lazy(() => import('./pages/PaymentSettings'));
-const PublicTicketSale = lazy(() => import('./pages/PublicTicketSale'));
-const PublicCalendar = lazy(() => import('./pages/PublicCalendar'));
-const InfoScreen = lazy(() => import('./pages/InfoScreen'));
-const MockPayment = lazy(() => import('./pages/MockPayment'));
-const TicketTransfer = lazy(() => import('./pages/TicketTransfer'));
-const AcceptTransfer = lazy(() => import('./pages/AcceptTransfer'));
+const MyTickets = lui(() => import('./pages/MyTickets'));
+const TicketScanner = lui(() => import('./pages/TicketScanner'));
+const TicketSales = lui(() => import('./pages/TicketSales'));
+const GuestList = lui(() => import('./pages/GuestList'));
+const PaymentSettings = lui(() => import('./pages/PaymentSettings'));
+const PublicTicketSale = lui(() => import('./pages/PublicTicketSale'));
+const PublicCalendar = lui(() => import('./pages/PublicCalendar'));
+const InfoScreen = lui(() => import('./pages/InfoScreen'));
+const MockPayment = lui(() => import('./pages/MockPayment'));
+const TicketTransfer = lui(() => import('./pages/TicketTransfer'));
+const AcceptTransfer = lui(() => import('./pages/AcceptTransfer'));
 
 // Stage Layout Designer
-const StageDesigner = lazy(() => import('./pages/StageDesigner'));
-const ConcertStageSetup = lazy(() => import('./pages/ConcertStageSetup'));
+const StageDesigner = lui(() => import('./pages/StageDesigner'));
+const ConcertStageSetup = lui(() => import('./pages/ConcertStageSetup'));
 
 /** Lightweight centered spinner shown while a route chunk loads */
 function RouteLoadingFallback() {

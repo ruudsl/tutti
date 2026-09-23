@@ -2,9 +2,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { tekstenKern } from './tekstenKernPlugin';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tekstenKern()],
   resolve: {
     alias: {
       // vite-plugin-pwa draait hier niet, dus deze virtuele module bestaat niet
