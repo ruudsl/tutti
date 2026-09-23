@@ -69,10 +69,14 @@ process.on('unhandledRejection', (reden) => {
  * rood zonder dat er iets veranderd is - dat is precies wat er gebeurde toen
  * hier 88 stond.
  *
- * Gemeten op de CI-runner, 23-09-2026: performance 92, accessibility 98,
- * best-practices 100, seo 100 (FCP 1,4 s, LCP 3,0 s). Dezelfde runner mat op
- * `main` daarvoor 84-85. De drempel staat op 88: vier punten onder de meting,
- * dezelfde marge als toen hij op 80 stond bij een gemeten 84.
+ * Gemeten op de CI-runner, 23-09-2026, twee runs van vrijwel dezelfde build:
+ * performance 92 en 90, accessibility 98, best-practices 100, seo 100. FCP
+ * 1,4 s en LCP 3,0 s in beide; het verschil zat in TBT (20 tegen 210 ms), dus
+ * in rekentijd op de runner, niet in de pagina. Dezelfde runner mat op `main`
+ * daarvoor 84-85. De drempel staat op 86: vier punten onder de laagste
+ * meting, dezelfde marge als toen hij op 80 stond bij een gemeten 84. Eerst
+ * stond hier 88, op basis van alleen de run van 92 - twee punten boven de
+ * volgende meting is geen drempel maar een muntworp.
  *
  * Van 84 naar 92 zat weer in wat er vóór de eerste weergave binnen moest:
  *  - index.html heeft een shell (het logo als inline SVG). Tot React tekende
@@ -116,7 +120,7 @@ process.on('unhandledRejection', (reden) => {
  * onopgemerkt in een cijfer verdwijnt.
  */
 const DREMPELS = {
-  performance: 88,
+  performance: 86,
   accessibility: 95,
   'best-practices': 95,
   seo: 95,
