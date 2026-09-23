@@ -11,8 +11,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { revokeUserSessions } from '../utils/sessionStore';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
-import { graphFetch } from '../utils/m365';
-import { DienstFout } from '../utils/veerkracht';
+import { getAppAccessToken, getMicrosoftConfig, graphFetch, setupEmailForwarding } from '../utils/m365';
 import { logAuditEvent } from './audit-logs';
 import multer from 'multer';
 
@@ -67,61 +66,6 @@ function generateM365Password(): string {
   }
 
   return password.join('');
-}
-
-interface MicrosoftConfig {
-  microsoft_client_id: string | null;
-  microsoft_client_secret: string | null;
-  microsoft_tenant_id: string | null;
-  microsoft_enabled: number;
-}
-
-function getMicrosoftConfig(associationId: string | null): MicrosoftConfig | null {
-  if (!associationId) return null;
-  const association = db
-    .prepare(
-      `
-        SELECT microsoft_client_id, microsoft_client_secret, microsoft_tenant_id, microsoft_enabled
-        FROM associations WHERE id = ?
-    `,
-    )
-    .get(associationId) as MicrosoftConfig | undefined;
-
-  if (
-    !association ||
-    !association.microsoft_enabled ||
-    !association.microsoft_client_id ||
-    !association.microsoft_tenant_id ||
-    !association.microsoft_client_secret
-  ) {
-    return null;
-  }
-  return association;
-}
-
-async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
-  const tokenResponse = await graphFetch(
-    `https://login.microsoftonline.com/${msConfig.microsoft_tenant_id}/oauth2/v2.0/token`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: msConfig.microsoft_client_id!,
-        client_secret: msConfig.microsoft_client_secret!,
-        scope: 'https://graph.microsoft.com/.default',
-        grant_type: 'client_credentials',
-      }),
-    },
-  );
-
-  if (!tokenResponse.ok) {
-    const errorBody = await tokenResponse.text();
-    logger.error('Failed to get app access token', { status: tokenResponse.status, body: errorBody });
-    throw new ApiError(500, 'Kan geen toegangstoken verkrijgen van Microsoft.');
-  }
-
-  const tokenData = (await tokenResponse.json()) as { access_token: string };
-  return tokenData.access_token;
 }
 
 // Supported M365 license SKU part numbers in order of preference
@@ -325,206 +269,6 @@ async function addUserToM365Groups(
   }
 
   return { added, failed };
-}
-
-/**
- * Set up email forwarding to private email address
- */
-/**
- * Helper function to wait for a specified time
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Try to set mailbox forwarding using Exchange Admin API (beta)
- * This sets forwardingSmtpAddress which is visible in M365 Admin under "Email forwarding"
- * Note: This API may not be available in all tenants
- */
-async function tryExchangeAdminForwarding(
-  accessToken: string,
-  userId: string,
-  forwardingAddress: string,
-): Promise<{ success: boolean; notSupported?: boolean }> {
-  try {
-    const response = await graphFetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${userId}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        forwardingSmtpAddress: `smtp:${forwardingAddress}`,
-        deliverToMailboxAndForward: true,
-      }),
-    });
-
-    if (response.ok) {
-      logger.info(`Email forwarding set via Exchange Admin API for user ${userId} to ${forwardingAddress}`);
-      return { success: true };
-    }
-
-    const errorData = (await response.json()) as { error?: { code?: string; message?: string } };
-    const errorCode = errorData.error?.code;
-
-    // Check if the API is not available/supported
-    if (response.status === 404 || errorCode === 'ResourceNotFound' || errorCode === 'UnknownError') {
-      logger.info('Exchange Admin API not available, will use inbox rules fallback');
-      return { success: false, notSupported: true };
-    }
-
-    logger.warn('Exchange Admin API forwarding failed', {
-      error: errorData.error?.message,
-      code: errorCode,
-      status: response.status,
-    });
-    return { success: false, notSupported: false };
-  } catch (err) {
-    logger.warn('Error calling Exchange Admin API', { error: err });
-    return { success: false, notSupported: true };
-  }
-}
-
-/**
- * Create an inbox forwarding rule with retry logic (fallback method)
- * This creates a mail rule that forwards all incoming mail
- * Note: This is NOT visible in M365 Admin "Email forwarding" but works via Graph API
- */
-async function createInboxForwardingRule(
-  accessToken: string,
-  userId: string,
-  forwardingAddress: string,
-  maxRetries: number = 5,
-  initialDelayMs: number = 3000,
-): Promise<boolean> {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const ruleResponse = await graphFetch(
-        `https://graph.microsoft.com/v1.0/users/${userId}/mailFolders/inbox/messageRules`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            displayName: 'Forward all mail to private email',
-            sequence: 1,
-            isEnabled: true,
-            conditions: {},
-            actions: {
-              forwardTo: [
-                {
-                  emailAddress: {
-                    address: forwardingAddress,
-                  },
-                },
-              ],
-              stopProcessingRules: false,
-            },
-          }),
-        },
-      );
-
-      if (ruleResponse.ok) {
-        logger.info(`Email forwarding rule created for user ${userId} to ${forwardingAddress} (attempt ${attempt})`);
-        return true;
-      }
-
-      const errorData = (await ruleResponse.json()) as { error?: { code?: string; message?: string } };
-      const errorCode = errorData.error?.code;
-      const errorMessage = errorData.error?.message;
-
-      // Check if it's a mailbox not ready error - these are worth retrying
-      const isMailboxNotReady =
-        errorCode === 'MailboxNotEnabledForRESTAPI' ||
-        errorCode === 'ResourceNotFound' ||
-        errorMessage?.includes('mailbox') ||
-        errorMessage?.includes('Mailbox') ||
-        ruleResponse.status === 404;
-
-      if (isMailboxNotReady && attempt < maxRetries) {
-        const delay = initialDelayMs * Math.pow(2, attempt - 1); // Exponential backoff
-        logger.info(`Mailbox not ready, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
-        await sleep(delay);
-        continue;
-      }
-
-      // Not a retryable error or max retries reached
-      logger.warn(`Could not create forwarding rule after ${attempt} attempts`, {
-        error: errorMessage,
-        code: errorCode,
-        status: ruleResponse.status,
-      });
-      return false;
-    } catch (err) {
-      // Na een timeout weten we niet of de regel er al staat. Nog een poging
-      // kan een tweede regel opleveren, en dan krijgt het lid elke mail dubbel.
-      const misschienAangekomen =
-        err instanceof DienstFout && err.cause instanceof Error && err.cause.name === 'TimeoutError';
-      if (attempt < maxRetries && !misschienAangekomen) {
-        const delay = initialDelayMs * Math.pow(2, attempt - 1);
-        logger.warn(`Error creating forwarding rule, retrying in ${delay}ms`, { error: err });
-        await sleep(delay);
-        continue;
-      }
-      logger.error('Failed to create forwarding rule after all retries', { error: err });
-      return false;
-    }
-  }
-  return false;
-}
-
-async function setupEmailForwarding(accessToken: string, userId: string, forwardingAddress: string): Promise<boolean> {
-  try {
-    // First set otherMails as a backup/reference
-    const updateResponse = await graphFetch(`https://graph.microsoft.com/v1.0/users/${userId}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        otherMails: [forwardingAddress],
-      }),
-    });
-
-    if (!updateResponse.ok) {
-      const errorData = (await updateResponse.json()) as { error?: { message?: string } };
-      logger.warn('Failed to set otherMails', { error: errorData.error?.message });
-      // Continue anyway - the forwarding is more important
-    }
-
-    // First, try the Exchange Admin API (beta) - this shows in M365 Admin
-    const exchangeResult = await tryExchangeAdminForwarding(accessToken, userId, forwardingAddress);
-    if (exchangeResult.success) {
-      return true;
-    }
-
-    // Always fall back to inbox rules when Exchange Admin API fails
-    // Note: Inbox rules work but are NOT visible in M365 Admin "Email forwarding"
-    // They are visible in Outlook Web -> Settings -> Mail -> Rules
-    // We try this regardless of the error type (500, 400, 404, etc.) because:
-    // 1. Exchange Admin API may fail temporarily while mailbox is being provisioned
-    // 2. Inbox rules API often succeeds even when Exchange Admin API fails
-    logger.info('Exchange Admin API failed, using inbox rules fallback for email forwarding', {
-      wasNotSupported: exchangeResult.notSupported,
-    });
-    const ruleCreated = await createInboxForwardingRule(accessToken, userId, forwardingAddress);
-    if (ruleCreated) {
-      return true;
-    }
-
-    // If both methods failed, return false
-    logger.warn(
-      'Email forwarding could not be set - both Exchange Admin API and inbox rules failed. Mailbox may need more time to provision.',
-    );
-    return false;
-  } catch (err) {
-    logger.error('Error setting up email forwarding', { error: err });
-    return false;
-  }
 }
 
 /**
@@ -874,7 +618,7 @@ router.post(
 
             // Set up email forwarding if private email is provided
             if (privateEmail) {
-              emailForwardingSet = await setupEmailForwarding(accessToken, microsoftId, privateEmail);
+              emailForwardingSet = (await setupEmailForwarding(accessToken, microsoftId, privateEmail)).success;
             }
 
             // Upload profile photo if provided
@@ -1263,7 +1007,7 @@ router.post(
     const accessToken = await getAppAccessToken(msConfig);
 
     // Try to set up email forwarding with retry
-    const success = await setupEmailForwarding(accessToken, user.microsoft_id, user.private_email);
+    const { success } = await setupEmailForwarding(accessToken, user.microsoft_id, user.private_email);
 
     if (success) {
       logger.info(`Email forwarding successfully set up for user ${user.email} to ${user.private_email}`);

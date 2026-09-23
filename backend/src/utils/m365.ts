@@ -1,10 +1,16 @@
 /**
  * M365/Microsoft Graph API utility functions
  * Shared between onboarding routes and schedulers
+ *
+ * onboarding.ts en entra-sync.ts hadden hiervan elk een eigen kopie. Die
+ * liepen uit elkaar: een reparatie hier (een foutpagina in HTML bij het
+ * nevenadres mag het doorsturen niet tegenhouden) kwam in de kopie van
+ * onboarding nooit aan. Nieuwe Microsoft-hulpfuncties horen hier.
  */
 
 import db from '../database/connection';
 import logger from './logger';
+import { ApiError } from '../middleware/errorHandler';
 import { beschermdeFetch, DienstFout } from './veerkracht';
 
 /** Methoden die hetzelfde opleveren als je ze nog eens doet. */
@@ -66,8 +72,7 @@ export function getMicrosoftConfig(associationId: string | null): MicrosoftConfi
  */
 export async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
   // Een app-token opvragen mag nog eens: er wordt niets aangemaakt.
-  const tokenResponse = await beschermdeFetch(
-    'microsoft',
+  const tokenResponse = await graphFetch(
     `https://login.microsoftonline.com/${msConfig.microsoft_tenant_id}/oauth2/v2.0/token`,
     {
       method: 'POST',
@@ -84,7 +89,9 @@ export async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<stri
   if (!tokenResponse.ok) {
     const errorBody = await tokenResponse.text();
     logger.error('Failed to get app access token', { status: tokenResponse.status, body: errorBody });
-    throw new Error('Kan geen toegangstoken verkrijgen van Microsoft.');
+    // Een ApiError, zodat een beheerder in onboarding en Entra-synchronisatie
+    // deze melding ziet en niet een kale "Interne serverfout".
+    throw new ApiError(500, 'Kan geen toegangstoken verkrijgen van Microsoft.');
   }
 
   const tokenData = (await tokenResponse.json()) as { access_token: string };
