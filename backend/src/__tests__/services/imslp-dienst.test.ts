@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '../setup';
 import { searchImslp, getWorkDetails, downloadPdf, findWork } from '../../services/imslp';
+import { DienstFout } from '../../utils/veerkracht';
 
 /** Wat de nagebootste dienst per aanroep terugkreeg. */
 let opgevraagd: string[] = [];
@@ -435,7 +436,11 @@ describe('Werkdetails ophalen', () => {
       throw new TypeError('fetch failed');
     });
 
-    await expect(getWorkDetails('1')).rejects.toThrow('fetch failed');
+    // Na de herkansingen komt hij door als DienstFout, met de oorspronkelijke
+    // fout als oorzaak; de foutafhandeling maakt daar een 503 van.
+    const fout = await getWorkDetails('1').catch((f: unknown) => f);
+    expect(fout).toBeInstanceOf(DienstFout);
+    expect(((fout as DienstFout).cause as Error).message).toBe('fetch failed');
   });
 });
 

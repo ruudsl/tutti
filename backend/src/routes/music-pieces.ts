@@ -19,6 +19,7 @@ import {
 import { withTransaction } from '../utils/database';
 import { bijlageKopregel } from '../utils/contentDisposition';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 import { logAuditEvent } from './audit-logs';
 import { notifyOrchestra } from './notifications';
 import {
@@ -1847,7 +1848,7 @@ router.get(
     // Fetch oEmbed data
     const oEmbedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
 
-    const response = await fetch(oEmbedUrl);
+    const response = await beschermdeFetch('youtube', oEmbedUrl);
 
     if (!response.ok) {
       throw new ApiError(404, 'Video niet gevonden.');
