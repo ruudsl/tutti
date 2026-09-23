@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { beschermdeFetch } from '../utils/veerkracht';
 
 // Payment provider configuration
 const MOLLIE_API_KEY = process.env.MOLLIE_API_KEY || '';
@@ -8,6 +9,24 @@ const MOLLIE_API_URL = 'https://api.mollie.com/v2';
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+/** Een betaaldienst die hangt, houdt de koper aan het afrekenen vast. */
+const BETAAL_TIJDSLIMIET_MS = 15_000;
+
+/**
+ * Een aanroep naar Mollie of Stripe, met tijdslimiet en stroomonderbreker.
+ *
+ * Aanmaken en terugbetalen (alles behalve GET) krijgt één poging: een tweede
+ * poging na een time-out kan een tweede betaling of terugbetaling zijn, want
+ * de eerste is misschien wel aangekomen. Opvragen mag vaker.
+ */
+function betaaldienst(dienst: PaymentProvider, url: string, init: RequestInit = {}): Promise<Response> {
+  const schrijft = (init.method ?? 'GET').toUpperCase() !== 'GET';
+  return beschermdeFetch(dienst, url, init, {
+    tijdslimietMs: BETAAL_TIJDSLIMIET_MS,
+    pogingen: schrijft ? 1 : 3,
+  });
+}
 
 export type PaymentProvider = 'mollie' | 'stripe';
 export type PaymentMethod = 'ideal' | 'creditcard' | 'bancontact' | 'paypal' | 'applepay' | 'googlepay';
@@ -78,7 +97,7 @@ async function createMolliePayment(request: PaymentRequest): Promise<PaymentResp
       payload.method = methodMap[request.method];
     }
 
-    const response = await fetch(`${MOLLIE_API_URL}/payments`, {
+    const response = await betaaldienst('mollie', `${MOLLIE_API_URL}/payments`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${MOLLIE_API_KEY}`,
@@ -134,11 +153,15 @@ async function getMolliePaymentStatus(paymentId: string): Promise<PaymentStatus 
     // paymentId komt uit de aanvraag en staat in het pad. Zonder controle kan
     // een aanroeper met '../' een ander eindpunt van Mollie raken, mét de
     // sleutel van de vereniging eraan vast.
-    const response = await fetch(`${MOLLIE_API_URL}/payments/${encodeURIComponent(controleerBetaalId(paymentId))}`, {
-      headers: {
-        Authorization: `Bearer ${MOLLIE_API_KEY}`,
+    const response = await betaaldienst(
+      'mollie',
+      `${MOLLIE_API_URL}/payments/${encodeURIComponent(controleerBetaalId(paymentId))}`,
+      {
+        headers: {
+          Authorization: `Bearer ${MOLLIE_API_KEY}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       return null;
@@ -213,7 +236,7 @@ async function createStripePayment(request: PaymentRequest): Promise<PaymentResp
       });
     }
 
-    const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    const response = await betaaldienst('stripe', 'https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
         Authorization: `Basic ${Buffer.from(STRIPE_SECRET_KEY + ':').toString('base64')}`,
@@ -250,7 +273,8 @@ async function getStripePaymentStatus(sessionId: string): Promise<PaymentStatus 
   }
 
   try {
-    const response = await fetch(
+    const response = await betaaldienst(
+      'stripe',
       `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(controleerBetaalId(sessionId))}`,
       {
         headers: {
@@ -609,7 +633,8 @@ async function createMollieRefund(request: RefundRequest): Promise<RefundRespons
       payload.description = request.reason;
     }
 
-    const response = await fetch(
+    const response = await betaaldienst(
+      'mollie',
       `${MOLLIE_API_URL}/payments/${encodeURIComponent(controleerBetaalId(request.paymentId))}/refunds`,
       {
         method: 'POST',
@@ -638,7 +663,8 @@ async function createMollieRefund(request: RefundRequest): Promise<RefundRespons
 async function createStripeRefund(request: RefundRequest): Promise<RefundResponse> {
   try {
     // First, get the payment intent from the session
-    const sessionResponse = await fetch(
+    const sessionResponse = await betaaldienst(
+      'stripe',
       `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(controleerBetaalId(request.paymentId))}`,
       {
         headers: {
@@ -665,7 +691,7 @@ async function createStripeRefund(request: RefundRequest): Promise<RefundRespons
       params.append('reason', 'requested_by_customer');
     }
 
-    const response = await fetch('https://api.stripe.com/v1/refunds', {
+    const response = await betaaldienst('stripe', 'https://api.stripe.com/v1/refunds', {
       method: 'POST',
       headers: {
         Authorization: `Basic ${Buffer.from(STRIPE_SECRET_KEY + ':').toString('base64')}`,
