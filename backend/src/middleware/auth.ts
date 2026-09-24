@@ -169,8 +169,11 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     if (!isLezendVerzoek(req)) {
       return res.status(401).json({ error: 'Een token in de URL is alleen geldig voor downloads.' });
     }
+    // Zonder regeleinden: het pad komt van de client en mag geen eigen
+    // logregels kunnen toevoegen.
+    const logPad = String(req.path ?? '').replace(/[\r\n]/g, '');
     logger.warn(
-      `Legacy full JWT accepted via query parameter (path: ${req.path}). Migrate to short-lived download tokens.`,
+      `Legacy full JWT accepted via query parameter (path: ${logPad}). Migrate to short-lived download tokens.`,
     );
   }
 
