@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { leesCsv, raadScheidingsteken } from '../../utils/csvLezen';
+import { leesCsv, MAX_TEKENS, raadScheidingsteken } from '../../utils/csvLezen';
 import { csvBestand } from '../../utils/csv';
 
 describe('het scheidingsteken raden', () => {
@@ -57,6 +57,12 @@ describe('een CSV-bestand lezen', () => {
 
   it('leest een bestand zonder afsluitende regelovergang', () => {
     expect(leesCsv('Titel\nBolero').rijen).toEqual([['Bolero']]);
+  });
+
+  it('leest alleen tekst, en niet meer dan de grens', () => {
+    // Een object met een verzonnen lengte zou de lezer anders eindeloos laten lopen.
+    expect(() => leesCsv({ length: 1e12 })).toThrow(TypeError);
+    expect(() => leesCsv('x'.repeat(MAX_TEKENS + 1))).toThrow(RangeError);
   });
 
   it('geeft een leeg bestand terug als leeg', () => {

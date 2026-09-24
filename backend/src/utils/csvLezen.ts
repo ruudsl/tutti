@@ -18,6 +18,9 @@
 
 export type LeesScheidingsteken = ',' | ';' | '\t';
 
+/** Het grootste bestand dat gelezen wordt, in tekens: ruim boven 2000 regels. */
+export const MAX_TEKENS = 5_000_000;
+
 export interface GelezenCsv {
   scheidingsteken: LeesScheidingsteken;
   kopregel: string[];
@@ -104,7 +107,16 @@ function splits(tekst: string, scheidingsteken: LeesScheidingsteken): string[][]
  * Witruimte rond een veld gaat eraf. Lege regels, ook regels met alleen
  * scheidingstekens (Excel laat die achter onder een tabel), vallen weg.
  */
-export function leesCsv(invoer: string): GelezenCsv {
+export function leesCsv(invoer: unknown): GelezenCsv {
+  // De route controleert dit ook, met Zod. Hier nog een keer, omdat de lezer
+  // teken voor teken loopt tot de lengte van wat hij krijgt: een object met
+  // een verzonnen `length` in plaats van tekst liet hem eindeloos doorlopen.
+  if (typeof invoer !== 'string') {
+    throw new TypeError('Een CSV-bestand wordt als tekst gelezen.');
+  }
+  if (invoer.length > MAX_TEKENS) {
+    throw new RangeError(`Een CSV-bestand mag hooguit ${MAX_TEKENS} tekens hebben.`);
+  }
   const tekst = invoer.replace(/^\uFEFF/, '');
   const scheidingsteken = raadScheidingsteken(tekst);
   const regels = splits(tekst, scheidingsteken)

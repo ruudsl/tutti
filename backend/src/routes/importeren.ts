@@ -5,6 +5,7 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler';
 import { validate } from '../middleware/validate';
 import { beoordeelLeden, beoordeelTitels, importeerLeden, importeerTitels } from '../services/importeren';
+import { MAX_TEKENS } from '../utils/csvLezen';
 import { logAuditEvent } from './audit-logs';
 
 /**
@@ -26,7 +27,7 @@ router.use(authenticateToken);
 // Ruim boven de 2000 regels die de import aankan, ver onder de 10 MB van de
 // JSON-parser.
 const bestandSchema = z.object({
-  csv: z.string().min(1, 'Het bestand is leeg.').max(5_000_000, 'Het bestand is groter dan 5 MB.'),
+  csv: z.string().min(1, 'Het bestand is leeg.').max(MAX_TEKENS, 'Het bestand is groter dan 5 MB.'),
 });
 
 router.post(
