@@ -33,7 +33,10 @@ import {
   TestUser,
 } from '../testUtils';
 
-vi.mock('../../services/workflowEngine', () => ({
+// De uitvoering wordt nagebootst; de controle van een datumveld is echt, want
+// die leest de kolommen uit de testdatabase.
+vi.mock('../../services/workflowEngine', async (importOriginal) => ({
+  controleerDatumveld: (await importOriginal<typeof import('../../services/workflowEngine')>()).controleerDatumveld,
   executeWorkflow: vi.fn(async () => ({ success: true, executionId: 'uitvoering-1' })),
   processScheduledWorkflows: vi.fn(),
   processDateFieldWorkflows: vi.fn(),
@@ -76,7 +79,7 @@ describe('workflows', () => {
   const geldigeWorkflow = {
     name: 'Herinnering voor het concert',
     description: 'Stuur drie dagen van tevoren een mail',
-    triggers: [{ triggerType: 'date_field', dateFieldEntity: 'concerts', dateFieldName: 'date', daysBefore: 3 }],
+    triggers: [{ triggerType: 'date_field', dateFieldEntity: 'concert', dateFieldName: 'date', daysBefore: 3 }],
     actions: [{ actionType: 'send_email', config: { subject: 'Bijna zover' } }],
   };
 
@@ -286,7 +289,7 @@ describe('workflows', () => {
       const trigger = (await alsBeheerder('get', `/${id}`)).body.triggers[0];
       expect(trigger).toMatchObject({
         triggerType: 'date_field',
-        dateFieldEntity: 'concerts',
+        dateFieldEntity: 'concert',
         dateFieldName: 'date',
       });
     });

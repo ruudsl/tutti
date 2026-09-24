@@ -8,6 +8,26 @@ import logger from '../utils/logger';
 
 const router = Router();
 
+/**
+ * Eist dat het muziekstuk bij de vereniging van de gebruiker hoort.
+ *
+ * pdf_annotations kent zelf geen vereniging; die loopt via het stuk. Zonder
+ * deze controle kon een lid van vereniging B annotaties op een stuk van
+ * vereniging A zetten - gedeeld, dus zichtbaar voor de leden van A - en de
+ * gedeelde annotaties van A lezen door het id van hun stuk op te vragen. De
+ * partitie zelf is ook alleen binnen de eigen vereniging te openen
+ * (music-pieces.ts GET /:id/download), dus er valt buiten de eigen vereniging
+ * niets te annoteren.
+ */
+function eisEigenStuk(musicPieceId: unknown, associationId: string | null | undefined): void {
+  const stuk = associationId
+    ? db.prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ?').get(musicPieceId, associationId)
+    : undefined;
+  if (!stuk) {
+    throw new ApiError(404, 'Muziekstuk niet gevonden.');
+  }
+}
+
 const sanitizeForLog = (value: unknown): string =>
   String(value)
     .replace(/[\r\n\t]/g, ' ')
@@ -128,11 +148,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createAnnotationSchema.parse(req.body);
 
-    // Verify piece exists
-    const piece = db.prepare('SELECT id FROM music_pieces WHERE id = ?').get(data.musicPieceId);
-    if (!piece) {
-      throw new ApiError(404, 'Muziekstuk niet gevonden.');
-    }
+    eisEigenStuk(data.musicPieceId, req.user!.associationId);
 
     const id = uuidv4();
     db.prepare(
@@ -340,17 +356,35 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { musicPieceId, pageNumber } = req.params;
     const { includeShared } = req.query;
+    const associationId = req.user!.associationId;
 
+    eisEigenStuk(musicPieceId, associationId);
+
+    // Gedeelde annotaties alleen van leden van de eigen vereniging: wat een
+    // buitenstaander vóór de controle hierboven op een stuk van ons zette,
+    // hoort niet alsnog bij onze leden te verschijnen.
+    const metGedeeld = includeShared === 'true';
     const query = `
         SELECT id, music_piece_id, page_number, annotation_type, data,
                color, stroke_width, opacity, is_shared, created_at, updated_at
         FROM pdf_annotations
         WHERE music_piece_id = ? AND page_number = ?
-          AND (user_id = ?${includeShared === 'true' ? ' OR is_shared = 1' : ''})
+          AND (user_id = ?${
+            metGedeeld
+              ? ` OR (is_shared = 1 AND user_id IN (
+                    SELECT id FROM users WHERE association_id = ?
+                    UNION
+                    SELECT user_id FROM user_associations WHERE association_id = ? AND status = 'active'
+                  ))`
+              : ''
+          })
         ORDER BY created_at
     `;
 
-    const annotations = db.prepare(query).all(musicPieceId, parseInt(pageNumber), req.user!.id);
+    const params: unknown[] = [musicPieceId, parseInt(pageNumber), req.user!.id];
+    if (metGedeeld) params.push(associationId, associationId);
+
+    const annotations = db.prepare(query).all(...params);
 
     res.json(
       annotations.map((a: any) => ({
@@ -392,11 +426,7 @@ router.post(
       throw new ApiError(400, `Ongeldig annotationType. Gebruik: ${validTypes.join(', ')}`);
     }
 
-    // Verify piece exists
-    const piece = db.prepare('SELECT id FROM music_pieces WHERE id = ?').get(musicPieceId);
-    if (!piece) {
-      throw new ApiError(404, 'Muziekstuk niet gevonden.');
-    }
+    eisEigenStuk(musicPieceId, req.user!.associationId);
 
     const id = uuidv4();
     const dataStr = typeof data === 'string' ? data : JSON.stringify(data);

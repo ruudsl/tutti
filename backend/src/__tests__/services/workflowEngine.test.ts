@@ -416,6 +416,18 @@ describe('workflowmotor', () => {
       expect(bericht.html).toContain('<b>');
     });
 
+    it('verstuurt via de SMTP van de vereniging van de workflow', async () => {
+      const werkstroom = maakWorkflow([
+        {
+          type: 'send_email',
+          config: { recipientType: 'specific', recipientEmail: 'dirigent@test.nl', subject: 'x', body: 'y' },
+        },
+      ]);
+      await executeWorkflow(werkstroom, vereniging.id, 'manual', beheerder.id);
+
+      expect(vi.mocked(sendEmail).mock.calls[0][0]).toMatchObject({ associationId: vereniging.id });
+    });
+
     it('stuurt bij alle leden alleen naar de eigen vereniging', async () => {
       const werkstroom = maakWorkflow([
         { type: 'send_email', config: { recipientType: 'all_members', subject: 'Aan allen', body: 'hoi' } },
@@ -895,12 +907,13 @@ describe('workflowmotor', () => {
       processDateFieldWorkflows(vereniging.id);
       await new Promise((klaar) => setTimeout(klaar, 50));
 
-      // De trigger hoort bij onze vereniging, dus onze regel gaat af - maar
-      // hij gaat wel af *op* de taak van de andere vereniging: de query achter
-      // date_field kent geen verenigingsgrens. Zie het rapport; dit legt de
-      // huidige stand vast.
+      // BEWIJS. De trigger hoort bij onze vereniging, dus onze regel mag
+      // afgaan - maar niet *op* de taak van de andere vereniging. Hier stond
+      // eerder toContain: de query achter date_field kende geen
+      // verenigingsgrens, en deze test legde die stand vast. Sinds de query op
+      // association_id filtert hoort de taak van elders er niet meer in.
       const uitvoeringen = testDb.prepare('SELECT entity_id FROM workflow_executions').all() as { entity_id: string }[];
-      expect(uitvoeringen.map((u) => u.entity_id)).toContain(hunTaak);
+      expect(uitvoeringen.map((u) => u.entity_id)).not.toContain(hunTaak);
     });
 
     it('blijft zichzelf voeden als de regel maakt waar hij op afgaat', async () => {

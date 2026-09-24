@@ -4,7 +4,12 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
-import { executeWorkflow, processScheduledWorkflows, processDateFieldWorkflows } from '../services/workflowEngine';
+import {
+  executeWorkflow,
+  processScheduledWorkflows,
+  processDateFieldWorkflows,
+  controleerDatumveld,
+} from '../services/workflowEngine';
 import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
@@ -37,6 +42,22 @@ const actionSchema = z.object({
 
 const updateTriggerSchema = wijzigingsschema(triggerSchema);
 const updateActionSchema = wijzigingsschema(actionSchema);
+
+/**
+ * Een datumveld-trigger moet naar een bekende soort entiteit en een kolom die
+ * de tabel echt heeft wijzen. Beide namen komen in de query van de motor
+ * terecht; wat hier niet klopt zou daar nooit afgaan of - erger - als SQL
+ * worden gelezen. Andere soorten trigger gebruiken deze velden niet.
+ */
+function eisGeldigDatumveld(trigger: {
+  triggerType?: string | null;
+  dateFieldEntity?: string | null;
+  dateFieldName?: string | null;
+}): void {
+  if (trigger.triggerType !== 'date_field') return;
+  const fout = controleerDatumveld(trigger.dateFieldEntity, trigger.dateFieldName);
+  if (fout) throw new ApiError(400, fout);
+}
 
 const createWorkflowSchema = z.object({
   name: z.string().min(1).max(100),
@@ -174,6 +195,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     const data = createWorkflowSchema.parse(req.body);
+    data.triggers.forEach(eisGeldigDatumveld);
 
     const workflowId = uuidv4();
     const now = new Date().toISOString();
@@ -312,6 +334,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     const data = triggerSchema.parse(req.body);
+    eisGeldigDatumveld(data);
 
     const workflow = db
       .prepare(`SELECT id FROM workflows WHERE id = ? AND association_id = ? AND deleted_at IS NULL`)
@@ -357,14 +380,24 @@ router.patch(
 
     const trigger = db
       .prepare(
-        `SELECT t.id FROM workflow_triggers t
+        `SELECT t.id, t.trigger_type, t.date_field_entity, t.date_field_name FROM workflow_triggers t
          JOIN workflows w ON t.workflow_id = w.id
          WHERE t.id = ? AND w.id = ? AND w.association_id = ? AND w.deleted_at IS NULL`,
       )
-      .get(req.params.triggerId, req.params.id, associationId);
+      .get(req.params.triggerId, req.params.id, associationId) as
+      | { id: string; trigger_type: string; date_field_entity: string | null; date_field_name: string | null }
+      | undefined;
     if (!trigger) {
       throw new ApiError(404, 'Trigger not found');
     }
+
+    // Controleer de trigger zoals hij na deze wijziging wordt, niet alleen de
+    // velden die meekomen: ook een wissel naar date_field hoort te kloppen.
+    eisGeldigDatumveld({
+      triggerType: data.triggerType ?? trigger.trigger_type,
+      dateFieldEntity: data.dateFieldEntity !== undefined ? data.dateFieldEntity : trigger.date_field_entity,
+      dateFieldName: data.dateFieldName !== undefined ? data.dateFieldName : trigger.date_field_name,
+    });
 
     const updates: string[] = [];
     const values: any[] = [];
