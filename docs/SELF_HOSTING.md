@@ -62,8 +62,8 @@ cd tutti
 # 2. Copy environment file
 cp .env.example .env
 
-# 3. Generate a secure JWT secret
-echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
+# 3. Generate a secure JWT secret (vult de lege regel uit .env.example in)
+sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -base64 48)|" .env
 
 # 4. Start Tutti
 docker compose up -d
@@ -136,8 +136,10 @@ DOMAIN=tutti.yourorganization.com
 # Required: Email for SSL certificates
 ACME_EMAIL=admin@yourorganization.com
 
-# Required: Generate a secure secret
-JWT_SECRET=your-secure-random-string
+# Required: een willekeurig geheim. Vul hier de uitvoer in van
+#   openssl rand -base64 48
+# Zonder, met een voorbeeldwaarde of met iets eentonigs start Tutti niet.
+JWT_SECRET=
 
 # Optional: Initial admin password
 ADMIN_INIT_PASSWORD=your-initial-password
@@ -193,7 +195,7 @@ docker compose logs -f
 | ------------------------ | -------- | -------- | ---------------------------------------------- |
 | `DOMAIN`                 | Yes*     | -        | Your domain name (production only)             |
 | `ACME_EMAIL`             | Yes*     | -        | Email for Let's Encrypt (production only)      |
-| `JWT_SECRET`             | Yes      | -        | Secret key for JWT tokens                      |
+| `JWT_SECRET`             | Yes      | -        | Willekeurig geheim: `openssl rand -base64 48`  |
 | `JWT_EXPIRES_IN`         | No       | `7d`     | JWT token expiration                           |
 | `ADMIN_INIT_PASSWORD`    | No       | (random) | Initial admin password                         |
 | `LOG_LEVEL`              | No       | `info`   | Log level: debug, info, warn, error            |

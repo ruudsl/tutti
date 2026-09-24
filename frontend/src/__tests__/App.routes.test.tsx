@@ -327,7 +327,11 @@ const VERWACHTE_ROLLEN: [pad: string, pagina: string, rollen: string[] | null][]
   ['/payment-settings', 'PaymentSettings', [ROLES.ADMIN]],
 
   // Beheerder en muziekcommissie
-  ['/importeren', 'Importeren', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.EQUIPMENT_COMMITTEE]],
+  [
+    '/importeren',
+    'Importeren',
+    [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.EQUIPMENT_COMMITTEE, ROLES.UNIFORMS_COMMITTEE],
+  ],
   ['/music-pieces', 'MusicPieces', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/titles', 'MusicTitles', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/upload', 'Upload', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],

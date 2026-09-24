@@ -7,6 +7,7 @@ import logger from '../utils/logger';
 import { ApiError } from '../middleware/errorHandler';
 import { logAuditEvent } from './audit-logs';
 import { withTransaction } from '../utils/database';
+import { wisLeden } from '../scheduler/gdpr-cleanup';
 
 const router = Router();
 
@@ -766,9 +767,16 @@ router.post(
         case 'activity_log':
           sql = `DELETE FROM activity_log WHERE created_at < ? AND user_id IN (SELECT id FROM users WHERE association_id = ?)`;
           break;
-        case 'deleted_users':
-          sql = `DELETE FROM users WHERE status = 'deleted' AND deleted_at < ? AND association_id = ?`;
+        case 'deleted_users': {
+          // Eén voor één: zie wisLeden in scheduler/gdpr-cleanup.ts.
+          const ids = (
+            db
+              .prepare("SELECT id FROM users WHERE status = 'deleted' AND deleted_at < ? AND association_id = ?")
+              .all(cutoff, associationId) as { id: string }[]
+          ).map(({ id }) => id);
+          results[setting.data_type] = wisLeden(ids).gewist.length;
           break;
+        }
       }
 
       if (sql) {

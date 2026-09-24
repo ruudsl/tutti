@@ -919,6 +919,12 @@ router.get(
     // vereniging uit af te leiden; die komt hier uit de route zelf. Staat de
     // module Nieuwsberichten uit, dan hoort er ook op het scherm in de hal
     // geen bericht te verschijnen.
+    //
+    // Alleen berichten zonder doelgroep. Een bericht voor het bestuur of voor
+    // één orkest ziet in de app alleen die groep (canUserSeePost in
+    // posts.ts); op een scherm zonder aanmelding en met CORS op * kan
+    // iedereen het lezen. posts.ts bewaart de doelgroep als json of NULL, en
+    // een lege lijst ('[]') betekent daar: iedereen.
     const latestPost = isModuleEnabled(association.id, 'posts')
       ? (db
           .prepare(
@@ -926,6 +932,8 @@ router.get(
         SELECT id, title, content, published_at
         FROM posts
         WHERE association_id = ? AND status = 'published' AND is_pinned = 1
+          AND (target_roles IS NULL OR TRIM(target_roles) IN ('', '[]', 'null'))
+          AND (target_orchestras IS NULL OR TRIM(target_orchestras) IN ('', '[]', 'null'))
         ORDER BY published_at DESC
         LIMIT 1
     `,

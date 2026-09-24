@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import '../setup';
 import db from '../../database/connection';
 import associationsRoutes from '../../routes/associations';
@@ -41,6 +42,7 @@ describe('verenigingen', () => {
 
   let andereVereniging: TestAssociation;
   let andereBeheerderToken: string;
+  let superbeheerderToken: string;
 
   beforeEach(() => {
     const omgeving = createTestEnvironment();
@@ -58,6 +60,15 @@ describe('verenigingen', () => {
       role: 'admin',
     });
     andereBeheerderToken = generateTestToken(andereBeheerder);
+
+    // De lijst van alle verenigingen en het aanmaken van een nieuwe raken de
+    // hele installatie; dat is voor een superbeheerder, niet voor de beheerder
+    // van een vereniging.
+    // Zonder eigen vereniging, zodat hij de ledentellingen hieronder niet raakt.
+    const superbeheerder = createTestUser(vereniging.id, { email: 'super@test.com', role: 'admin' });
+    db.prepare('UPDATE users SET association_id = NULL WHERE id = ?').run(superbeheerder.id);
+    db.prepare('INSERT INTO super_admins (id, user_id) VALUES (?, ?)').run(uuidv4(), superbeheerder.id);
+    superbeheerderToken = generateTestToken({ ...superbeheerder, associationId: null as unknown as string });
   });
 
   type Methode = 'get' | 'post' | 'put';
@@ -65,17 +76,24 @@ describe('verenigingen', () => {
     request(app)[methode](`/api/associations${pad}`).set('Authorization', `Bearer ${token}`);
 
   describe('GET /api/associations', () => {
-    it('geeft de lijst met verenigingen aan een beheerder', async () => {
-      const antwoord = await als(beheerderToken, 'get', '/');
+    it('geeft de lijst met verenigingen aan een superbeheerder', async () => {
+      const antwoord = await als(superbeheerderToken, 'get', '/');
 
       expect(antwoord.status).toBe(200);
-      // Deze lijst is bewust verenigingsoverstijgend: hij bestaat om muziek te
-      // kunnen delen met een andere vereniging. Alleen naam, id en datum, geen
-      // instellingen of sleutels van die andere vereniging.
+      // Deze lijst is bewust verenigingsoverstijgend. Alleen naam, id en
+      // datum, geen instellingen of sleutels van een vereniging.
       const namen = antwoord.body.map((v: any) => v.name);
       expect(namen).toContain(vereniging.name);
       expect(namen).toContain('Harmonie B');
       expect(Object.keys(antwoord.body[0]).sort()).toEqual(['createdAt', 'id', 'name']);
+    });
+
+    it('weigert de beheerder van een vereniging', async () => {
+      // Een verenigingsbeheerder zag hier alle verenigingen van de installatie.
+      const antwoord = await als(beheerderToken, 'get', '/');
+
+      expect(antwoord.status).toBe(403);
+      expect(JSON.stringify(antwoord.body)).not.toContain('Harmonie B');
     });
 
     it('weigert een gewoon lid', async () => {
@@ -211,23 +229,23 @@ describe('verenigingen', () => {
   });
 
   describe('POST /api/associations', () => {
-    it('maakt een nieuwe vereniging aan', async () => {
-      const antwoord = await als(beheerderToken, 'post', '/').send({ name: '  Nieuwe Fanfare  ' });
+    it('laat een superbeheerder een nieuwe vereniging aanmaken', async () => {
+      const antwoord = await als(superbeheerderToken, 'post', '/').send({ name: '  Nieuwe Fanfare  ' });
 
       expect(antwoord.status).toBe(201);
       const rij = db.prepare('SELECT name FROM associations WHERE id = ?').get(antwoord.body.id) as any;
       expect(rij.name).toBe('Nieuwe Fanfare');
     });
 
-    it('laat de eigen vereniging van de aanmaker ongemoeid', async () => {
-      await als(beheerderToken, 'post', '/').send({ name: 'Nieuwe Fanfare' });
+    it('laat de bestaande verenigingen ongemoeid', async () => {
+      await als(superbeheerderToken, 'post', '/').send({ name: 'Nieuwe Fanfare' });
 
       const rij = db.prepare('SELECT name FROM associations WHERE id = ?').get(vereniging.id) as any;
       expect(rij.name).toBe(vereniging.name);
     });
 
     it('weigert een naam die al bestaat, ongeacht hoofdletters', async () => {
-      const antwoord = await als(beheerderToken, 'post', '/').send({ name: 'HARMONIE B' });
+      const antwoord = await als(superbeheerderToken, 'post', '/').send({ name: 'HARMONIE B' });
 
       expect(antwoord.status).toBe(409);
       const aantal = db.prepare('SELECT COUNT(*) AS aantal FROM associations').get() as { aantal: number };
@@ -235,9 +253,18 @@ describe('verenigingen', () => {
     });
 
     it('weigert een lege naam', async () => {
-      const antwoord = await als(beheerderToken, 'post', '/').send({ name: '' });
+      const antwoord = await als(superbeheerderToken, 'post', '/').send({ name: '' });
 
       expect(antwoord.status).toBe(400);
+    });
+
+    it('weigert de beheerder van een vereniging', async () => {
+      // Een verenigingsbeheerder kon hier zelf verenigingen bijmaken.
+      const antwoord = await als(beheerderToken, 'post', '/').send({ name: 'Van een beheerder' });
+
+      expect(antwoord.status).toBe(403);
+      const aantal = db.prepare('SELECT COUNT(*) AS aantal FROM associations').get() as { aantal: number };
+      expect(aantal.aantal).toBe(2);
     });
 
     it('weigert een gewoon lid', async () => {

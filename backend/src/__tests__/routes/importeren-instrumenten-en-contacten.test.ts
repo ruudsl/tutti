@@ -120,7 +120,7 @@ describe('instrumenten importeren', () => {
 
     const antwoord = await stuur(beheerderToken, '/instrumenten/voorbeeld', INSTRUMENTEN);
 
-    expect(antwoord.body.tellingen).toEqual({ nieuw: 2, bestaat: 0, fout: 0 });
+    expect(antwoord.body.tellingen).toEqual({ nieuw: 2, bestaat: 0, bijwerken: 0, fout: 0 });
   });
 
   it('mag de instrumentencommissie ook, een lid en de muziekcommissie niet', async () => {

@@ -120,15 +120,14 @@ export function mollieSleutel(associationId?: string | null): string {
  * de webhook: Mollie stuurt alleen het betaalkenmerk, en het terugvragen van
  * de betaling moet al met de sleutel van de juiste vereniging.
  */
-function verenigingVanBetaling(paymentId: string): string | null {
-  const rij = db
+function bestellingVanBetaling(paymentId: string): { id: string; association_id: string; total: number } | undefined {
+  return db
     .prepare(
-      `SELECT c.association_id FROM ticket_orders o
+      `SELECT o.id, c.association_id, o.total FROM ticket_orders o
        JOIN concerts c ON c.id = o.concert_id
        WHERE o.payment_id = ?`,
     )
-    .get(paymentId) as { association_id: string } | undefined;
-  return rij?.association_id ?? null;
+    .get(paymentId) as { id: string; association_id: string; total: number } | undefined;
 }
 
 async function createMolliePayment(request: PaymentRequest): Promise<PaymentResponse> {
@@ -514,15 +513,38 @@ export async function handleMollieWebhook(paymentId: string): Promise<WebhookRes
   // Terugvragen met de sleutel van de vereniging waar de betaling bij hoort.
   // Een betaling op haar eigen Mollie-account kent de sleutel van de
   // installatie niet, en andersom.
-  const paymentStatus = await getMolliePaymentStatus(paymentId, mollieSleutel(verenigingVanBetaling(paymentId)));
+  //
+  // Welke bestelling bij de betaling hoort, bepalen wij, niet Mollie: de
+  // bestelling waarbij we deze betaling hebben aangemaakt. Sinds elke
+  // vereniging haar eigen Mollie-account koppelt, bepaalt de eigenaar van
+  // zo'n account de metadata van zijn betalingen. Met alleen
+  // `metadata.order_id` kon de beheerder van vereniging A een betaling op
+  // zijn eigen account naar een openstaande bestelling bij vereniging B laten
+  // wijzen, en kreeg die bestelling geldige kaarten zonder dat er voor betaald
+  // was.
+  const bestelling = bestellingVanBetaling(paymentId);
+  if (!bestelling) {
+    logger.warn('Mollie-webhook voor een betaling die bij geen bestelling hoort', { paymentId });
+    return { success: false, error: 'Payment not found' };
+  }
+
+  const paymentStatus = await getMolliePaymentStatus(paymentId, mollieSleutel(bestelling.association_id));
 
   if (!paymentStatus) {
     return { success: false, error: 'Payment not found' };
   }
 
-  const orderId = paymentStatus.metadata?.order_id;
-  if (!orderId) {
-    return { success: false, error: 'Order ID not found in metadata' };
+  const orderId = bestelling.id;
+  const bedrag = paymentStatus.amount;
+  if (
+    (paymentStatus.metadata?.order_id && paymentStatus.metadata.order_id !== orderId) ||
+    (Number.isFinite(bedrag) && Math.abs(bedrag - bestelling.total) > 0.005)
+  ) {
+    logger.warn('Mollie-betaling past niet bij de bestelling waarvoor hij is aangemaakt', {
+      paymentId,
+      orderId,
+    });
+    return { success: false, error: 'Payment does not match order' };
   }
 
   // Log webhook

@@ -44,6 +44,16 @@ export async function executeWorkflow(
     return { executionId: '', success: false, error: 'Module workflows staat uit voor deze vereniging.' };
   }
 
+  // De vereniging waarvoor de regel draait bepaalt hieronder wie er mail krijgt
+  // en welke rijen er worden gelezen en bijgewerkt. Dan moet de regel ook echt
+  // van die vereniging zijn.
+  const eigenRegel = db
+    .prepare('SELECT id FROM workflows WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+    .get(workflowId, associationId);
+  if (!eigenRegel) {
+    return { executionId: '', success: false, error: 'Workflow hoort niet bij deze vereniging.' };
+  }
+
   const executionId = uuidv4();
   const now = new Date().toISOString();
 
@@ -69,8 +79,11 @@ export async function executeWorkflow(
   try {
     // Load entity data if available
     if (entityType && entityId) {
-      context.entityData = await loadEntityData(entityType, entityId);
+      context.entityData = await loadEntityData(entityType, entityId, associationId);
       context.log.push(`Loaded ${entityType} data for ID ${entityId}`);
+      if (!context.entityData) {
+        context.log.push(`Geen ${entityType} ${entityId} gevonden binnen deze vereniging`);
+      }
     }
 
     // Get workflow actions
@@ -187,6 +200,9 @@ async function executeSendEmail(config: Record<string, any>, context: ExecutionC
     try {
       await sendEmail({
         to: email,
+        // Via de SMTP van de vereniging van de workflow; zonder vereniging
+        // ging workflowmail altijd via de server van de installatie.
+        associationId: context.associationId,
         subject: processedSubject,
         text: sanitizeHtml(processedBody, {
           allowedTags: [],
@@ -232,8 +248,9 @@ function hoortBijVereniging(userId: string, associationId: string): boolean {
 function aanmakerVoor(context: ExecutionContext): string | null {
   if (context.userId) return context.userId;
 
-  const rij = db.prepare('SELECT created_by FROM workflows WHERE id = ?').get(context.workflowId) as
-    { created_by: string | null } | undefined;
+  const rij = db
+    .prepare('SELECT created_by FROM workflows WHERE id = ? AND association_id = ?')
+    .get(context.workflowId, context.associationId) as { created_by: string | null } | undefined;
   return rij?.created_by ?? null;
 }
 
@@ -377,16 +394,22 @@ async function executeUpdateField(config: Record<string, any>, context: Executio
   const processedValue = replaceVariables(String(fieldValue), context);
 
   // Niet elke tabel houdt updated_at bij; die alleen meenemen waar hij bestaat.
+  // De rij moet van de vereniging van de regel zijn; het id alleen zegt daar
+  // niets over.
   const zetUpdatedAt = kolommen.has('updated_at');
   const sql = zetUpdatedAt
-    ? `UPDATE ${tableName} SET ${fieldName} = ?, updated_at = ? WHERE id = ?`
-    : `UPDATE ${tableName} SET ${fieldName} = ? WHERE id = ?`;
+    ? `UPDATE ${tableName} SET ${fieldName} = ?, updated_at = ? WHERE id = ? AND association_id = ?`
+    : `UPDATE ${tableName} SET ${fieldName} = ? WHERE id = ? AND association_id = ?`;
   const params = zetUpdatedAt
-    ? [processedValue, new Date().toISOString(), context.entityId]
-    : [processedValue, context.entityId];
+    ? [processedValue, new Date().toISOString(), context.entityId, context.associationId]
+    : [processedValue, context.entityId, context.associationId];
 
   try {
-    db.prepare(sql).run(...params);
+    const resultaat = db.prepare(sql).run(...params);
+    if (resultaat.changes === 0) {
+      context.log.push(`Geen ${entityType} ${context.entityId} gevonden binnen deze vereniging`);
+      return;
+    }
     context.log.push(`Updated ${entityType}.${fieldName} to ${processedValue}`);
   } catch (error) {
     context.log.push(`Failed to update field: ${error}`);
@@ -519,30 +542,70 @@ function replaceVariables(text: string, context: ExecutionContext): string {
   return result;
 }
 
-async function loadEntityData(entityType: string, entityId: string): Promise<Record<string, any> | undefined> {
+/**
+ * Leest de rij waar de regel over gaat, maar alleen als die van de vereniging
+ * van de regel is. Zonder die grens las een regel van vereniging A de rij van
+ * een lid van vereniging B, en stuurde de actie 'mail naar de entiteit' een
+ * mail naar dat lid - met diens gegevens ingevuld in de tekst.
+ */
+async function loadEntityData(
+  entityType: string,
+  entityId: string,
+  associationId: string,
+): Promise<Record<string, any> | undefined> {
   const tableName = getTableName(entityType);
   if (!tableName) return undefined;
 
   try {
-    const data = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(entityId) as Record<string, any> | undefined;
+    const data = db
+      .prepare(`SELECT * FROM ${tableName} WHERE id = ? AND association_id = ?`)
+      .get(entityId, associationId) as Record<string, any> | undefined;
     return data;
   } catch {
     return undefined;
   }
 }
 
+/**
+ * De soorten entiteit waar een regel over kan gaan, met hun tabel. Elke tabel
+ * hier heeft een eigen kolom association_id; de queries in dit bestand leunen
+ * daarop. Een tabel die de vereniging alleen via een ouder kent hoort hier dus
+ * niet bij zonder die queries aan te passen.
+ */
+const ENTITEIT_TABELLEN: Record<string, string> = {
+  user: 'users',
+  member: 'users',
+  concert: 'concerts',
+  rehearsal: 'rehearsals',
+  task: 'tasks',
+  project: 'projects',
+  tour: 'tours',
+  equipment: 'equipment',
+};
+
 function getTableName(entityType: string): string | null {
-  const mapping: Record<string, string> = {
-    user: 'users',
-    member: 'users',
-    concert: 'concerts',
-    rehearsal: 'rehearsals',
-    task: 'tasks',
-    project: 'projects',
-    tour: 'tours',
-    equipment: 'equipment',
-  };
-  return mapping[entityType] || null;
+  return Object.prototype.hasOwnProperty.call(ENTITEIT_TABELLEN, entityType) ? ENTITEIT_TABELLEN[entityType] : null;
+}
+
+/**
+ * Controleert een datumveld-trigger: bestaat de soort entiteit en heeft de
+ * tabel die kolom echt? Geeft een foutmelding terug, of null als het klopt.
+ *
+ * Zowel de soort als de kolomnaam komen in de query van
+ * processDateFieldWorkflows terecht, en een kolomnaam kan niet als parameter.
+ * Daarom alleen namen die de database zelf opgeeft. De route controleert dit
+ * bij het opslaan; de motor bij het uitvoeren nog een keer, voor rijen die er
+ * al stonden.
+ */
+export function controleerDatumveld(
+  entiteit: string | null | undefined,
+  veld: string | null | undefined,
+): string | null {
+  if (!entiteit || !veld) return 'Een datumveld-trigger heeft een soort entiteit en een veld nodig.';
+  const tabel = getTableName(entiteit);
+  if (!tabel) return `Onbekende soort entiteit: ${entiteit}.`;
+  if (!kolommenVan(tabel).has(veld)) return `Onbekend veld voor ${entiteit}: ${veld}.`;
+  return null;
 }
 
 /**
@@ -605,8 +668,12 @@ export function processDateFieldWorkflows(associationId?: string): void {
     .all(associationId ?? null, associationId ?? null) as any[];
 
   for (const trigger of triggers) {
-    const tableName = getTableName(trigger.date_field_entity);
-    if (!tableName) continue;
+    const fout = controleerDatumveld(trigger.date_field_entity, trigger.date_field_name);
+    if (fout) {
+      console.error(`Datumveld-trigger ${trigger.id} overgeslagen: ${fout}`);
+      continue;
+    }
+    const tableName = getTableName(trigger.date_field_entity) as string;
 
     const daysBefore = trigger.days_before || 0;
     const daysAfter = trigger.days_after || 0;
@@ -621,14 +688,17 @@ export function processDateFieldWorkflows(associationId?: string): void {
     const targetDateStr = targetDate.toISOString().split('T')[0];
 
     try {
+      // Alleen de rijen van de vereniging van de regel. Zonder deze grens ging
+      // een regel van vereniging A af op de leden, concerten en taken van elke
+      // vereniging op de installatie, en mailde hij hun leden.
       const entities = db
         .prepare(
           `
         SELECT id FROM ${tableName}
-        WHERE DATE(${trigger.date_field_name}) = ?
+        WHERE DATE(${trigger.date_field_name}) = ? AND association_id = ?
       `,
         )
-        .all(targetDateStr) as { id: string }[];
+        .all(targetDateStr, trigger.association_id) as { id: string }[];
 
       for (const entity of entities) {
         executeWorkflow(

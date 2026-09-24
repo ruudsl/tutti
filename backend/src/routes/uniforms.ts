@@ -10,6 +10,33 @@ import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
+/**
+ * Eist dat een gebruiker lid is van de eigen vereniging: rechtstreeks via
+ * users.association_id, of via user_associations voor wie bij meer dan een
+ * vereniging speelt. Leeg of ontbrekend is goed; dan wordt er niemand
+ * gekoppeld.
+ *
+ * Het gebruikers-id komt uit de body. Zonder deze controle kon een beheerder
+ * van vereniging A een onderdeel uitgeven aan een lid van vereniging B, en
+ * kreeg hij daarna diens naam en e-mailadres terug in het overzicht.
+ * (Zelfde opzet als eisEigenId in accounting.ts, die niet geëxporteerd is.)
+ */
+function eisEigenLid(userId: string | null | undefined, associationId: string | null | undefined): void {
+  if (userId === null || userId === undefined || userId === '') return;
+  if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+  const lid = db
+    .prepare(
+      `SELECT u.id FROM users u
+       WHERE u.id = ? AND u.deleted_at IS NULL
+         AND (u.association_id = ? OR EXISTS (
+           SELECT 1 FROM user_associations ua
+           WHERE ua.user_id = u.id AND ua.association_id = ? AND ua.status = 'active'
+         ))`,
+    )
+    .get(userId, associationId, associationId);
+  if (!lid) throw new ApiError(400, 'Onbekend lid.');
+}
+
 // Uniform item types
 const UNIFORM_ITEM_TYPES = [
   { value: 'jacket', label: 'Jas' },
@@ -361,6 +388,7 @@ router.post(
   requireRole('admin', 'uniforms_committee'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createUniformItemSchema.parse(req.body);
+    eisEigenLid(data.currentUserId, req.user!.associationId);
 
     const id = uuidv4();
 
@@ -474,6 +502,8 @@ router.put(
       throw new ApiError(404, 'Uniform onderdeel niet gevonden.');
     }
 
+    eisEigenLid(data.currentUserId, req.user!.associationId);
+
     db.prepare(
       `
         UPDATE uniform_items SET
@@ -569,6 +599,8 @@ router.post(
     if (item.status === 'in_repair' || item.status === 'written_off') {
       throw new ApiError(400, 'Dit onderdeel kan niet worden uitgegeven vanwege de huidige status.');
     }
+
+    eisEigenLid(data.userId, req.user!.associationId);
 
     const id = uuidv4();
 

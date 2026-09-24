@@ -1387,7 +1387,7 @@ Zet de taak terug op `wachtend` met een verse teller. Alleen voor een taak met s
 
 ## Import API
 
-Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit een spreadsheet. Instrumenten horen bij de module inventaris en contacten bij de module contacten; staat die uit, dan geeft de route `404`. De kolommen en wat er per regel gebeurt staan in [IMPORTEREN.md](./IMPORTEREN.md).
+Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en apparatuur inlezen uit een spreadsheet. Instrumenten, uniformen en apparatuur horen bij de module inventaris en contacten bij de module contacten; staat die uit, dan geeft de route `404`. De kolommen en wat er per regel gebeurt staan in [IMPORTEREN.md](./IMPORTEREN.md).
 
 | Route                                     | Wie                              | Wat                                     |
 | ----------------------------------------- | -------------------------------- | --------------------------------------- |
@@ -1399,14 +1399,20 @@ Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit een 
 | `POST /api/import/instrumenten`           | beheerder, instrumentencommissie | Importeert de regels met status `nieuw` |
 | `POST /api/import/contacten/voorbeeld`    | beheerder, muziekcommissie       | Beoordeelt het bestand, verandert niets |
 | `POST /api/import/contacten`              | beheerder, muziekcommissie       | Importeert de regels met status `nieuw` |
+| `POST /api/import/uniformen/voorbeeld`    | beheerder, uniformcommissie      | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/uniformen`              | beheerder, uniformcommissie      | Importeert de regels met status `nieuw` |
+| `POST /api/import/apparatuur/voorbeeld`   | beheerder, instrumentencommissie | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/apparatuur`             | beheerder, instrumentencommissie | Importeert de regels met status `nieuw` |
 
 De body is het bestand als tekst, hooguit 5 MB en 2000 regels:
 
 ```json
-{ "csv": "Voornaam;Achternaam;E-mail\nAnna;Jansen;anna@voorbeeld.nl\n" }
+{ "csv": "Voornaam;Achternaam;E-mail\nAnna;Jansen;anna@voorbeeld.nl\n", "bijwerken": false }
 ```
 
-Het antwoord geeft per regel de uitkomst. De import beoordeelt het bestand opnieuw en voegt `geimporteerd` toe; hij antwoordt `201` als er iets is geïmporteerd, anders `200`.
+Met `"bijwerken": true` krijgen bestaande rijen wat in het bestand anders is: zulke regels hebben de status `bijwerken` en een lijst `wijzigingen` (`{ "veld", "oud", "nieuw" }`). Een lege cel wist niets. Uniformen negeren de optie. Zie [IMPORTEREN.md](./IMPORTEREN.md#bestaande-gegevens-bijwerken) voor wat per soort kan.
+
+Het antwoord geeft per regel de uitkomst. De import beoordeelt het bestand opnieuw en voegt `geimporteerd` en `bijgewerkt` toe; hij antwoordt `201` als er iets is geïmporteerd, anders `200`.
 
 ```json
 {
@@ -1421,8 +1427,9 @@ Het antwoord geeft per regel de uitkomst. De import beoordeelt het bestand opnie
       "waarschuwingen": []
     }
   ],
-  "tellingen": { "nieuw": 1, "bestaat": 0, "fout": 0 },
-  "geimporteerd": 1
+  "tellingen": { "nieuw": 1, "bestaat": 0, "bijwerken": 0, "fout": 0 },
+  "geimporteerd": 1,
+  "bijgewerkt": 0
 }
 ```
 

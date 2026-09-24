@@ -318,18 +318,19 @@ describe('sessies', () => {
       expect(antwoord.body.revokedCount).toBe(1);
     });
 
-    it('spaart ook de huidige sessie als het token in de queryparameter staat', async () => {
-      // authenticateToken accepteert een volledig token nog via ?token=; dan
-      // moet de route dat token ook als 'de huidige' herkennen, anders logt
-      // de gebruiker zichzelf alsnog uit.
+    it('weigert een volledig token in de queryparameter bij DELETE', async () => {
+      // authenticateToken accepteert een volledig token via ?token= alleen nog
+      // bij GET en HEAD (securityreview): een URL belandt in logboeken en
+      // geschiedenis, en wie hem vindt mocht er hier alle andere sessies mee
+      // afmelden. Er wordt dan ook niets ingetrokken.
       const huidige = maakSessie(lid.id, lidToken);
       const telefoon = maakSessie(lid.id, 'token-op-de-telefoon');
 
       const antwoord = await request(app).delete(`/api/sessions/all?token=${lidToken}`);
 
-      expect(antwoord.status).toBe(200);
+      expect(antwoord.status).toBe(401);
       expect(ingetrokken(huidige)).toBe(false);
-      expect(ingetrokken(telefoon)).toBe(true);
+      expect(ingetrokken(telefoon)).toBe(false);
     });
 
     it('weigert een verzoek zonder token', async () => {

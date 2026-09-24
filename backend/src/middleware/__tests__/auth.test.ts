@@ -37,6 +37,16 @@ vi.mock('../../utils/sessionStore', () => ({
 }));
 
 import { findSessionByTokenHash } from '../../utils/sessionStore';
+import { createTestAssociation, createTestUser } from '../../__tests__/testUtils';
+
+// De sessiecontrole kijkt sinds de securityreview ook naar de gebruiker zelf
+// (verwijderd of uit dienst = geen toegang), ook bij een bekende sessie. De
+// gebruiker uit deze tests moet dus echt bestaan; de testdatabase wordt per
+// test leeggemaakt (__tests__/setup.ts).
+beforeEach(() => {
+  createTestAssociation({ id: 'assoc-1', name: 'Vereniging voor de middleware-tests' });
+  createTestUser('assoc-1', { id: 'user-1', email: 'test@example.com' });
+});
 
 function mockResponse(): Response {
   const res: Partial<Response> = {
@@ -108,7 +118,9 @@ describe('authenticateToken', () => {
 
   it('accepts token from query parameter', () => {
     const token = jwt.sign(testUser, 'test-secret-key');
+    // Een volledig token in de URL geldt alleen bij GET/HEAD.
     const req = mockRequest({
+      method: 'GET',
       query: { token } as any,
     });
     const res = mockResponse();
@@ -359,7 +371,8 @@ describe('optionalAuth', () => {
       role: testUser.role,
       association_id: testUser.associationId,
     });
-    const req = mockRequest({ query: { token } });
+    // Een volledig token in de URL geldt alleen bij GET/HEAD.
+    const req = mockRequest({ method: 'GET', query: { token } });
     const res = mockResponse();
     const next = vi.fn();
 

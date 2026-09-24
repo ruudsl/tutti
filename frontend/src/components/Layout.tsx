@@ -195,7 +195,11 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/uniforms', labelKey: 'nav.uniforms', roles: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE] },
       { path: '/equipment', labelKey: 'nav.equipment', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
       // De beheerder vindt het importeren onder Beheer.
-      { path: '/importeren', labelKey: 'nav.importeren', roles: [ROLES.EQUIPMENT_COMMITTEE] },
+      {
+        path: '/importeren',
+        labelKey: 'nav.importeren',
+        roles: [ROLES.EQUIPMENT_COMMITTEE, ROLES.UNIFORMS_COMMITTEE],
+      },
     ],
   },
   {

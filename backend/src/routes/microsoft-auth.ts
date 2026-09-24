@@ -1,14 +1,74 @@
 import { Router, Response, Request } from 'express';
 import crypto from 'crypto';
+import { z } from 'zod';
 import db from '../database/connection';
-import { generateToken, authenticateToken, AuthRequest } from '../middleware/auth';
+import { generateToken, authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { registerSession } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { validate } from '../middleware/validate';
 import config from '../config';
 import logger from '../utils/logger';
 import { graphFetch } from '../utils/m365';
 
 const router = Router();
+
+/**
+ * Tenants waarin iedereen met een Microsoft-account kan inloggen.
+ *
+ * Met een van deze als tenant laat Microsoft elk werk- of schoolaccount
+ * (organizations), elk persoonlijk account (consumers) of allebei (common)
+ * binnen. Wie zelf een tenant aanmaakt, kiest daar zijn eigen
+ * userPrincipalName en `mail`; koppelen op e-mailadres gaf zo iedereen die het
+ * adres van een lid kende diens account.
+ */
+const OPEN_TENANTS = new Set(['common', 'organizations', 'consumers']);
+
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Een tenant-id (GUID) of een domeinnaam; niets dat een URL-pad kan ombuigen. */
+const TENANT_VORM = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$/i;
+
+function isSpecifiekeTenant(tenant: string): boolean {
+  return TENANT_VORM.test(tenant) && !OPEN_TENANTS.has(tenant.toLowerCase());
+}
+
+const microsoftConfigSchema = z.object({
+  clientId: z.string().trim().min(1, 'Client ID en Tenant ID zijn verplicht.'),
+  clientSecret: z.string().optional(),
+  tenantId: z
+    .string()
+    .trim()
+    .min(1, 'Client ID en Tenant ID zijn verplicht.')
+    .refine((tenant) => TENANT_VORM.test(tenant), 'Tenant ID moet een GUID of domeinnaam zijn.')
+    .refine(
+      (tenant) => !OPEN_TENANTS.has(tenant.toLowerCase()),
+      'Vul de tenant van de eigen organisatie in; common, organizations en consumers laten elk Microsoft-account binnen.',
+    ),
+  enabled: z.boolean().optional(),
+});
+
+/**
+ * De claims uit het id_token dat bij het inwisselen van de code terugkwam.
+ *
+ * De handtekening wordt niet gecontroleerd, en dat hoeft ook niet: het token
+ * komt rechtstreeks van het token-eindpunt van Microsoft, over TLS, als
+ * antwoord op ons eigen verzoek met ons clientgeheim (OpenID Connect Core
+ * 3.1.3.7). Er zit geen gebruiker tussen die het kan vervangen.
+ */
+function claimsUitIdToken(idToken: unknown): { tid?: string; oid?: string } {
+  if (typeof idToken !== 'string') return {};
+  const deel = idToken.split('.')[1];
+  if (!deel) return {};
+  try {
+    const claims = JSON.parse(Buffer.from(deel, 'base64url').toString('utf8')) as Record<string, unknown>;
+    return {
+      tid: typeof claims.tid === 'string' ? claims.tid : undefined,
+      oid: typeof claims.oid === 'string' ? claims.oid : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
 
 interface MicrosoftConfig {
   microsoft_client_id: string | null;
@@ -32,6 +92,19 @@ interface MicrosoftUserProfile {
   mail: string;
   userPrincipalName: string;
 }
+
+interface GebruikerRij {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  association_id: string | null;
+  status: string | null;
+  mfa_enabled: number;
+}
+
+const GEBRUIKER_KOLOMMEN = 'id, email, first_name, last_name, role, association_id, status, mfa_enabled';
 
 // In-memory state store for CSRF protection (short-lived)
 const stateStore = new Map<string, { createdAt: number; associationId: string }>();
@@ -105,6 +178,14 @@ function getMicrosoftConfig(associationId: string | null): MicrosoftConfig | nul
     !association.microsoft_client_id ||
     !association.microsoft_tenant_id
   ) {
+    return null;
+  }
+
+  // Een instelling van vóór de controle bij het opslaan kan nog op common of
+  // organizations staan. Daarmee inloggen laat elk Microsoft-account toe; dan
+  // liever geen SSO tot een beheerder de eigen tenant invult.
+  if (!isSpecifiekeTenant(association.microsoft_tenant_id)) {
+    logger.warn(`Microsoft-SSO uitgeschakeld voor ${associationId}: tenant is geen specifieke tenant.`);
     return null;
   }
   return association;
@@ -225,32 +306,72 @@ router.post(
     }
 
     const msProfile = (await profileResponse.json()) as MicrosoftUserProfile;
-    const msEmail = (msProfile.mail || msProfile.userPrincipalName || '').toLowerCase();
 
-    if (!msEmail) {
-      throw new ApiError(400, 'Geen e-mailadres gevonden in Microsoft account.');
+    if (typeof msProfile.id !== 'string' || !msProfile.id) {
+      throw new ApiError(400, 'Kan Microsoft profiel niet ophalen.');
     }
 
-    // Try to find existing user by microsoft_id first, then by email
+    // In welke tenant is deze gebruiker ingelogd? Bij een tenant-id (GUID) als
+    // instelling moet dat dezelfde zijn; anders is er iets mis met de
+    // configuratie of het antwoord, en dan liever niemand binnen.
+    const ingesteldeTenant = tenantId.toLowerCase();
+    const { tid } = claimsUitIdToken(tokenData.id_token);
+    const tenantIsGuid = GUID.test(ingesteldeTenant);
+    const tenantKlopt = tenantIsGuid && tid?.toLowerCase() === ingesteldeTenant;
+
+    if (tenantIsGuid && tid && !tenantKlopt) {
+      logger.warn('Microsoft-SSO: token uit een andere tenant geweigerd', {
+        associationId: storedState.associationId,
+      });
+      throw new ApiError(403, 'Dit Microsoft-account hoort niet bij de organisatie van deze vereniging.');
+    }
+
+    // Eerst op microsoft_id: dat is gekoppeld bij het aanmaken (onboarding),
+    // bij het importeren uit Entra ID, of bij een eerdere inlog hieronder.
     let user = db
-      .prepare('SELECT * FROM users WHERE microsoft_id = ? AND association_id = ? AND deleted_at IS NULL')
-      .get(msProfile.id, storedState.associationId) as any;
+      .prepare(
+        `SELECT ${GEBRUIKER_KOLOMMEN} FROM users WHERE microsoft_id = ? AND association_id = ? AND deleted_at IS NULL`,
+      )
+      .get(msProfile.id, storedState.associationId) as GebruikerRij | undefined;
 
     if (!user) {
-      // Try to match by email
-      user = db
-        .prepare('SELECT * FROM users WHERE LOWER(email) = ? AND association_id = ? AND deleted_at IS NULL')
-        .get(msEmail, storedState.associationId) as any;
+      // Automatisch koppelen op e-mailadres, maar alleen als vaststaat dat
+      // het account uit de eigen tenant komt, en alleen op userPrincipalName.
+      //
+      // `mail` is een vrij in te vullen eigenschap; wie beheerder is van welke
+      // tenant dan ook kan hem op het adres van een lid zetten. Met common of
+      // organizations als tenant (nu geweigerd) kwam zo iedereen binnen als
+      // dat lid. De UPN is binnen een tenant uniek en door de beheerder van
+      // die tenant uitgegeven; een gast (B2B) heeft een UPN met #EXT# en telt
+      // niet. Is de tenant als domeinnaam ingesteld, dan valt de tid niet te
+      // vergelijken en is een expliciete koppeling nodig (Entra-import).
+      const upn = typeof msProfile.userPrincipalName === 'string' ? msProfile.userPrincipalName.toLowerCase() : '';
+      if (tenantKlopt && upn && !upn.includes('#ext#')) {
+        user = db
+          .prepare(
+            `SELECT ${GEBRUIKER_KOLOMMEN} FROM users
+             WHERE LOWER(email) = ? AND association_id = ? AND deleted_at IS NULL AND microsoft_id IS NULL`,
+          )
+          .get(upn, storedState.associationId) as GebruikerRij | undefined;
 
-      if (user) {
-        // Link Microsoft account to existing user
-        db.prepare('UPDATE users SET microsoft_id = ? WHERE id = ?').run(msProfile.id, user.id);
-        logger.info(`Linked Microsoft account to user ${user.id} (${msEmail})`);
+        if (user && user.status !== 'inactive') {
+          db.prepare('UPDATE users SET microsoft_id = ? WHERE id = ?').run(msProfile.id, user.id);
+          logger.info(`Linked Microsoft account to user ${user.id} (${upn})`);
+        }
       }
     }
 
     if (!user) {
-      throw new ApiError(400, 'Geen account gevonden met dit e-mailadres. Neem contact op met de beheerder.');
+      throw new ApiError(
+        400,
+        'Geen account gevonden dat aan dit Microsoft-account is gekoppeld. Neem contact op met de beheerder.',
+      );
+    }
+
+    // Uit dienst is uit dienst, ook via Microsoft. Het wachtwoordpad
+    // (routes/auth.ts) weigerde dit al; hier kwam zo iemand gewoon binnen.
+    if (user.status === 'inactive') {
+      throw new ApiError(403, 'Dit account is niet meer actief. Neem contact op met je vereniging.');
     }
 
     // Geen tweede factor op dit pad, en dat is een keuze.
@@ -296,11 +417,8 @@ router.post(
 router.get(
   '/config',
   authenticateToken,
+  requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (req.user!.role !== 'admin') {
-      throw new ApiError(403, 'Alleen beheerders kunnen de Microsoft configuratie bekijken.');
-    }
-
     const association = db
       .prepare(
         `
@@ -328,16 +446,10 @@ router.get(
 router.put(
   '/config',
   authenticateToken,
+  requireRole('admin'),
+  validate(microsoftConfigSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (req.user!.role !== 'admin') {
-      throw new ApiError(403, 'Alleen beheerders kunnen de Microsoft configuratie wijzigen.');
-    }
-
-    const { clientId, clientSecret, tenantId, enabled } = req.body;
-
-    if (!clientId || !tenantId) {
-      throw new ApiError(400, 'Client ID en Tenant ID zijn verplicht.');
-    }
+    const { clientId, clientSecret, tenantId, enabled } = req.body as z.infer<typeof microsoftConfigSchema>;
 
     // If clientSecret is provided, update it. Otherwise keep existing.
     if (clientSecret) {
@@ -368,11 +480,8 @@ router.put(
 router.delete(
   '/config',
   authenticateToken,
+  requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (req.user!.role !== 'admin') {
-      throw new ApiError(403, 'Alleen beheerders kunnen de Microsoft configuratie verwijderen.');
-    }
-
     db.prepare(
       `
         UPDATE associations

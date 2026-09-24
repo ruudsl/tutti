@@ -397,8 +397,10 @@ describe('menu tegenover de routetabel', () => {
 
     // Het gat tussen `path=` en `<PrivateRoute roles=` mag geen tweede
     // `path=` bevatten. Zonder die voorwaarde springt een route zonder rollen
-    // over de eerstvolgende route heen en pikt diens rollen mee.
-    const metRollen = /path="([^"]+)"\s*\n\s*element=\{((?:(?!path=")[\s\S])*?)<PrivateRoute roles=\{\[([^\]]*)\]\}/g;
+    // over de eerstvolgende route heen en pikt diens rollen mee. Tussen
+    // `<PrivateRoute` en `roles=` mag een regelovergang staan: Prettier breekt
+    // een lange rollenlijst zo af.
+    const metRollen = /path="([^"]+)"\s*\n\s*element=\{((?:(?!path=")[\s\S])*?)<PrivateRoute\s+roles=\{\[([^\]]*)\]\}/g;
     for (const treffer of bron.matchAll(metRollen)) {
       tabel['/' + treffer[1]] = treffer[3]
         .split(',')

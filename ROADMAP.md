@@ -510,7 +510,7 @@ Gestructureerde pilot deployments:
 ### Deliverables
 
 - [ ] 2-3 live deployments
-- [x] Import tooling voor spreadsheets/legacy data — _leden, muziekbibliotheek, instrumenten in bezit en contacten uit CSV, met eerst een voorbeeld per regel, 24-09-2026; zie `docs/IMPORTEREN.md`. Nog niet: materiaal, uniformen en concertkleding, en bijwerken van wat er al is_
+- [x] Import tooling voor spreadsheets/legacy data — _leden, muziekbibliotheek, instrumenten in bezit, contacten, uniformen en apparatuur uit CSV, met eerst een voorbeeld per regel; bestaande gegevens bijwerken met oud → nieuw per veld, 24-09-2026; zie `docs/IMPORTEREN.md`. Nog niet: concertkleding_
 - [ ] Onboarding handleiding
 - [ ] Feedback rapport per pilot
 - [ ] Publieke case studies

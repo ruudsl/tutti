@@ -667,7 +667,9 @@ function AppRoutes() {
           <Route
             path="importeren"
             element={
-              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.EQUIPMENT_COMMITTEE]}>
+              <PrivateRoute
+                roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.EQUIPMENT_COMMITTEE, ROLES.UNIFORMS_COMMITTEE]}
+              >
                 <Importeren />
               </PrivateRoute>
             }

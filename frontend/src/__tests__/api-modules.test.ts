@@ -67,7 +67,6 @@ import {
   updateGoogleDriveSettings,
   deleteGoogleDriveSettings,
   getEquipmentTypes,
-  getMaintenanceAlerts,
   getEquipment,
   getEquipmentItem,
   createEquipment,
@@ -548,8 +547,7 @@ describe('koppelingen met derden', () => {
 /**
  * Apparatuur.
  *
- * LET OP: dit hele blok is uit de pas gelopen met backend/src/routes/equipment.ts.
- * De backend kent daar:
+ * De routes in backend/src/routes/equipment.ts:
  *   GET/POST /categories, DELETE /categories/:id
  *   GET /, GET /loans, GET /stats, GET /types, GET /:id
  *   POST /, PATCH /:id, DELETE /:id
@@ -557,23 +555,25 @@ describe('koppelingen met derden', () => {
  *   POST /:id/maintenance
  *   GET/POST /:id/damage, PATCH/DELETE /:id/damage/:reportId
  *
- * De functies hieronder roepen deels routes aan die daar niet tussen staan, en
- * de velden in de body zijn ook andere (de backend wil name en equipmentType,
- * de frontend stuurt instrumentType en brandModel). De tests leggen vast wat er
- * nu verstuurd wordt; ze zeggen niets over of dat goed is.
+ * Tot september 2026 stond hier dat dit blok daar uit de pas liep, en legden
+ * deze tests vast wat er toen verstuurd werd: PUT in plaats van PATCH,
+ * /damage-logs, /:id/loans, /record-maintenance, /maintenance-alerts en de
+ * veldnamen instrumentType en brandModel. De api-laag is sindsdien op de
+ * backend gezet; deze tests volgen nu de routes hierboven. Het volledige
+ * contract per functie staat in api/__tests__/equipment-backendcontract.test.ts.
  */
 describe('apparatuur', () => {
-  it('getEquipmentTypes en getEquipment komen wel bij de backend aan', async () => {
+  it('getEquipmentTypes en getEquipment komen bij de backend aan', async () => {
     antwoordMet([]);
     await getEquipmentTypes();
     expect(laatsteVerzoek().pad).toBe('/equipment/types');
 
-    antwoordMet({ data: [], total: 0, page: 1, limit: 25 });
-    await getEquipment({ search: 'trompet', status: 'available', type: 'instrument' });
+    antwoordMet([]);
+    await getEquipment({ status: 'available', type: 'instrument' });
     const verzoek = laatsteVerzoek();
     expect(verzoek.pad).toBe('/equipment');
-    expect(verzoek.query.get('search')).toBe('trompet');
     expect(verzoek.query.get('status')).toBe('available');
+    expect(verzoek.query.get('type')).toBe('instrument');
 
     antwoordMet({ id: 'e1' });
     await getEquipmentItem('e1');
@@ -585,76 +585,70 @@ describe('apparatuur', () => {
     expect(laatsteVerzoek().pad).toBe('/equipment/e1');
   });
 
-  // /equipment/maintenance-alerts bestaat niet. Express matcht dit op GET /:id
-  // met id 'maintenance-alerts' en antwoordt met 404 'Apparatuur niet
-  // gevonden'. Het onderhoudsblok blijft dus leeg.
-  it('getMaintenanceAlerts vraagt een route op die de backend niet kent', async () => {
-    antwoordMet([]);
-    await getMaintenanceAlerts();
-
-    expect(laatsteVerzoek().pad).toBe('/equipment/maintenance-alerts');
-  });
-
-  // De backend verwacht { name, equipmentType, ... }; dit stuurt
-  // { instrumentType, brandModel, ... } en loopt daar op een 400 vast.
-  it('createEquipment stuurt de oude veldnamen', async () => {
-    antwoordMet({ id: 'e1' });
-    await createEquipment({ instrumentType: 'Trompet', brandModel: 'Yamaha', status: 'available' });
+  it('createEquipment stuurt de veldnamen die de backend verwacht', async () => {
+    antwoordMet({ id: 'e1', inventoryNumber: 'EQ-00001' });
+    await createEquipment({ name: 'Trompet', equipmentType: 'instrument', brand: 'Yamaha', status: 'available' });
 
     const verzoek = laatsteVerzoek();
     expect(verzoek.methode).toBe('post');
     expect(verzoek.pad).toBe('/equipment');
-    expect(verzoek.body).toEqual({ instrumentType: 'Trompet', brandModel: 'Yamaha', status: 'available' });
+    expect(verzoek.body).toEqual({
+      name: 'Trompet',
+      equipmentType: 'instrument',
+      brand: 'Yamaha',
+      status: 'available',
+    });
   });
 
-  // De backend kent alleen PATCH /:id, geen PUT. Een wijziging aan apparatuur
-  // komt dus nooit aan.
-  it('updateEquipment gebruikt PUT waar de backend PATCH verwacht', async () => {
+  it('updateEquipment gebruikt PATCH, zoals de backend', async () => {
     antwoordMet({});
-    await updateEquipment('e1', { notes: 'Klep hersteld' });
+    await updateEquipment('e1', { location: 'Zolder' });
 
-    expect(laatsteVerzoek().methode).toBe('put');
+    expect(laatsteVerzoek().methode).toBe('patch');
     expect(laatsteVerzoek().pad).toBe('/equipment/e1');
+    expect(laatsteVerzoek().body).toEqual({ location: 'Zolder' });
   });
 
-  // De backend noemt dit /:id/damage, niet /:id/damage-logs.
-  it('de schadelogboeken gebruiken een pad dat de backend niet kent', async () => {
+  it('de schademeldingen gebruiken /:id/damage', async () => {
     antwoordMet({ id: 's1' });
-    await addEquipmentDamageLog('e1', { date: '2026-02-01', description: 'Deuk in de beker' });
+    await addEquipmentDamageLog('e1', { description: 'Deuk in de beker', severity: 'moderate' });
     expect(laatsteVerzoek().methode).toBe('post');
-    expect(laatsteVerzoek().pad).toBe('/equipment/e1/damage-logs');
+    expect(laatsteVerzoek().pad).toBe('/equipment/e1/damage');
 
     antwoordMet({});
-    await updateEquipmentDamageLog('e1', 's1', { status: 'repaired' });
-    expect(laatsteVerzoek().methode).toBe('put');
-    expect(laatsteVerzoek().pad).toBe('/equipment/e1/damage-logs/s1');
+    await updateEquipmentDamageLog('e1', 's1', { repairedAt: '2026-03-01' });
+    expect(laatsteVerzoek().methode).toBe('patch');
+    expect(laatsteVerzoek().pad).toBe('/equipment/e1/damage/s1');
 
     antwoordMet({});
     await deleteEquipmentDamageLog('e1', 's1');
     expect(laatsteVerzoek().methode).toBe('delete');
-    expect(laatsteVerzoek().pad).toBe('/equipment/e1/damage-logs/s1');
+    expect(laatsteVerzoek().pad).toBe('/equipment/e1/damage/s1');
   });
 
-  // De backend heeft POST /equipment/loans met equipmentId in de body en
-  // PATCH /equipment/loans/:id/return. Beide aanroepen hieronder lopen dood.
-  it('de uitleenroutes zetten het apparaat-id in het pad in plaats van in de body', async () => {
-    antwoordMet({ id: 'u1' });
-    await createEquipmentLoan('e1', { userId: 'u1', loanDate: '2026-02-01' });
-    expect(laatsteVerzoek().pad).toBe('/equipment/e1/loans');
-    expect(laatsteVerzoek().body).toEqual({ userId: 'u1', loanDate: '2026-02-01' });
+  it('de uitleenroutes zetten het apparaat-id in de body en nemen in op de uitlening-id', async () => {
+    antwoordMet({ id: 'l1' });
+    await createEquipmentLoan('e1', { userId: 'u1' });
+    expect(laatsteVerzoek().methode).toBe('post');
+    expect(laatsteVerzoek().pad).toBe('/equipment/loans');
+    expect(laatsteVerzoek().body).toEqual({ equipmentId: 'e1', userId: 'u1' });
 
     antwoordMet({});
-    await returnEquipmentLoan('e1', 'u1', { returnDate: '2026-03-01' });
-    expect(laatsteVerzoek().methode).toBe('post');
-    expect(laatsteVerzoek().pad).toBe('/equipment/e1/loans/u1/return');
+    await returnEquipmentLoan('l1', { conditionAtReturn: 'good' });
+    expect(laatsteVerzoek().methode).toBe('patch');
+    expect(laatsteVerzoek().pad).toBe('/equipment/loans/l1/return');
   });
 
-  // De backend noemt dit /:id/maintenance.
-  it('recordEquipmentMaintenance gebruikt /record-maintenance', async () => {
-    antwoordMet({ nextMaintenanceDate: '2026-08-01' });
-    await recordEquipmentMaintenance('e1', { date: '2026-02-01', notes: 'Groot onderhoud' });
+  it('recordEquipmentMaintenance gebruikt /:id/maintenance', async () => {
+    antwoordMet({ id: 'm1' });
+    await recordEquipmentMaintenance('e1', {
+      maintenanceType: 'service',
+      description: 'Groot onderhoud',
+      performedDate: '2026-02-01',
+    });
 
-    expect(laatsteVerzoek().pad).toBe('/equipment/e1/record-maintenance');
+    expect(laatsteVerzoek().methode).toBe('post');
+    expect(laatsteVerzoek().pad).toBe('/equipment/e1/maintenance');
   });
 });
 

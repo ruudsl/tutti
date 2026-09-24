@@ -99,7 +99,11 @@ const navGroups: NavGroup[] = [
       { path: '/instrument-assets', labelKey: 'nav.instrumentAssets', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
       { path: '/uniforms', labelKey: 'nav.uniforms', roles: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE] },
       // De beheerder vindt het importeren onder Beheer.
-      { path: '/importeren', labelKey: 'nav.importeren', roles: [ROLES.EQUIPMENT_COMMITTEE] },
+      {
+        path: '/importeren',
+        labelKey: 'nav.importeren',
+        roles: [ROLES.EQUIPMENT_COMMITTEE, ROLES.UNIFORMS_COMMITTEE],
+      },
     ],
   },
   {

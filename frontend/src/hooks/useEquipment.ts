@@ -4,7 +4,7 @@ import {
   getEquipment,
   getEquipmentItem,
   getEquipmentTypes,
-  getMaintenanceAlerts,
+  getEquipmentDamageLogs,
   createEquipment,
   updateEquipment,
   deleteEquipment,
@@ -15,6 +15,7 @@ import {
   returnEquipmentLoan,
   recordEquipmentMaintenance,
 } from '../api';
+import type { EquipmentFilters } from '../api/equipment';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 
@@ -29,21 +30,11 @@ export function useEquipmentTypes() {
 }
 
 /**
- * Hook to fetch maintenance alerts
- */
-export function useMaintenanceAlerts() {
-  return useQuery({
-    queryKey: queryKeys.maintenanceAlerts,
-    queryFn: getMaintenanceAlerts,
-  });
-}
-
-/**
  * Hook to fetch equipment with filters
  */
-export function useEquipment(filters?: { search?: string; status?: string; type?: string }) {
+export function useEquipment(filters?: EquipmentFilters) {
   return useQuery({
-    queryKey: queryKeys.equipment(filters as Record<string, string>),
+    queryKey: queryKeys.equipment(filters as Record<string, string> | undefined),
     queryFn: () => getEquipment(filters),
   });
 }
@@ -56,6 +47,19 @@ export function useEquipmentItem(id: string) {
     queryKey: queryKeys.equipmentItem(id),
     queryFn: () => getEquipmentItem(id),
     enabled: !!id,
+  });
+}
+
+/**
+ * De schademeldingen van één item. GET /equipment/:id stuurt ze niet mee; de
+ * sleutel hangt onder die van het item, zodat een invalidatie van het item ze
+ * meeneemt.
+ */
+export function useEquipmentDamageLogs(equipmentId: string) {
+  return useQuery({
+    queryKey: queryKeys.equipmentDamage(equipmentId),
+    queryFn: () => getEquipmentDamageLogs(equipmentId),
+    enabled: !!equipmentId,
   });
 }
 
@@ -208,15 +212,16 @@ export function useReturnEquipmentLoan() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // De backend neemt in op de uitlening-id alleen (PATCH
+    // /equipment/loans/:id/return); equipmentId dient hier voor de cache.
     mutationFn: ({
-      equipmentId,
       loanId,
       returnData,
     }: {
       equipmentId: string;
       loanId: string;
-      returnData: Parameters<typeof returnEquipmentLoan>[2];
-    }) => returnEquipmentLoan(equipmentId, loanId, returnData),
+      returnData?: Parameters<typeof returnEquipmentLoan>[1];
+    }) => returnEquipmentLoan(loanId, returnData),
     onSuccess: (_, { equipmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.equipmentItem(equipmentId) });
@@ -245,7 +250,6 @@ export function useRecordEquipmentMaintenance() {
     onSuccess: (_, { equipmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.equipmentItem(equipmentId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.maintenanceAlerts });
       showSuccess('Onderhoud geregistreerd');
     },
     onError: (error) => {

@@ -172,7 +172,13 @@ export function getMostPlayedPieces(
                 MAX(c.date) as last_date
             FROM concert_program cp
             JOIN concerts c ON cp.concert_id = c.id
-            LEFT JOIN music_titles mt ON cp.music_title_id = mt.id OR LOWER(cp.title) = LOWER(mt.title)
+            -- De titel moet van dezelfde vereniging zijn als het concert. Zonder
+            -- die grens koppelde een gelijknamige titel van een andere
+            -- vereniging zich aan dit programma, en kwamen diens componist,
+            -- arrangeur en genres in deze statistiek terecht.
+            LEFT JOIN music_titles mt
+              ON (cp.music_title_id = mt.id OR LOWER(cp.title) = LOWER(mt.title))
+              AND mt.association_id = c.association_id
             WHERE c.association_id = ?
             ${orchestraId ? 'AND EXISTS (SELECT 1 FROM user_orchestras uo WHERE uo.orchestra_id = ?)' : ''}
             GROUP BY COALESCE(cp.music_title_id, mt.id), COALESCE(mt.title, cp.title)
@@ -209,7 +215,7 @@ export function getMostPlayedPieces(
             a.last_performed as lastPerformed,
             GROUP_CONCAT(g.name) as genres
         FROM aggregated a
-        LEFT JOIN music_titles mt ON a.title_id = mt.id
+        LEFT JOIN music_titles mt ON a.title_id = mt.id AND mt.association_id = ?
         LEFT JOIN music_title_genres mtg ON mt.id = mtg.music_title_id
         LEFT JOIN genres g ON mtg.genre_id = g.id
         GROUP BY a.title_id, a.title, mt.composer, mt.arranger, a.total_performances, a.last_performed
@@ -218,8 +224,8 @@ export function getMostPlayedPieces(
     `;
 
   const params = orchestraId
-    ? [associationId, orchestraId, associationId, orchestraId, limit]
-    : [associationId, associationId, limit];
+    ? [associationId, orchestraId, associationId, orchestraId, associationId, limit]
+    : [associationId, associationId, associationId, limit];
 
   const rows = db.prepare(query).all(...params) as any[];
 

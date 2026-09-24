@@ -17,7 +17,13 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL').optional(),
 
   // JWT configuration (required in production)
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters in production').optional(),
+  // Een lege waarde telt als niet ingevuld: de voorbeeldbestanden laten
+  // JWT_SECRET bewust leeg, zodat een vergeten geheim in productie de start
+  // tegenhoudt en lokaal gewoon op het ontwikkelgeheim terugvalt.
+  JWT_SECRET: z.preprocess(
+    (waarde) => (waarde === '' ? undefined : waarde),
+    z.string().min(32, 'JWT_SECRET must be at least 32 characters in production').optional(),
+  ),
   JWT_EXPIRES_IN: z.string().optional().default('7d'),
 
   // Database
@@ -56,6 +62,49 @@ const envSchema = z.object({
 });
 
 /**
+ * Geheimen die in de voorbeeldbestanden of de documentatie staan of stonden.
+ * Wie `.env.example` kopieert en vergeet het geheim te vervangen, tekent
+ * tokens met een sleutel die openbaar op GitHub staat: dan kan iedereen een
+ * token maken voor elke gebruiker, ook voor een beheerder.
+ */
+const VOORBEELDGEHEIMEN = new Set([
+  'harmonie-dev-secret-change-in-production',
+  'your-very-secure-secret-key-change-this',
+  'your-secret-key-change-in-production',
+  'your-secure-random-string',
+]);
+
+/**
+ * Een willekeurig geheim van 32 tekens of meer bevat vrijwel altijd tientallen
+ * verschillende tekens. Minder dan dit wijst op iets als `'a'.repeat(32)` of
+ * `abcabcabc…`: lang genoeg voor de lengte-eis, maar te raden.
+ */
+const MINIMAAL_VERSCHILLENDE_TEKENS = 10;
+
+/**
+ * Waarom dit JWT-geheim in productie niet deugt, of `null` als het deugt.
+ *
+ * Dit is geen sterktemeter; het vangt de gevallen die in de praktijk
+ * voorkomen: een voorbeeldwaarde die niet is vervangen, en een eentonige
+ * opvulling die alleen aan de lengte-eis voldoet.
+ */
+export function waaromJwtGeheimOnveilig(geheim: string | undefined): string | null {
+  if (!geheim) {
+    return 'JWT_SECRET ontbreekt';
+  }
+  if (geheim.length < 32) {
+    return 'JWT_SECRET is korter dan 32 tekens';
+  }
+  if (VOORBEELDGEHEIMEN.has(geheim) || /change-?(this|me|in-production)/i.test(geheim)) {
+    return 'JWT_SECRET is de voorbeeldwaarde uit .env.example of de documentatie';
+  }
+  if (new Set(geheim).size < MINIMAAL_VERSCHILLENDE_TEKENS) {
+    return `JWT_SECRET bestaat uit minder dan ${MINIMAAL_VERSCHILLENDE_TEKENS} verschillende tekens en is te raden`;
+  }
+  return null;
+}
+
+/**
  * Validate environment variables against the schema.
  * Throws detailed errors if validation fails.
  */
@@ -73,8 +122,11 @@ function validateEnv() {
 
   // Additional production-specific validations
   if (isProduction) {
-    if (!env.JWT_SECRET || env.JWT_SECRET === 'harmonie-dev-secret-change-in-production') {
-      throw new Error('JWT_SECRET must be set to a secure value in production (minimum 32 characters)');
+    const reden = waaromJwtGeheimOnveilig(env.JWT_SECRET);
+    if (reden) {
+      throw new Error(
+        `${reden}. In productie is een willekeurig geheim verplicht; maak er een met: openssl rand -base64 48`,
+      );
     }
     if (!env.FRONTEND_URL) {
       throw new Error('FRONTEND_URL must be set in production for CORS configuration');

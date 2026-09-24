@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { createAssociationSchema, updateAssociationSchema } from '../validation/schemas';
 import logger from '../utils/logger';
@@ -12,18 +12,23 @@ const router = Router();
  * @swagger
  * /associations:
  *   get:
- *     summary: Get all associations (for sharing purposes)
+ *     summary: Get all associations (super admin)
  *     tags: [Associations]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of associations
+ *       403:
+ *         description: Geen superbeheerder
  */
+// Alleen voor een superbeheerder. requireRole('admin') is de beheerder van
+// één vereniging; die hoort niet te zien welke andere verenigingen er op deze
+// installatie draaien.
 router.get(
   '/',
   authenticateToken,
-  requireRole('admin'),
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associations = db
       .prepare(
@@ -162,13 +167,17 @@ router.put(
  *     responses:
  *       201:
  *         description: Association created successfully
+ *       403:
+ *         description: Geen superbeheerder
  *       409:
  *         description: Association with this name already exists
  */
+// Een vereniging aanmaken raakt de hele installatie, niet één vereniging:
+// daarom de superbeheerder en niet de verenigingsbeheerder.
 router.post(
   '/',
   authenticateToken,
-  requireRole('admin'),
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createAssociationSchema.parse(req.body);
 
