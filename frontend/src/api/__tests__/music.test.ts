@@ -524,7 +524,7 @@ describe('uploads', () => {
     expect(formulier.has('youtubeUrls')).toBe(false);
   });
 
-  it('uploadMusicPiecesZip stuurt het zipbestand onder de naam zip mee', async () => {
+  it('uploadMusicPiecesZip stuurt het zipbestand onder de naam file mee, zoals de route verwacht', async () => {
     antwoordMet({ uploaded: [], skipped: [] });
 
     await uploadMusicPiecesZip(new File(['pk'], 'partijen.zip', { type: 'application/zip' }), 'l1');
@@ -532,7 +532,9 @@ describe('uploads', () => {
     const verzoek = laatsteVerzoek();
     expect(verzoek.pad).toBe('/music-pieces/upload-zip');
     const formulier = verzoek.body as FormData;
-    expect(formulier.get('zip')).toBeInstanceOf(File);
+    // De backend leest zipUpload.single('file'); een ander veld weigert multer.
+    expect(formulier.get('file')).toBeInstanceOf(File);
+    expect(formulier.has('zip')).toBe(false);
     expect(formulier.get('listId')).toBe('l1');
   });
 

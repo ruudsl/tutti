@@ -147,7 +147,10 @@ export const uploadMusicPiecesZip = async (
   listId?: string,
 ): Promise<{ uploaded: any[]; errors?: any[]; skipped?: string[] }> => {
   const formData = new FormData();
-  formData.append('zip', zipFile);
+  // Onder 'file', de naam die de route verwacht (zipUpload.single('file')).
+  // Tot september 2026 stond hier 'zip': multer weigerde dat veld en elke
+  // zip-upload vanuit het scherm eindigde in een 500.
+  formData.append('file', zipFile);
   if (listId) formData.append('listId', listId);
 
   const { data } = await api.post('/music-pieces/upload-zip', formData, {
