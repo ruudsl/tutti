@@ -4,13 +4,26 @@ import { z } from 'zod';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { validate } from '../middleware/validate';
-import { beoordeelLeden, beoordeelTitels, importeerLeden, importeerTitels } from '../services/importeren';
+import {
+  beoordeelContacten,
+  beoordeelInstrumenten,
+  beoordeelLeden,
+  beoordeelTitels,
+  importeerContacten,
+  importeerInstrumenten,
+  importeerLeden,
+  importeerTitels,
+} from '../services/importeren';
 import { MAX_TEKENS } from '../utils/csvLezen';
 import { logAuditEvent } from './audit-logs';
 
 /**
- * Leden en de muziekbibliotheek inlezen uit een spreadsheet (WP11). Zie
- * docs/IMPORTEREN.md voor de kolommen.
+ * Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit
+ * een spreadsheet (WP11). Zie docs/IMPORTEREN.md voor de kolommen.
+ *
+ * Instrumenten horen bij de module inventaris en contacten bij de module
+ * contacten. Die guards staan op de mount in index.ts, net als bij de routes
+ * van die modules zelf: staat de module uit, dan bestaat de import niet (404).
  *
  * Per soort twee routes: `/voorbeeld` beoordeelt het bestand en verandert
  * niets, de route zonder achtervoegsel voert uit wat klopt. Die beoordeelt het
@@ -94,6 +107,69 @@ router.post(
       );
     }
 
+    res.status(uitkomst.geimporteerd > 0 ? 201 : 200).json(uitkomst);
+  }),
+);
+
+router.post(
+  '/instrumenten/voorbeeld',
+  requireRole('admin', 'equipment_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(beoordeelInstrumenten(req.user!.associationId!, req.body.csv));
+  }),
+);
+
+router.post(
+  '/instrumenten',
+  requireRole('admin', 'equipment_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const uitkomst = importeerInstrumenten(req.user!.associationId!, req.user!.id, req.body.csv);
+    if (uitkomst.geimporteerd > 0) {
+      logAuditEvent(
+        req.user!.id,
+        'import',
+        'instrument_asset',
+        uuidv4(),
+        `${uitkomst.geimporteerd} instrumenten uit een spreadsheet`,
+        uitkomst.tellingen,
+        req.ip,
+        req.get('user-agent'),
+      );
+    }
+    res.status(uitkomst.geimporteerd > 0 ? 201 : 200).json(uitkomst);
+  }),
+);
+
+// Dezelfde rollen als het aanmaken van een contact in routes/contacts.ts.
+router.post(
+  '/contacten/voorbeeld',
+  requireRole('admin', 'music_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(beoordeelContacten(req.user!.associationId!, req.body.csv));
+  }),
+);
+
+router.post(
+  '/contacten',
+  requireRole('admin', 'music_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const uitkomst = importeerContacten(req.user!.associationId!, req.user!.id, req.body.csv);
+    if (uitkomst.geimporteerd > 0) {
+      logAuditEvent(
+        req.user!.id,
+        'import',
+        'contact',
+        uuidv4(),
+        `${uitkomst.geimporteerd} contacten uit een spreadsheet`,
+        uitkomst.tellingen,
+        req.ip,
+        req.get('user-agent'),
+      );
+    }
     res.status(uitkomst.geimporteerd > 0 ? 201 : 200).json(uitkomst);
   }),
 );

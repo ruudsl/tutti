@@ -5999,11 +5999,15 @@
     "soort": "What are you importing?",
     "soorten": {
       "leden": "Members",
-      "muziektitels": "Music library"
+      "muziektitels": "Music library",
+      "instrumenten": "Instruments owned",
+      "contacten": "Contacts"
     },
     "uitleg": {
       "leden": "Read members from a CSV file. You first see what happens to each row; nothing changes until you click import. Members who already exist are skipped.",
-      "muziektitels": "Read titles for the music library from a CSV file. You first see what happens to each row; nothing changes until you click import. Titles that already exist, with the same arranger, are skipped."
+      "muziektitels": "Read titles for the music library from a CSV file. You first see what happens to each row; nothing changes until you click import. Titles that already exist, with the same arranger, are skipped.",
+      "instrumenten": "Read the association's instruments from a CSV file. You first see what happens to each row; nothing changes until you click import. An instrument with the same serial number, or without a serial number and with the same name, is skipped.",
+      "contacten": "Read contacts from a CSV file: suppliers, venues, sponsors. You first see what happens to each row; nothing changes until you click import. A contact with the same name is skipped."
     },
     "kiesBestand": "Choose a CSV file",
     "sjabloon": "Download example file",
@@ -6048,7 +6052,23 @@
       "arrangeur": "Arranger",
       "duur": "Duration",
       "graad": "Grade",
-      "meldingen": "Messages"
+      "meldingen": "Messages",
+      "soort": "Type",
+      "merk": "Brand and model",
+      "serienummer": "Serial number",
+      "instrumentStatus": "Status",
+      "contactsoort": "Type",
+      "contactpersoon": "Contact person",
+      "plaats": "City"
+    },
+    "instrumentStatus": {
+      "available": "Available",
+      "on_loan": "On loan",
+      "in_repair": "In repair",
+      "in_storage": "In storage",
+      "written_off": "Written off",
+      "sold": "Sold",
+      "lost": "Lost"
     }
   }
 }

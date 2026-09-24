@@ -1,8 +1,10 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useAuth } from '../context/AuthContext';
+import { useModules } from '../context/ModulesContext';
 import { ROLES } from '../utils/constants';
 import { getErrorMessage } from '../utils/errorHandling';
 import { leesTekstbestand } from '../utils/leesTekstbestand';
@@ -10,7 +12,9 @@ import {
   bekijkImport,
   voerImportUit,
   type Beoordeling,
+  type ContactGegevens,
   type ImportSoort,
+  type InstrumentGegevens,
   type ImportUitkomst,
   type ImportVoorbeeld,
   type LidGegevens,
@@ -19,13 +23,23 @@ import {
 } from '../api/importeren';
 
 /**
- * Leden en de muziekbibliotheek inlezen uit een spreadsheet (WP11).
+ * Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit
+ * een spreadsheet (WP11).
  *
  * Kies een bestand, bekijk per regel wat er gebeurt, en importeer. Het
  * voorbeeld verandert niets; bij het importeren beoordeelt de server het
- * bestand opnieuw. Leden importeren mag alleen de beheerder, de
- * muziekbibliotheek ook de muziekcommissie.
+ * bestand opnieuw. Wie welke soort mag, volgt de routes in
+ * backend/src/routes/importeren.ts; instrumenten en contacten verschijnen
+ * alleen als hun module aan staat.
  */
+
+/** Per soort de rollen die hem mogen importeren, en de module waar hij bij hoort. */
+const SOORTEN: { soort: ImportSoort; rollen: string[]; module?: string }[] = [
+  { soort: 'leden', rollen: [ROLES.ADMIN] },
+  { soort: 'muziektitels', rollen: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+  { soort: 'instrumenten', rollen: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE], module: 'inventory' },
+  { soort: 'contacten', rollen: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE], module: 'contacts' },
+];
 
 /** Een voorbeeldbestand per soort, met de kolomnamen die herkend worden. */
 const SJABLONEN: Record<ImportSoort, string> = {
@@ -39,6 +53,24 @@ const SJABLONEN: Record<ImportSoort, string> = {
     'Bolero;Maurice Ravel;Jan de Haan;15:30;4;Classical',
     'Mars der Medici;Johan Wichers;;4:00;2;',
   ].join('\r\n'),
+  instrumenten: [
+    'Naam;Soort;Categorie;Merk;Model;Serienummer;Bouwjaar;Aankoopdatum;Aankoopprijs;Status;Staat;Locatie',
+    'Trompet 1;Trompet;Koperblazers;Yamaha;YTR-2330;123456;2015;15-03-2016;1.249,50;uitgeleend;goed;Kast 2',
+    'Grote trom;Grote trom;Slagwerk;Premier;;;;;;beschikbaar;redelijk;Repetitielokaal',
+  ].join('\r\n'),
+  contacten: [
+    'Naam;Soort;Contactpersoon;E-mail;Telefoon;Adres;Postcode;Plaats;IBAN;Website;Categorie',
+    'Muziekhandel De Toon;leverancier;Piet de Wit;info@detoon.nl;030-1234567;Kerkstraat 1;3511 AB;Utrecht;;www.detoon.nl;',
+    'Stadsschouwburg;zaal;;;;;;Zwolle;;;',
+  ].join('\r\n'),
+};
+
+/** Welke lijst in de rest van de app na een import opnieuw opgehaald moet worden. */
+const TE_VERVERSEN: Record<ImportSoort, string> = {
+  leden: 'users',
+  muziektitels: 'musicTitles',
+  instrumenten: 'instrumentAssets',
+  contacten: 'contacts',
 };
 
 const STATUSKLEUR: Record<RegelStatus, string> = {
@@ -65,10 +97,45 @@ function downloadSjabloon(soort: ImportSoort) {
   URL.revokeObjectURL(url);
 }
 
-type Voorbeeld = ImportVoorbeeld<LidGegevens | TitelGegevens>;
+type Gegevens = LidGegevens | TitelGegevens | InstrumentGegevens | ContactGegevens;
+type Voorbeeld = ImportVoorbeeld<Gegevens>;
 
-function Regeltabel({ soort, regels }: { soort: ImportSoort; regels: Beoordeling<LidGegevens | TitelGegevens>[] }) {
+/** Per soort de kolommen van de voorbeeldtabel: de kop en wat erin staat. */
+type Kolom = { kop: string; waarde: (gegevens: never, t: TFunction) => ReactNode };
+const KOLOMMEN: Record<ImportSoort, Kolom[]> = {
+  leden: [
+    { kop: 'naam', waarde: (g: LidGegevens) => `${g.voornaam} ${g.achternaam}` },
+    { kop: 'email', waarde: (g: LidGegevens) => g.email },
+    { kop: 'rol', waarde: (g: LidGegevens, t) => t(`roles.${g.rol}`) },
+    { kop: 'instrumenten', waarde: (g: LidGegevens) => g.instrumenten.join(', ') },
+    { kop: 'orkesten', waarde: (g: LidGegevens) => g.orkesten.join(', ') },
+  ],
+  muziektitels: [
+    { kop: 'titel', waarde: (g: TitelGegevens) => g.titel },
+    { kop: 'componist', waarde: (g: TitelGegevens) => g.componist },
+    { kop: 'arrangeur', waarde: (g: TitelGegevens) => g.arrangeur },
+    { kop: 'duur', waarde: (g: TitelGegevens) => duur(g.duurSeconden) },
+    { kop: 'graad', waarde: (g: TitelGegevens) => g.graad },
+  ],
+  instrumenten: [
+    { kop: 'naam', waarde: (g: InstrumentGegevens) => g.naam },
+    { kop: 'soort', waarde: (g: InstrumentGegevens) => g.soort },
+    { kop: 'merk', waarde: (g: InstrumentGegevens) => [g.merk, g.model].filter(Boolean).join(' ') },
+    { kop: 'serienummer', waarde: (g: InstrumentGegevens) => g.serienummer },
+    { kop: 'instrumentStatus', waarde: (g: InstrumentGegevens, t) => t(`importeren.instrumentStatus.${g.status}`) },
+  ],
+  contacten: [
+    { kop: 'naam', waarde: (g: ContactGegevens) => g.naam },
+    { kop: 'contactsoort', waarde: (g: ContactGegevens, t) => t(`contacts.type.${g.soort}`) },
+    { kop: 'contactpersoon', waarde: (g: ContactGegevens) => g.contactpersoon },
+    { kop: 'email', waarde: (g: ContactGegevens) => g.email },
+    { kop: 'plaats', waarde: (g: ContactGegevens) => g.plaats },
+  ],
+} as Record<ImportSoort, Kolom[]>;
+
+function Regeltabel({ soort, regels }: { soort: ImportSoort; regels: Beoordeling<Gegevens>[] }) {
   const { t } = useTranslation();
+  const kolommen = KOLOMMEN[soort];
 
   return (
     <div className="overflow-x-auto">
@@ -77,23 +144,9 @@ function Regeltabel({ soort, regels }: { soort: ImportSoort; regels: Beoordeling
           <tr>
             <th>{t('importeren.kolom.rij')}</th>
             <th>{t('importeren.kolom.status')}</th>
-            {soort === 'leden' ? (
-              <>
-                <th>{t('importeren.kolom.naam')}</th>
-                <th>{t('importeren.kolom.email')}</th>
-                <th>{t('importeren.kolom.rol')}</th>
-                <th>{t('importeren.kolom.instrumenten')}</th>
-                <th>{t('importeren.kolom.orkesten')}</th>
-              </>
-            ) : (
-              <>
-                <th>{t('importeren.kolom.titel')}</th>
-                <th>{t('importeren.kolom.componist')}</th>
-                <th>{t('importeren.kolom.arrangeur')}</th>
-                <th>{t('importeren.kolom.duur')}</th>
-                <th>{t('importeren.kolom.graad')}</th>
-              </>
-            )}
+            {kolommen.map(({ kop }) => (
+              <th key={kop}>{t(`importeren.kolom.${kop}`)}</th>
+            ))}
             <th>{t('importeren.kolom.meldingen')}</th>
           </tr>
         </thead>
@@ -106,11 +159,9 @@ function Regeltabel({ soort, regels }: { soort: ImportSoort; regels: Beoordeling
                   {t(`importeren.status.${regel.status}`)}
                 </span>
               </td>
-              {soort === 'leden' ? (
-                <LidCellen gegevens={regel.gegevens as LidGegevens} />
-              ) : (
-                <TitelCellen gegevens={regel.gegevens as TitelGegevens} />
-              )}
+              {kolommen.map(({ kop, waarde }) => (
+                <td key={kop}>{waarde(regel.gegevens as never, t)}</td>
+              ))}
               <td>
                 {regel.fouten.map((fout) => (
                   <div key={fout} className="text-error text-sm">
@@ -131,33 +182,6 @@ function Regeltabel({ soort, regels }: { soort: ImportSoort; regels: Beoordeling
   );
 }
 
-function LidCellen({ gegevens }: { gegevens: LidGegevens }) {
-  const { t } = useTranslation();
-  return (
-    <>
-      <td>
-        {gegevens.voornaam} {gegevens.achternaam}
-      </td>
-      <td>{gegevens.email}</td>
-      <td>{t(`roles.${gegevens.rol}`)}</td>
-      <td>{gegevens.instrumenten.join(', ')}</td>
-      <td>{gegevens.orkesten.join(', ')}</td>
-    </>
-  );
-}
-
-function TitelCellen({ gegevens }: { gegevens: TitelGegevens }) {
-  return (
-    <>
-      <td>{gegevens.titel}</td>
-      <td>{gegevens.componist}</td>
-      <td>{gegevens.arrangeur}</td>
-      <td>{duur(gegevens.duurSeconden)}</td>
-      <td>{gegevens.graad}</td>
-    </>
-  );
-}
-
 function ImportStap({ soort }: { soort: ImportSoort }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -165,7 +189,7 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
   const [csv, setCsv] = useState<string | null>(null);
   const [bestandsnaam, setBestandsnaam] = useState('');
   const [voorbeeld, setVoorbeeld] = useState<Voorbeeld | null>(null);
-  const [uitkomst, setUitkomst] = useState<ImportUitkomst<LidGegevens | TitelGegevens> | null>(null);
+  const [uitkomst, setUitkomst] = useState<ImportUitkomst<Gegevens> | null>(null);
 
   const bekijken = useMutation({
     mutationFn: (tekst: string) => bekijkImport(soort, tekst),
@@ -178,7 +202,7 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
       setUitkomst(data);
       setVoorbeeld(null);
       setCsv(null);
-      queryClient.invalidateQueries({ queryKey: soort === 'leden' ? ['users'] : ['musicTitles'] });
+      queryClient.invalidateQueries({ queryKey: [TE_VERVERSEN[soort]] });
     },
   });
 
@@ -271,24 +295,30 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
 export default function Importeren() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { isEnabled } = useModules();
   useDocumentTitle('pageTitle.importeren');
 
-  const magLeden = user?.role === ROLES.ADMIN;
-  const [soort, setSoort] = useState<ImportSoort>(magLeden ? 'leden' : 'muziektitels');
+  const beschikbaar = SOORTEN.filter(
+    ({ rollen, module }) => user?.role && rollen.includes(user.role) && (!module || isEnabled(module)),
+  ).map(({ soort }) => soort);
+  const [gekozen, setGekozen] = useState<ImportSoort | null>(null);
+  const soort = gekozen && beschikbaar.includes(gekozen) ? gekozen : beschikbaar[0];
+
+  if (!soort) return null;
 
   return (
     <div>
       <h1 className="mb-3">{t('importeren.titel')}</h1>
 
-      {magLeden && (
-        <div className="flex gap-2 mb-3" role="group" aria-label={t('importeren.soort')}>
-          {(['leden', 'muziektitels'] as ImportSoort[]).map((keuze) => (
+      {beschikbaar.length > 1 && (
+        <div className="flex flex-wrap gap-2 mb-3" role="group" aria-label={t('importeren.soort')}>
+          {beschikbaar.map((keuze) => (
             <button
               key={keuze}
               type="button"
               aria-pressed={soort === keuze}
               className={`btn ${soort === keuze ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setSoort(keuze)}
+              onClick={() => setGekozen(keuze)}
             >
               {t(`importeren.soorten.${keuze}`)}
             </button>

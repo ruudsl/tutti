@@ -1387,14 +1387,18 @@ Zet de taak terug op `wachtend` met een verse teller. Alleen voor een taak met s
 
 ## Import API
 
-Leden en de muziekbibliotheek inlezen uit een spreadsheet. De kolommen en wat er per regel gebeurt staan in [IMPORTEREN.md](./IMPORTEREN.md).
+Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit een spreadsheet. Instrumenten horen bij de module inventaris en contacten bij de module contacten; staat die uit, dan geeft de route `404`. De kolommen en wat er per regel gebeurt staan in [IMPORTEREN.md](./IMPORTEREN.md).
 
-| Route                                     | Wie                        | Wat                                     |
-| ----------------------------------------- | -------------------------- | --------------------------------------- |
-| `POST /api/import/leden/voorbeeld`        | beheerder                  | Beoordeelt het bestand, verandert niets |
-| `POST /api/import/leden`                  | beheerder                  | Importeert de regels met status `nieuw` |
-| `POST /api/import/muziektitels/voorbeeld` | beheerder, muziekcommissie | Beoordeelt het bestand, verandert niets |
-| `POST /api/import/muziektitels`           | beheerder, muziekcommissie | Importeert de regels met status `nieuw` |
+| Route                                     | Wie                              | Wat                                     |
+| ----------------------------------------- | -------------------------------- | --------------------------------------- |
+| `POST /api/import/leden/voorbeeld`        | beheerder                        | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/leden`                  | beheerder                        | Importeert de regels met status `nieuw` |
+| `POST /api/import/muziektitels/voorbeeld` | beheerder, muziekcommissie       | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/muziektitels`           | beheerder, muziekcommissie       | Importeert de regels met status `nieuw` |
+| `POST /api/import/instrumenten/voorbeeld` | beheerder, instrumentencommissie | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/instrumenten`           | beheerder, instrumentencommissie | Importeert de regels met status `nieuw` |
+| `POST /api/import/contacten/voorbeeld`    | beheerder, muziekcommissie       | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/contacten`              | beheerder, muziekcommissie       | Importeert de regels met status `nieuw` |
 
 De body is het bestand als tekst, hooguit 5 MB en 2000 regels:
 

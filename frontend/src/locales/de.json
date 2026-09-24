@@ -5999,11 +5999,15 @@
     "soort": "Was importieren Sie?",
     "soorten": {
       "leden": "Mitglieder",
-      "muziektitels": "Notenbibliothek"
+      "muziektitels": "Notenbibliothek",
+      "instrumenten": "Instrumente im Besitz",
+      "contacten": "Kontakte"
     },
     "uitleg": {
       "leden": "Mitglieder aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Bereits vorhandene Mitglieder werden übersprungen.",
-      "muziektitels": "Titel für die Notenbibliothek aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Bereits vorhandene Titel mit demselben Bearbeiter werden übersprungen."
+      "muziektitels": "Titel für die Notenbibliothek aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Bereits vorhandene Titel mit demselben Bearbeiter werden übersprungen.",
+      "instrumenten": "Die Instrumente des Vereins aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Ein Instrument mit derselben Seriennummer oder ohne Seriennummer mit demselben Namen wird übersprungen.",
+      "contacten": "Kontakte aus einer CSV-Datei einlesen: Lieferanten, Säle, Sponsoren. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Ein Kontakt mit demselben Namen wird übersprungen."
     },
     "kiesBestand": "CSV-Datei auswählen",
     "sjabloon": "Beispieldatei herunterladen",
@@ -6048,7 +6052,23 @@
       "arrangeur": "Bearbeiter",
       "duur": "Dauer",
       "graad": "Grad",
-      "meldingen": "Meldungen"
+      "meldingen": "Meldungen",
+      "soort": "Art",
+      "merk": "Marke und Modell",
+      "serienummer": "Seriennummer",
+      "instrumentStatus": "Status",
+      "contactsoort": "Art",
+      "contactpersoon": "Ansprechpartner",
+      "plaats": "Ort"
+    },
+    "instrumentStatus": {
+      "available": "Verfügbar",
+      "on_loan": "Verliehen",
+      "in_repair": "In Reparatur",
+      "in_storage": "Eingelagert",
+      "written_off": "Abgeschrieben",
+      "sold": "Verkauft",
+      "lost": "Verloren"
     }
   }
 }

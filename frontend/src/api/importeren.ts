@@ -1,14 +1,15 @@
 import api from './client';
 
 /**
- * Leden en de muziekbibliotheek inlezen uit een spreadsheet (WP11); zie
- * backend/src/routes/importeren.ts en docs/IMPORTEREN.md.
+ * Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit
+ * een spreadsheet (WP11); zie backend/src/routes/importeren.ts en
+ * docs/IMPORTEREN.md.
  *
  * Per soort een voorbeeld dat niets verandert, en de import zelf. De server
  * beoordeelt het bestand bij het importeren opnieuw.
  */
 
-export type ImportSoort = 'leden' | 'muziektitels';
+export type ImportSoort = 'leden' | 'muziektitels' | 'instrumenten' | 'contacten';
 
 export type RegelStatus = 'nieuw' | 'bestaat' | 'fout';
 
@@ -31,6 +32,42 @@ export interface TitelGegevens {
   genres: string[];
 }
 
+export interface InstrumentGegevens {
+  naam: string;
+  soort: string;
+  categorie: string;
+  merk: string | null;
+  model: string | null;
+  serienummer: string | null;
+  bouwjaar: number | null;
+  aankoopdatum: string | null;
+  aankoopprijs: number | null;
+  waarde: number | null;
+  status: string;
+  staat: string;
+  locatie: string | null;
+  opmerkingen: string | null;
+}
+
+export interface ContactGegevens {
+  naam: string;
+  soort: 'organization' | 'person' | 'venue' | 'vendor';
+  contactpersoon: string | null;
+  email: string | null;
+  telefoon: string | null;
+  mobiel: string | null;
+  adres: string | null;
+  postcode: string | null;
+  plaats: string | null;
+  land: string | null;
+  iban: string | null;
+  website: string | null;
+  kvk: string | null;
+  btw: string | null;
+  categorieen: string[];
+  opmerkingen: string | null;
+}
+
 export interface Beoordeling<T> {
   rij: number;
   status: RegelStatus;
@@ -50,7 +87,12 @@ export interface ImportUitkomst<T> extends ImportVoorbeeld<T> {
   geimporteerd: number;
 }
 
-export type GegevensVan<S extends ImportSoort> = S extends 'leden' ? LidGegevens : TitelGegevens;
+export type GegevensVan<S extends ImportSoort> = {
+  leden: LidGegevens;
+  muziektitels: TitelGegevens;
+  instrumenten: InstrumentGegevens;
+  contacten: ContactGegevens;
+}[S];
 
 export const bekijkImport = async <S extends ImportSoort>(
   soort: S,

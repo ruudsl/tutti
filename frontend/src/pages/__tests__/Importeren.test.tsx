@@ -15,9 +15,12 @@ import type { ImportVoorbeeld, LidGegevens } from '../../api/importeren';
 vi.mock('../../api/importeren');
 vi.mock('../../hooks/useDocumentTitle', () => ({ useDocumentTitle: () => {} }));
 
-const gebruiker = vi.hoisted(() => ({ rol: 'admin' }));
+const gebruiker = vi.hoisted(() => ({ rol: 'admin', modules: ['inventory', 'contacts'] as string[] }));
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'u1', role: gebruiker.rol } }),
+}));
+vi.mock('../../context/ModulesContext', () => ({
+  useModules: () => ({ isEnabled: (sleutel: string) => gebruiker.modules.includes(sleutel) }),
 }));
 
 // `t` geeft de sleutel terug, met de waarden erachter als die er zijn.
@@ -86,6 +89,7 @@ async function kiesBestand(inhoud = CSV) {
 describe('de importpagina', () => {
   beforeEach(() => {
     gebruiker.rol = 'admin';
+    gebruiker.modules = ['inventory', 'contacts'];
     vi.mocked(api.bekijkImport).mockReset();
     vi.mocked(api.voerImportUit).mockReset();
   });
@@ -139,13 +143,75 @@ describe('de importpagina', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Deze kolommen ontbreken in het bestand: email.');
   });
 
-  it('laat de muziekcommissie alleen de muziekbibliotheek importeren', async () => {
+  /** De knoppen om een soort te kiezen, in volgorde. */
+  const soorten = () =>
+    screen.queryAllByRole('button', { name: /^importeren\.soorten\./ }).map((knop) => knop.textContent);
+
+  it('laat de beheerder alle vier de soorten kiezen als de modules aan staan', () => {
+    toon();
+    expect(soorten()).toEqual([
+      'importeren.soorten.leden',
+      'importeren.soorten.muziektitels',
+      'importeren.soorten.instrumenten',
+      'importeren.soorten.contacten',
+    ]);
+  });
+
+  it('biedt instrumenten en contacten niet aan als hun module uit staat', () => {
+    gebruiker.modules = [];
+    toon();
+    expect(soorten()).toEqual(['importeren.soorten.leden', 'importeren.soorten.muziektitels']);
+  });
+
+  it('laat de muziekcommissie de muziekbibliotheek en contacten importeren, geen leden', async () => {
     gebruiker.rol = 'music_committee';
     vi.mocked(api.bekijkImport).mockResolvedValue({ ...VOORBEELD, regels: [] });
     toon();
 
-    expect(screen.queryByRole('button', { name: 'importeren.soorten.leden' })).not.toBeInTheDocument();
+    expect(soorten()).toEqual(['importeren.soorten.muziektitels', 'importeren.soorten.contacten']);
     await kiesBestand('Titel\nBolero\n');
     expect(api.bekijkImport).toHaveBeenCalledWith('muziektitels', 'Titel\nBolero\n');
+  });
+
+  it('laat de instrumentencommissie alleen instrumenten importeren, en toont de status in woorden', async () => {
+    gebruiker.rol = 'equipment_committee';
+    vi.mocked(api.bekijkImport).mockResolvedValue({
+      kolommen: { naam: 'Naam', soort: 'Soort' },
+      genegeerd: [],
+      regels: [
+        {
+          rij: 2,
+          status: 'nieuw',
+          gegevens: {
+            naam: 'Trompet 1',
+            soort: 'Trompet',
+            categorie: 'brass',
+            merk: 'Yamaha',
+            model: null,
+            serienummer: 'YTR-123',
+            bouwjaar: null,
+            aankoopdatum: null,
+            aankoopprijs: null,
+            waarde: null,
+            status: 'on_loan',
+            staat: 'good',
+            locatie: null,
+            opmerkingen: null,
+          },
+          fouten: [],
+          waarschuwingen: [],
+        },
+      ],
+      tellingen: { nieuw: 1, bestaat: 0, fout: 0 },
+    } as never);
+    toon();
+
+    // Eén soort: dan is er niets te kiezen.
+    expect(soorten()).toEqual([]);
+    await kiesBestand('Naam;Soort\nTrompet 1;Trompet\n');
+
+    expect(api.bekijkImport).toHaveBeenCalledWith('instrumenten', 'Naam;Soort\nTrompet 1;Trompet\n');
+    expect(await screen.findByText('YTR-123')).toBeInTheDocument();
+    expect(screen.getByText('importeren.instrumentStatus.on_loan')).toBeInTheDocument();
   });
 });

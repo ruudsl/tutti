@@ -5999,11 +5999,15 @@
     "soort": "Wat importeer je?",
     "soorten": {
       "leden": "Leden",
-      "muziektitels": "Muziekbibliotheek"
+      "muziektitels": "Muziekbibliotheek",
+      "instrumenten": "Instrumenten in bezit",
+      "contacten": "Contacten"
     },
     "uitleg": {
       "leden": "Lees leden in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Leden die er al zijn, worden overgeslagen.",
-      "muziektitels": "Lees titels voor de muziekbibliotheek in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Titels die er al zijn, met dezelfde arrangeur, worden overgeslagen."
+      "muziektitels": "Lees titels voor de muziekbibliotheek in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Titels die er al zijn, met dezelfde arrangeur, worden overgeslagen.",
+      "instrumenten": "Lees de instrumenten van de vereniging in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Een instrument met hetzelfde serienummer, of zonder serienummer met dezelfde naam, wordt overgeslagen.",
+      "contacten": "Lees contacten in uit een CSV-bestand: leveranciers, zalen, sponsors. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Een contact met dezelfde naam wordt overgeslagen."
     },
     "kiesBestand": "Kies een CSV-bestand",
     "sjabloon": "Voorbeeldbestand downloaden",
@@ -6048,7 +6052,23 @@
       "arrangeur": "Arrangeur",
       "duur": "Duur",
       "graad": "Graad",
-      "meldingen": "Meldingen"
+      "meldingen": "Meldingen",
+      "soort": "Soort",
+      "merk": "Merk en model",
+      "serienummer": "Serienummer",
+      "instrumentStatus": "Status",
+      "contactsoort": "Soort",
+      "contactpersoon": "Contactpersoon",
+      "plaats": "Plaats"
+    },
+    "instrumentStatus": {
+      "available": "Beschikbaar",
+      "on_loan": "Uitgeleend",
+      "in_repair": "In reparatie",
+      "in_storage": "Opgeslagen",
+      "written_off": "Afgeschreven",
+      "sold": "Verkocht",
+      "lost": "Kwijt"
     }
   }
 }
