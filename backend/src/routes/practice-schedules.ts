@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { eisBruikbaar } from '../services/catalogus';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -593,6 +594,7 @@ router.post(
     }
 
     haalEigenMijlpaal(req, req.params.id);
+    eisBruikbaar('instrument', instrumentId, req.user!.associationId);
 
     // Check if user plays this instrument (or is admin/conductor)
     const canUpdate =

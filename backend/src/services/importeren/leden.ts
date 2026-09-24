@@ -7,6 +7,7 @@ import { z } from 'zod';
 import db from '../../database/connection';
 import { withTransaction } from '../../utils/database';
 import { ruimteVoorLeden } from '../abonnementLimieten';
+import { instrumentenOpNaam } from '../catalogus';
 import {
   bepaalWijzigingen,
   herkenKolommen,
@@ -89,30 +90,12 @@ interface LidIntern extends LidGegevens {
 
 const emailSchema = z.string().email().max(255);
 
-/** Instrumenten en hun andere namen, in kleine letters, naar het id. */
-function laadInstrumenten(): Map<string, string> {
-  const kaart = new Map<string, string>();
-  // Eerst de andere namen, dan de echte: een echte naam wint van een alias.
-  for (const { naam, id } of db
-    .prepare('SELECT LOWER(alias) AS naam, instrument_id AS id FROM instrument_aliases')
-    .all() as { naam: string; id: string }[]) {
-    kaart.set(naam, id);
-  }
-  for (const { naam, id } of db.prepare('SELECT LOWER(name) AS naam, id FROM instruments').all() as {
-    naam: string;
-    id: string;
-  }[]) {
-    kaart.set(naam, id);
-  }
-  return kaart;
-}
-
 function beoordeelLedenIntern(associationId: string, csv: string, opties: ImportOpties = {}) {
   const { kopregel, rijen } = lees(csv);
   const { index, kolommen, genegeerd } = herkenKolommen(kopregel, LEDENVELDEN);
   const cel = (rij: string[], veld: string) => (index[veld] === undefined ? '' : (rij[index[veld]] ?? '').trim());
 
-  const instrumenten = laadInstrumenten();
+  const instrumenten = instrumentenOpNaam(associationId);
   const orkesten = new Map(
     (
       db.prepare('SELECT id, LOWER(name) AS naam FROM orchestras WHERE association_id = ?').all(associationId) as {

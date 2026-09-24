@@ -27,6 +27,7 @@ import { sendEmail } from '../utils/email';
 import { getWelcomeEmail } from '../templates/emails';
 import logger from '../utils/logger';
 import { bewaakLedenLimiet } from '../services/abonnementLimieten';
+import { eisBruikbaar } from '../services/catalogus';
 import { logAuditEvent } from './audit-logs';
 
 const router = Router();
@@ -797,6 +798,7 @@ router.post(
     }
 
     bewaakLedenLimiet(req.user!.associationId!);
+    eisBruikbaar('instrument', data.instrumentIds, req.user!.associationId);
 
     const userId = uuidv4();
     const passwordHash = bcrypt.hashSync(data.password, 10);
@@ -942,6 +944,8 @@ router.put(
         throw new ApiError(409, 'Email is al in gebruik.');
       }
     }
+
+    eisBruikbaar('instrument', data.instrumentIds, req.user!.associationId);
 
     // Een nieuwe rol of een nieuw wachtwoord moet ook gelden voor wie al
     // ingelogd is. Zonder intrekken hield een teruggezette beheerder met zijn

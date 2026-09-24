@@ -75,6 +75,54 @@ export function eisBruikbaar(
   }
 }
 
+/**
+ * De instrumenten die de vereniging ziet, op naam en op andere naam (kleine
+ * letters) naar het id. Voor imports en bestandsnamen: laad hem één keer en
+ * zoek er in een lus in. Voorrang, van laag naar hoog: andere naam van een
+ * standaardinstrument, naam van een standaardinstrument, andere naam van een
+ * eigen instrument, naam van een eigen instrument.
+ */
+export function instrumentenOpNaam(associationId: string | null | undefined): Map<string, string> {
+  const rijen = db
+    .prepare(
+      `SELECT naam, id FROM (
+         SELECT LOWER(ia.alias) AS naam, i.id AS id, (i.association_id IS NOT NULL) * 2 AS rang
+         FROM instrument_aliases ia JOIN instruments i ON i.id = ia.instrument_id
+         WHERE ${zichtbaarVoorwaarde('i')}
+         UNION ALL
+         SELECT LOWER(i.name), i.id, (i.association_id IS NOT NULL) * 2 + 1
+         FROM instruments i
+         WHERE ${zichtbaarVoorwaarde('i')}
+       ) ORDER BY rang`,
+    )
+    .all(...zichtbaarParams(associationId, 'instrument'), ...zichtbaarParams(associationId, 'instrument')) as {
+    naam: string;
+    id: string;
+  }[];
+  const kaart = new Map<string, string>();
+  for (const { naam, id } of rijen) kaart.set(naam, id);
+  return kaart;
+}
+
+/** Eén instrument op naam of andere naam, uit wat de vereniging ziet. */
+export function zoekInstrument(naam: string, associationId: string | null | undefined): string | null {
+  const gezocht = naam?.toLowerCase().trim();
+  if (!gezocht) return null;
+  return instrumentenOpNaam(associationId).get(gezocht) ?? null;
+}
+
+/** De genres die de vereniging ziet, op naam (kleine letters) naar het id; een eigen genre wint. */
+export function genresOpNaam(associationId: string | null | undefined): Map<string, string> {
+  const rijen = db
+    .prepare(
+      `SELECT LOWER(g.name) AS naam, g.id FROM genres g
+       WHERE ${zichtbaarVoorwaarde('g')}
+       ORDER BY g.association_id IS NOT NULL`,
+    )
+    .all(...zichtbaarParams(associationId, 'genre')) as { naam: string; id: string }[];
+  return new Map(rijen.map(({ naam, id }) => [naam, id]));
+}
+
 export function isSuperbeheerder(userId: string): boolean {
   return !!db.prepare('SELECT 1 FROM super_admins WHERE user_id = ?').get(userId);
 }

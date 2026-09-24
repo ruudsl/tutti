@@ -5,6 +5,7 @@ import fs from 'fs';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { eisBruikbaar } from '../services/catalogus';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -191,6 +192,14 @@ router.post(
       }
     }
 
+    // Get metadata
+    const metadata = failedImport.metadata_json ? JSON.parse(failedImport.metadata_json) : {};
+
+    // Het instrument-id in de metadata kwam ooit uit een aanvraag. Toets het
+    // voordat er iets verandert: standaard of van deze vereniging, nooit een
+    // eigen instrument van een andere vereniging.
+    eisBruikbaar('instrument', metadata.instrumentId, req.user!.associationId);
+
     // Update status to retrying
     db.prepare(
       `
@@ -201,9 +210,6 @@ router.post(
         WHERE id = ?
     `,
     ).run(id);
-
-    // Get metadata
-    const metadata = failedImport.metadata_json ? JSON.parse(failedImport.metadata_json) : {};
 
     // Attempt the import based on type
     try {

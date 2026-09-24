@@ -8,6 +8,7 @@ import db from '../database/connection';
 import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { bruikbaarVoorwaarde, eisBruikbaar } from '../services/catalogus';
 import { revokeUserSessions } from '../utils/sessionStore';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
@@ -487,8 +488,9 @@ router.post(
     // licentie die het opgesoupeerd had. Een transactie draait de database
     // terug, niet de buitenwereld.
     //
-    // Instrumenten hebben deze controle niet nodig: die tabel is gedeeld en
-    // heeft geen association_id.
+    // Hetzelfde geldt voor de instrumenten: standaard of van deze vereniging,
+    // nooit een eigen instrument van een andere vereniging.
+    eisBruikbaar('instrument', instrumentIds, req.user!.associationId);
     if (orchestraIds.length > 0) {
       const hoortErbij = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?');
       for (const orchestraId of orchestraIds) {
@@ -1514,9 +1516,11 @@ router.post(
       throw new ApiError(400, 'Instrument en functietitel zijn verplicht.');
     }
 
-    // Check if instrument exists
-    const instrument = db.prepare('SELECT id, name FROM instruments WHERE id = ?').get(instrumentId) as
-      { id: string; name: string } | undefined;
+    // Het instrument moet bestaan en bruikbaar zijn: standaard of van deze
+    // vereniging, nooit een eigen instrument van een andere vereniging.
+    const instrument = db
+      .prepare(`SELECT id, name FROM instruments i WHERE i.id = ? AND ${bruikbaarVoorwaarde('i')}`)
+      .get(instrumentId, req.user!.associationId ?? '') as { id: string; name: string } | undefined;
     if (!instrument) {
       throw new ApiError(404, 'Instrument niet gevonden.');
     }

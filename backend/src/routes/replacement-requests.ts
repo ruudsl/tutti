@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { eisBruikbaar } from '../services/catalogus';
 import { z } from 'zod';
 import logger from '../logging/logger';
 
@@ -312,6 +313,8 @@ router.post(
         throw new ApiError(404, 'Repetitie niet gevonden');
       }
     }
+
+    eisBruikbaar('instrument', data.instrumentId, associationId);
 
     // Check for duplicate request
     const existing = db

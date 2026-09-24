@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { eisBruikbaar } from '../services/catalogus';
 import { validate } from '../middleware/validate';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
 import { createEventSchema, updateEventAttendanceSchema } from '../validation/schemas';
@@ -1569,6 +1570,7 @@ router.post(
     }
 
     const data = req.body as z.infer<typeof updateEventAttendanceSchema>;
+    eisBruikbaar('instrument', data.instrumentId, req.user!.associationId);
 
     db.prepare(
       `

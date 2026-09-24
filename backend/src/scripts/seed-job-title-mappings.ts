@@ -53,8 +53,8 @@ async function seedMappings() {
       const instrument = db
         .prepare(
           mapping.tuning !== null
-            ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ?'
-            : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL',
+            ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ? AND association_id IS NULL'
+            : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL AND association_id IS NULL',
         )
         .get(...(mapping.tuning !== null ? [mapping.instrumentName, mapping.tuning] : [mapping.instrumentName])) as
         { id: string } | undefined;

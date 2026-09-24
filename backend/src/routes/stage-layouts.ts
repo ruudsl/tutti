@@ -8,6 +8,7 @@ import { requireModule } from '../middleware/requireModule';
 import logger from '../utils/logger';
 import { z } from 'zod';
 import { wijzigingsschema } from '../utils/schema';
+import { bruikbaarVoorwaarde } from '../services/catalogus';
 
 const router = Router();
 
@@ -744,14 +745,11 @@ concertStageRouter.get(
       sectionColors[section.id] = section.color;
     }
 
-    // Get instruments for lookup
+    // Namen van de instrumenten die deze vereniging mag gebruiken; een eigen
+    // instrument van een andere vereniging hoort hier niet bij.
     const instrumentRows = db
-      .prepare(
-        `
-    SELECT id, name FROM instruments
-  `,
-      )
-      .all() as { id: string; name: string }[];
+      .prepare(`SELECT i.id, i.name FROM instruments i WHERE ${bruikbaarVoorwaarde('i')}`)
+      .all(req.user!.associationId) as { id: string; name: string }[];
 
     const instrumentMap: Record<string, string> = {};
     for (const inst of instrumentRows) {

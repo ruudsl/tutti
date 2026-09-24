@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { eisBruikbaar } from '../services/catalogus';
 import { isAudio, validateUploadedFile } from '../utils/fileValidation';
 import logger from '../utils/logger';
 import multer from 'multer';
@@ -295,6 +296,7 @@ router.post(
         req.user!.associationId,
         'Titel niet gevonden.',
       );
+      eisBruikbaar('instrument', sectionInstrumentId, req.user!.associationId);
     } catch (fout) {
       try {
         fs.unlinkSync(req.file.path);

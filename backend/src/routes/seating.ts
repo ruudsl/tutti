@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { eisBruikbaar, instrumentenOpNaam } from '../services/catalogus';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
@@ -301,6 +302,10 @@ router.post(
       { rowNumber: 5, name: 'Rij 5 - Slagwerk', instruments: ['Percussion', 'Timpani', 'Mallets'] },
     ];
 
+    // Op naam, uit wat deze vereniging ziet: een verborgen standaardinstrument
+    // hoort niet vanzelf in de opstelling terug te komen.
+    const instrumenten = instrumentenOpNaam(req.user!.associationId);
+
     const transaction = db.transaction(() => {
       for (const row of defaultLayout) {
         const sectionId = uuidv4();
@@ -314,15 +319,15 @@ router.post(
         // Add instruments to section
         let sortOrder = 0;
         for (const instrumentName of row.instruments) {
-          const instrument = db.prepare('SELECT id FROM instruments WHERE name = ?').get(instrumentName) as any;
+          const instrumentId = instrumenten.get(instrumentName.toLowerCase());
 
-          if (instrument) {
+          if (instrumentId) {
             db.prepare(
               `
                         INSERT OR IGNORE INTO seating_section_instruments (id, section_id, instrument_id, sort_order)
                         VALUES (?, ?, ?, ?)
                     `,
-            ).run(uuidv4(), sectionId, instrument.id, sortOrder++);
+            ).run(uuidv4(), sectionId, instrumentId, sortOrder++);
           }
         }
       }
@@ -374,6 +379,8 @@ router.post(
     if (existingRow) {
       throw new ApiError(400, 'Rijnummer bestaat al voor dit orkest.');
     }
+
+    eisBruikbaar('instrument', data.instrumentIds, req.user!.associationId);
 
     const sectionId = uuidv4();
 
@@ -447,6 +454,8 @@ router.put(
         throw new ApiError(400, 'Rijnummer bestaat al voor dit orkest.');
       }
     }
+
+    eisBruikbaar('instrument', data.instrumentIds, req.user!.associationId);
 
     const updates: string[] = [];
     const params: any[] = [];

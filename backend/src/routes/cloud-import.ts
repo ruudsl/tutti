@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { instrumentenOpNaam } from '../services/catalogus';
 import { withTransaction } from '../utils/database';
 import { isPdf } from '../utils/fileValidation';
 import logger from '../utils/logger';
@@ -57,29 +58,6 @@ function parseFilename(filename: string): {
     groupNumber: parts[4] || null,
     clef: parts[5] || null,
   };
-}
-
-function findInstrumentId(instrumentName: string): string | null {
-  if (!instrumentName) return null;
-  const searchName = instrumentName.toLowerCase().trim();
-
-  const instrument = db
-    .prepare(
-      `
-        SELECT id FROM instruments WHERE LOWER(name) = ?
-    `,
-    )
-    .get(searchName) as { id: string } | undefined;
-  if (instrument) return instrument.id;
-
-  const alias = db
-    .prepare(
-      `
-        SELECT instrument_id FROM instrument_aliases WHERE LOWER(alias) = ?
-    `,
-    )
-    .get(searchName) as { instrument_id: string } | undefined;
-  return alias ? alias.instrument_id : null;
 }
 
 function validateCloudDownloadUrl(rawUrl: string): string {
@@ -204,11 +182,14 @@ async function importFiles(
   }
 
   if (savedFiles.length > 0) {
+    const instrumenten = instrumentenOpNaam(user.associationId);
     withTransaction(() => {
       for (const saved of savedFiles) {
         try {
           const parsed = parseFilename(saved.originalName);
-          const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument) : null;
+          const instrumentId = parsed.instrument
+            ? (instrumenten.get(parsed.instrument.toLowerCase().trim()) ?? null)
+            : null;
           const pieceId = uuidv4();
 
           db.prepare(
