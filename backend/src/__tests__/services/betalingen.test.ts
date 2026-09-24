@@ -533,6 +533,30 @@ describe('Stripe-webhook: verwerking van het bericht', () => {
 // ============================================================
 
 describe('Mollie-webhook: de body wordt niet vertrouwd', () => {
+  /**
+   * Een openstaande bestelling waarvoor betaling `paymentId` is aangemaakt.
+   * De webhook hoort bij die bestelling uit te komen, wat Mollie ook in de
+   * metadata zet.
+   */
+  function bestelling(paymentId: string, orderId = 'bestelling-1', totaal = 25): string {
+    const db = houder.echt as unknown as { prepare: (s: string) => { run: (...p: unknown[]) => unknown } };
+    const vereniging = crypto.randomUUID();
+    const concert = crypto.randomUUID();
+    db.prepare('INSERT INTO associations (id, name, slug) VALUES (?, ?, ?)').run(
+      vereniging,
+      `Harmonie ${vereniging}`,
+      vereniging,
+    );
+    db.prepare(
+      "INSERT INTO concerts (id, association_id, name, date, location) VALUES (?, ?, 'Nieuwjaarsconcert', '2099-01-01', 'Zaal')",
+    ).run(concert, vereniging);
+    db.prepare(
+      `INSERT INTO ticket_orders (id, concert_id, total, status, payment_id, payment_method, buyer_name, buyer_email)
+       VALUES (?, ?, ?, 'pending', ?, 'ideal', 'Jan Jansen', 'jan@example.com')`,
+    ).run(orderId, concert, totaal, paymentId);
+    return orderId;
+  }
+
   function molliesAntwoord(overrides: Record<string, unknown> = {}) {
     return antwoord(200, {
       id: 'tr_echt123',
@@ -546,6 +570,7 @@ describe('Mollie-webhook: de body wordt niet vertrouwd', () => {
   }
 
   it('haalt de status bij Mollie op in plaats van hem uit de body te geloven', async () => {
+    bestelling('tr_vervalst');
     const nep = netwerk(molliesAntwoord({ status: 'failed' }));
     const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
@@ -558,16 +583,44 @@ describe('Mollie-webhook: de body wordt niet vertrouwd', () => {
     expect(resultaat).toEqual({ success: true, orderId: 'bestelling-1', status: 'failed' });
   });
 
-  it('gebruikt het bestelnummer uit Mollies antwoord, niet uit de body', async () => {
-    netwerk(molliesAntwoord({ metadata: { order_id: 'bestelling-van-mollie' } }));
+  it('weigert een betaling waarvan de metadata naar een andere bestelling wijst', async () => {
+    // Sinds een vereniging haar eigen Mollie-account koppelt, bepaalt de
+    // eigenaar van dat account de metadata. Zo kon een betaling op het account
+    // van vereniging A een openstaande bestelling bij vereniging B op
+    // betaald zetten. De bestelling komt uit onze eigen administratie.
+    bestelling('tr_van_a', 'bestelling-a');
+    bestelling('tr_van_b', 'bestelling-b');
+    netwerk(molliesAntwoord({ id: 'tr_van_a', metadata: { order_id: 'bestelling-b' } }));
     const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
-    const resultaat = await handleMollieWebhook('tr_wat_dan_ook');
+    const resultaat = await handleMollieWebhook('tr_van_a');
 
-    expect(resultaat.orderId).toBe('bestelling-van-mollie');
+    expect(resultaat).toEqual({ success: false, error: 'Payment does not match order' });
+    expect(webhookRegels()).toHaveLength(0);
+  });
+
+  it('weigert een betaling met een ander bedrag dan de bestelling', async () => {
+    bestelling('tr_echt123', 'bestelling-1', 80);
+    netwerk(molliesAntwoord());
+    const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
+
+    const resultaat = await handleMollieWebhook('tr_echt123');
+
+    expect(resultaat).toEqual({ success: false, error: 'Payment does not match order' });
+  });
+
+  it('weigert een betaling die bij geen bestelling hoort, zonder Mollie te vragen', async () => {
+    const nep = netwerk(molliesAntwoord());
+    const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
+
+    const resultaat = await handleMollieWebhook('tr_onbekend');
+
+    expect(resultaat).toEqual({ success: false, error: 'Payment not found' });
+    expect(nep).not.toHaveBeenCalled();
   });
 
   it('stuurt de sleutel mee en vraagt niets anders op', async () => {
+    bestelling('tr_echt123');
     const nep = netwerk(molliesAntwoord());
     const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
@@ -578,6 +631,7 @@ describe('Mollie-webhook: de body wordt niet vertrouwd', () => {
   });
 
   it('boekt niets als Mollie de betaling niet kent', async () => {
+    bestelling('tr_bestaatniet');
     netwerk(antwoord(404, { detail: 'No payment exists' }));
     const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
@@ -610,17 +664,18 @@ describe('Mollie-webhook: de body wordt niet vertrouwd', () => {
     expect(nep).not.toHaveBeenCalled();
   });
 
-  it('weigert een betaling zonder bestelnummer in de metadata', async () => {
+  it('heeft de metadata niet nodig: de bestelling hoort bij de betaling', async () => {
+    bestelling('tr_echt123');
     netwerk(molliesAntwoord({ metadata: undefined }));
     const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
     const resultaat = await handleMollieWebhook('tr_echt123');
 
-    expect(resultaat).toEqual({ success: false, error: 'Order ID not found in metadata' });
-    expect(webhookRegels()).toHaveLength(0);
+    expect(resultaat).toEqual({ success: true, orderId: 'bestelling-1', status: 'paid' });
   });
 
   it('legt een verwerkte betaling vast in payment_webhooks', async () => {
+    bestelling('tr_echt123');
     netwerk(molliesAntwoord());
     const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
@@ -633,6 +688,7 @@ describe('Mollie-webhook: de body wordt niet vertrouwd', () => {
   });
 
   it('boekt niets wanneer Mollie een storing geeft', async () => {
+    bestelling('tr_echt123');
     netwerk(antwoord(500, 'Internal Server Error'));
     const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
