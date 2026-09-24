@@ -38,7 +38,6 @@ import {
   updateTaskTemplate,
   deleteTaskTemplate,
   createTaskFromTemplate,
-  applyTaskTemplate,
   getTaskSummary,
 } from '../tasks';
 
@@ -470,25 +469,6 @@ describe('sjablonen', () => {
     await createTaskFromTemplate('s1');
 
     expect(laatsteVerzoek().body).toEqual({});
-  });
-
-  it('applyTaskTemplate post op /tasks/templates/:id/apply', async () => {
-    antwoordMet({ tasks: [{ id: 't1', title: 'Zaal boeken' }], message: 'Sjabloon toegepast.' });
-
-    await applyTaskTemplate('s1', { listId: 'tl1' });
-
-    const verzoek = laatsteVerzoek();
-    expect(verzoek.methode).toBe('post');
-    // Let op: de backend kent alleen /templates/:id/create-task. Deze route
-    // bestaat daar niet; zie het rapport bij deze tak.
-    expect(verzoek.pad).toBe('/tasks/templates/s1/apply');
-    expect(verzoek.body).toEqual({ listId: 'tl1' });
-  });
-
-  it('applyTaskTemplate laat een 404 doorkomen in plaats van een lege takenlijst', async () => {
-    antwoordMetFout(404, { error: 'Not found' });
-
-    await expect(applyTaskTemplate('s1')).rejects.toMatchObject({ response: { status: 404 } });
   });
 });
 

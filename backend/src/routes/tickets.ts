@@ -29,6 +29,7 @@ import {
   handleStripeWebhook,
   createRefund,
   PaymentMethod,
+  type PaymentProvider,
 } from '../services/payments';
 import {
   verifyCaptcha,
@@ -154,7 +155,7 @@ router.get(
     const concert = db
       .prepare(
         `
-        SELECT id, name, date, end_date, location, description, concert_type
+        SELECT id, name, date, end_date, location, description, concert_type, association_id
         FROM concerts
         WHERE id = ? AND deleted_at IS NULL
     `,
@@ -162,6 +163,7 @@ router.get(
       .get(concertId) as
       | {
           id: string;
+          association_id: string;
           name: string;
           date: string;
           end_date: string | null;
@@ -236,7 +238,7 @@ router.get(
         serviceFee: tt.service_fee || 0,
         showServiceFeeSeparate: Boolean(tt.show_service_fee_separate),
       })),
-      paymentMethods: getAvailablePaymentMethods(),
+      paymentMethods: getAvailablePaymentMethods(concert.association_id),
       captcha: {
         enabled: isCaptchaEnabled(),
         siteKey: getCaptchaSiteKey(),
@@ -746,6 +748,9 @@ router.post(
     // Create payment
     const paymentResult = await createPayment({
       orderId,
+      // Het geld gaat naar de vereniging van het concert, via haar eigen
+      // Mollie-account als ze dat gekoppeld heeft.
+      associationId: order.association_id,
       amount: order.total,
       description: `Tickets for ${order.concert_name}`,
       redirectUrl,
@@ -788,7 +793,18 @@ router.post(
 router.post(
   '/tickets/webhooks/payment',
   asyncHandler(async (req: Request, res: Response) => {
-    const provider = getPaymentProvider();
+    // Welke dienst er belt, staat in het verzoek zelf: Stripe ondertekent met
+    // een kopregel, Mollie stuurt een formulier met het betaalkenmerk. De
+    // instelling van de installatie is daar niet genoeg voor, want een
+    // vereniging kan haar eigen Mollie-account hebben terwijl de installatie
+    // geen sleutel heeft; dan kwam de melding van Mollie hier in de tak voor
+    // nepbetalingen terecht.
+    const provider: PaymentProvider | null =
+      typeof req.headers['stripe-signature'] === 'string'
+        ? 'stripe'
+        : !Buffer.isBuffer(req.body) && typeof req.body?.id === 'string'
+          ? 'mollie'
+          : getPaymentProvider();
 
     let result;
 
@@ -3321,6 +3337,7 @@ router.post(
     try {
       refundResult = await createRefund({
         paymentId: order.payment_id,
+        associationId: req.user!.associationId,
         reason,
       });
     } catch (error) {
@@ -3427,8 +3444,8 @@ router.get(
     }
 
     // Fetch payment details from provider
-    const paymentDetails = await getPaymentStatus(order.payment_id);
-    const provider = getPaymentProvider();
+    const paymentDetails = await getPaymentStatus(order.payment_id, req.user!.associationId);
+    const provider = getPaymentProvider(req.user!.associationId);
 
     res.json({
       orderId: order.id,

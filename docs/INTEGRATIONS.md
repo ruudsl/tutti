@@ -46,22 +46,35 @@ Mollie is a European payment service provider, ideal for Dutch and Belgian organ
 
 **Configuration:**
 
-1. Create a Mollie account at [mollie.com](https://www.mollie.com/)
-2. Get your API keys from the Mollie Dashboard
-3. Configure webhooks to point to your backend
+Each association connects its own Mollie account, so ticket money goes to its
+own bank account:
 
-**Environment Variables:**
+1. Create a Mollie account at [mollie.com](https://www.mollie.com/)
+2. In Tutti, open **Payment settings** and enter the live key, the test key, or
+   both. The keys are stored encrypted (AES-256-GCM); choose live or test mode
+   there.
+
+An installation that serves a single association can instead set one key in
+the environment. It is used for every association that has not connected its
+own account:
 
 ```env
-# Mollie API key (live or test)
+# Fallback Mollie API key (live or test)
 MOLLIE_API_KEY=live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Notes:**
 
 - Use test API keys (starting with `test_`) during development
-- Webhook URL: `https://your-domain.com/api/payments/mollie/webhook`
+- No webhook needs to be configured in the Mollie Dashboard: every payment
+  carries its own webhook URL, `https://your-api-domain/api/tickets/webhooks/payment`
+  (from `API_URL`). The webhook fetches the payment back from Mollie with the
+  key of the association the order belongs to.
+- If an association's stored key cannot be decrypted (for example after
+  changing `ENCRYPTION_SECRET`), Tutti does **not** fall back to the
+  environment key: its payments fail until the key is entered again.
 - Supported payment methods: iDEAL, creditcard, bancontact, paypal
+- Stripe is configured for the whole installation only (`STRIPE_SECRET_KEY`).
 
 ---
 

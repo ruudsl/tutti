@@ -20,6 +20,9 @@ import {
   sendNotification,
 } from '../../services/notifications';
 
+import { sendWhatsAppNotification } from '../../services/whatsapp';
+import { sendTelegramNotification } from '../../services/telegram';
+
 vi.mock('../../services/whatsapp', () => ({
   sendWhatsAppNotification: vi.fn().mockResolvedValue(true),
   isWhatsAppConfigured: vi.fn().mockReturnValue(false),
@@ -48,15 +51,20 @@ describe('meldingen', () => {
 
   describe('getAvailableChannels', () => {
     it('noemt alle vier de kanalen', () => {
-      expect(getAvailableChannels().map((k) => k.channel)).toEqual(['email', 'push', 'whatsapp', 'telegram']);
+      expect(getAvailableChannels(vereniging.id).map((k) => k.channel)).toEqual([
+        'email',
+        'push',
+        'whatsapp',
+        'telegram',
+      ]);
     });
 
     it('meldt e-mail altijd als beschikbaar', () => {
-      expect(getAvailableChannels().find((k) => k.channel === 'email')?.configured).toBe(true);
+      expect(getAvailableChannels(vereniging.id).find((k) => k.channel === 'email')?.configured).toBe(true);
     });
 
     it('meldt een kanaal zonder instellingen als niet beschikbaar', () => {
-      const kanalen = getAvailableChannels();
+      const kanalen = getAvailableChannels(vereniging.id);
       expect(kanalen.find((k) => k.channel === 'whatsapp')?.configured).toBe(false);
       expect(kanalen.find((k) => k.channel === 'telegram')?.configured).toBe(false);
     });
@@ -287,6 +295,23 @@ describe('meldingen', () => {
 
       expect(bewaardeMeldingen(lid.id)).toHaveLength(1);
       expect(bewaardeMeldingen(anderLid.id)).toHaveLength(0);
+    });
+
+    it('verstuurt WhatsApp en Telegram met de instellingen van de eigen vereniging', async () => {
+      // Elke vereniging heeft haar eigen bot en WhatsApp-nummer. Zonder
+      // vereniging viel de dienst terug op de omgeving, en ging een melding
+      // via het nummer van een ander of helemaal niet.
+      await sendNotification({
+        userId: lid.id,
+        type: 'general',
+        title: 'Mededeling',
+        body: 'Ter kennisgeving',
+        channels: ['whatsapp', 'telegram'],
+        associationId: vereniging.id,
+      });
+
+      expect(vi.mocked(sendWhatsAppNotification).mock.calls[0][4]).toBe(vereniging.id);
+      expect(vi.mocked(sendTelegramNotification).mock.calls[0][4]).toBe(vereniging.id);
     });
 
     it('gebruikt de standaardkanalen voor een lid dat nooit iets heeft ingesteld', async () => {

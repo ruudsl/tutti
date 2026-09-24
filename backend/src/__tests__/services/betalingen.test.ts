@@ -1396,34 +1396,30 @@ describe('Terugbetalingen', () => {
 });
 
 // ============================================================
-// 6. De sleutel per vereniging doet niet mee
+// 6. De sleutel van de installatie
 // ============================================================
 
-describe('De Mollie-sleutel komt uit de omgeving, niet uit payment_settings', () => {
-  it('gebruikt bij elke aanroep de sleutel uit MOLLIE_API_KEY', async () => {
+/**
+ * Zonder vereniging, of voor een vereniging die niets gekoppeld heeft, geldt de
+ * sleutel uit de omgeving. De sleutel per vereniging staat in
+ * betalingen-per-vereniging.test.ts; dit bestand laadt de dienst per test
+ * opnieuw in en werkt daarom niet met de echte payment_settings.
+ */
+describe('De Mollie-sleutel van de installatie', () => {
+  it('gebruikt zonder vereniging de sleutel uit MOLLIE_API_KEY', async () => {
     const nep = netwerk(antwoord(201, { id: 'tr_1', _links: { checkout: { href: 'https://x' } } }));
     const { createPayment } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
-    // BEVINDING - vastgelegd, niet gerepareerd. De tabel payment_settings
-    // bewaart per vereniging een eigen (versleutelde) Mollie-sleutel, maar
-    // deze dienst kent geen vereniging: geen enkele functie neemt een
-    // association_id aan, en de sleutel komt uit process.env.MOLLIE_API_KEY.
-    // In een opzet met meerdere verenigingen loopt het geld daarmee via een
-    // en dezelfde rekening. Dit repareren betekent de sleutel per vereniging
-    // opzoeken en ontsleutelen in elke aanroep - een grotere ingreep die
-    // buiten deze testronde valt.
     await createPayment({ orderId: 'b1', amount: 10, description: 'K', redirectUrl: 'x', webhookUrl: 'y' });
 
     const opties = nep.mock.calls[0][1] as RequestInit;
     expect((opties.headers as Record<string, string>).Authorization).toBe(`Bearer ${MOLLIE_SLEUTEL}`);
   });
 
-  it('valt zonder MOLLIE_API_KEY terug op de nepprovider, ook al staat er een sleutel in payment_settings', async () => {
+  it('valt zonder MOLLIE_API_KEY en zonder vereniging terug op de nepprovider', async () => {
     const nep = netwerk(antwoord(201, { id: 'tr_1', _links: { checkout: { href: 'https://x' } } }));
     const { createPayment, getPaymentProvider } = await laadBetalingen({ MOLLIE_API_KEY: undefined });
 
-    // Er bestaat geen weg van payment_settings naar deze dienst: zonder de
-    // omgevingsvariabele is er domweg geen provider.
     expect(getPaymentProvider()).toBeNull();
     const resultaat = await createPayment({
       orderId: 'b1',

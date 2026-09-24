@@ -77,14 +77,22 @@ export interface UserNotificationPreferences {
 }
 
 /**
- * Get available notification channels
+ * De meldkanalen die een lid van deze vereniging kan gebruiken.
+ *
+ * WhatsApp en Telegram stelt een vereniging zelf in (Instellingen), met de
+ * omgeving als terugval. Zonder vereniging keken deze controles of *een*
+ * vereniging het kanaal had ingesteld; dan zag een lid Telegram als
+ * beschikbaar terwijl zijn eigen vereniging geen bot had, en mislukte het
+ * koppelen daarna.
  */
-export function getAvailableChannels(): { channel: NotificationChannel; configured: boolean; name: string }[] {
+export function getAvailableChannels(
+  associationId: string,
+): { channel: NotificationChannel; configured: boolean; name: string }[] {
   return [
     { channel: 'email', configured: true, name: 'E-mail' },
     { channel: 'push', configured: !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY), name: 'Push notificaties' },
-    { channel: 'whatsapp', configured: isWhatsAppConfigured(), name: 'WhatsApp' },
-    { channel: 'telegram', configured: isTelegramConfigured(), name: 'Telegram' },
+    { channel: 'whatsapp', configured: isWhatsAppConfigured(associationId), name: 'WhatsApp' },
+    { channel: 'telegram', configured: isTelegramConfigured(associationId), name: 'Telegram' },
   ];
 }
 
@@ -443,11 +451,11 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
           break;
 
         case 'whatsapp':
-          success = await sendWhatsAppNotification(userId, title, body, data);
+          success = await sendWhatsAppNotification(userId, title, body, data, associationId);
           break;
 
         case 'telegram':
-          success = await sendTelegramNotification(userId, title, body, data);
+          success = await sendTelegramNotification(userId, title, body, data, associationId);
           break;
       }
 

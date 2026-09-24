@@ -43,7 +43,7 @@ router.get(
   '/channels',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const channels = getAvailableChannels();
+    const channels = getAvailableChannels(req.user!.associationId!);
     res.json(channels);
   }),
 );
@@ -172,11 +172,12 @@ router.post(
   '/telegram/link',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!isTelegramConfigured()) {
+    // De bot van de eigen vereniging, niet die van een andere.
+    if (!isTelegramConfigured(req.user!.associationId!)) {
       throw new ApiError(503, 'Telegram is niet geconfigureerd');
     }
 
-    const result = await generateTelegramLinkUrl(req.user!.id);
+    const result = await generateTelegramLinkUrl(req.user!.id, req.user!.associationId!);
     if (!result) {
       throw new ApiError(500, 'Kon geen Telegram link genereren');
     }
@@ -297,7 +298,7 @@ router.post(
   '/whatsapp/link',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!isWhatsAppConfigured()) {
+    if (!isWhatsAppConfigured(req.user!.associationId!)) {
       throw new ApiError(503, 'WhatsApp is niet geconfigureerd');
     }
 
@@ -344,7 +345,7 @@ router.post(
     }
 
     // Send verification code via WhatsApp
-    const sent = await sendVerificationCode(normalizedNumber, code);
+    const sent = await sendVerificationCode(normalizedNumber, code, req.user!.associationId!);
     if (!sent) {
       throw new ApiError(500, 'Kon verificatiecode niet verzenden');
     }
