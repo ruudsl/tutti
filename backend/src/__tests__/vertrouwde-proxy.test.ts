@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import crypto from 'crypto';
 
 async function laadConfig(omgeving: Record<string, string | undefined>) {
   vi.resetModules();
@@ -19,7 +20,9 @@ async function laadConfig(omgeving: Record<string, string | undefined>) {
 
 const productie = {
   NODE_ENV: 'production',
-  JWT_SECRET: 'x'.repeat(32),
+  // Een eentonig geheim als 'x'.repeat(32) start in productie niet meer (zie
+  // jwt-geheim-productie.test.ts); daarom een willekeurig geheim.
+  JWT_SECRET: crypto.randomBytes(48).toString('base64'),
   FRONTEND_URL: 'https://tutti.example.org',
 };
 

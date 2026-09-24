@@ -13,102 +13,78 @@ const sanitizeForLog = (value: unknown): string => {
   );
 };
 
-interface SmtpConfig {
+interface SmtpRij {
   smtp_host: string | null;
   smtp_port: number | null;
   smtp_secure: number | null;
   smtp_user: string | null;
   smtp_pass: string | null;
   smtp_from: string | null;
-  smtp_enabled: number | null;
 }
 
+interface SmtpKeuze {
+  transporter: nodemailer.Transporter;
+  from: string;
+  bron: 'vereniging' | 'installatie';
+}
+
+const STANDAARD_AFZENDER = '"Harmonie App" <noreply@harmonie.app>';
+
 /**
- * Get SMTP config from the database (first association with SMTP enabled),
- * falling back to environment variables.
+ * Via welke SMTP-server en met welke afzender gaat een bericht de deur uit?
+ *
+ * 1. De eigen SMTP-instellingen van de vereniging, als die aan staan.
+ * 2. Anders de installatiebrede `SMTP_*`-omgevingsvariabelen: de server van
+ *    wie Tutti draait, niet van een vereniging.
+ * 3. Anders niets: dan wordt er niet verstuurd.
+ *
+ * Nooit de instellingen van een andere vereniging. Hier stond eerst een
+ * terugval op "de eerste vereniging met SMTP aan"; daardoor gingen
+ * bijvoorbeeld de wachtwoordherstellinks van vereniging B via het
+ * mailaccount en met de afzender van vereniging A. Die kan ze dan lezen, en
+ * de ontvanger ziet een afzender die niets met zijn vereniging te maken heeft.
  */
-const getSmtpTransporter = (associationId?: string | null): nodemailer.Transporter | null => {
-  // Try database config first
-  try {
-    let smtpConfig: SmtpConfig | undefined;
-
-    if (associationId) {
-      smtpConfig = db
+const kiesSmtp = (associationId?: string | null): SmtpKeuze | null => {
+  if (associationId) {
+    let rij: SmtpRij | undefined;
+    try {
+      rij = db
         .prepare(
-          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, smtp_enabled FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL',
+          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL',
         )
-        .get(associationId) as SmtpConfig | undefined;
+        .get(associationId) as SmtpRij | undefined;
+    } catch {
+      // Database nog niet klaar: dan valt er ook niets van de vereniging te lezen.
     }
 
-    // Fallback: try any association with SMTP enabled
-    if (!smtpConfig) {
-      smtpConfig = db
-        .prepare(
-          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, smtp_enabled FROM associations WHERE smtp_enabled = 1 AND smtp_host IS NOT NULL LIMIT 1',
-        )
-        .get() as SmtpConfig | undefined;
+    if (rij?.smtp_host) {
+      return {
+        transporter: nodemailer.createTransport({
+          host: rij.smtp_host,
+          port: rij.smtp_port || 587,
+          secure: !!rij.smtp_secure,
+          auth: rij.smtp_user ? { user: rij.smtp_user, pass: rij.smtp_pass || '' } : undefined,
+        }),
+        from: rij.smtp_from || process.env.SMTP_FROM || STANDAARD_AFZENDER,
+        bron: 'vereniging',
+      };
     }
-
-    if (smtpConfig?.smtp_host) {
-      return nodemailer.createTransport({
-        host: smtpConfig.smtp_host,
-        port: smtpConfig.smtp_port || 587,
-        secure: !!smtpConfig.smtp_secure,
-        auth: smtpConfig.smtp_user
-          ? {
-              user: smtpConfig.smtp_user,
-              pass: smtpConfig.smtp_pass || '',
-            }
-          : undefined,
-      });
-    }
-  } catch {
-    // Database might not be initialized yet, fall through to env vars
   }
 
-  // Fallback to environment variables
   if (process.env.SMTP_HOST) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    return {
+      transporter: nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' } : undefined,
+      }),
+      from: process.env.SMTP_FROM || STANDAARD_AFZENDER,
+      bron: 'installatie',
+    };
   }
 
   return null;
-};
-
-/**
- * Get the "from" address from database config or environment.
- */
-const getFromAddress = (associationId?: string | null): string => {
-  try {
-    let smtpConfig: SmtpConfig | undefined;
-
-    if (associationId) {
-      smtpConfig = db
-        .prepare('SELECT smtp_from FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL')
-        .get(associationId) as SmtpConfig | undefined;
-    }
-
-    if (!smtpConfig) {
-      smtpConfig = db
-        .prepare('SELECT smtp_from FROM associations WHERE smtp_enabled = 1 AND smtp_host IS NOT NULL LIMIT 1')
-        .get() as SmtpConfig | undefined;
-    }
-
-    if (smtpConfig?.smtp_from) {
-      return smtpConfig.smtp_from;
-    }
-  } catch {
-    // Fall through
-  }
-
-  return process.env.SMTP_FROM || '"Harmonie App" <noreply@harmonie.app>';
 };
 
 interface EmailAttachment {
@@ -139,11 +115,15 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     `Sending email to ${sanitizeForLog(to)}: ${sanitizeForLog(subject)}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`,
   );
 
-  const transporter = getSmtpTransporter(associationId);
+  const smtp = kiesSmtp(associationId);
 
-  if (!transporter) {
+  if (!smtp) {
     // Log metadata only when no SMTP is configured (avoid logging user-controlled body content)
-    logger.warn('No SMTP configuration found. Emails will be logged to console only.');
+    logger.warn(
+      associationId
+        ? `E-mail niet verstuurd: vereniging ${sanitizeForLog(associationId)} heeft geen eigen SMTP aan staan en de installatie heeft geen SMTP_HOST. De SMTP van een andere vereniging wordt nooit gebruikt.`
+        : 'E-mail niet verstuurd: er is geen installatiebrede SMTP ingesteld (SMTP_HOST).',
+    );
     logger.info('Email content (no SMTP configured):');
     logger.info(`To: ${safeTo}`);
     logger.info(`Subject: ${safeSubject}`);
@@ -155,9 +135,8 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   }
 
   try {
-    const from = getFromAddress(associationId);
-    const info = await transporter.sendMail({
-      from,
+    const info = await smtp.transporter.sendMail({
+      from: smtp.from,
       to,
       subject,
       text,
@@ -170,7 +149,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
       })),
     });
 
-    logger.info(`Email sent successfully: ${info.messageId}`);
+    logger.info(`Email sent successfully via ${smtp.bron}-SMTP: ${info.messageId}`);
     return true;
   } catch (error) {
     logger.error('Failed to send email:', error);

@@ -1,7 +1,10 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
+import net from 'net';
+import { domainToASCII } from 'url';
 import nodemailer from 'nodemailer';
 import db from '../database/connection';
 import config from '../config';
@@ -9,6 +12,8 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import logger from '../utils/logger';
+import { readFileHeader } from '../utils/fileValidation';
+import { controleerUitgaandAdres, OnveiligAdresFout } from '../utils/uitgaandAdres';
 import { logAuditEvent } from './audit-logs';
 
 const router = Router();
@@ -19,26 +24,93 @@ if (!fs.existsSync(logoDir)) {
   fs.mkdirSync(logoDir, { recursive: true });
 }
 
-const logoStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, logoDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `logo-${Date.now()}${ext}`);
-  },
+/**
+ * Wat een logo mag zijn, en hoe het terug naar de browser gaat.
+ *
+ * Het soort bestand volgt uit de eerste bytes, niet uit de extensie of het
+ * mimetype dat de browser meestuurt: die kiest de uploader zelf. Hier nam de
+ * opslag eerst de extensie van de client over, en serveerde sendFile het
+ * bestand met het Content-Type dat bij die extensie hoort. Een "logo" met de
+ * naam logo.html kwam zo als text/html terug op het domein van Tutti, zonder
+ * inloggen - een script erin draaide met de sessie van wie de link opende.
+ *
+ * SVG kan zelf script bevatten. Als <img> draait dat nooit; wie het bestand
+ * rechtstreeks opent krijgt het als bijlage, met een CSP die script en elke
+ * verbinding naar buiten verbiedt.
+ */
+interface LogoSoort {
+  extensie: string;
+  contentType: string;
+}
+
+const LOGO_SOORTEN = {
+  png: { extensie: '.png', contentType: 'image/png' },
+  jpeg: { extensie: '.jpg', contentType: 'image/jpeg' },
+  gif: { extensie: '.gif', contentType: 'image/gif' },
+  webp: { extensie: '.webp', contentType: 'image/webp' },
+  svg: { extensie: '.svg', contentType: 'image/svg+xml' },
+} satisfies Record<string, LogoSoort>;
+
+/** Genoeg bytes om ook een SVG met een XML-declaratie en commentaar te herkennen. */
+const LOGO_KOP_LENGTE = 4096;
+
+/**
+ * Herken een logo aan de inhoud. Geeft `null` voor alles wat geen PNG, JPEG,
+ * GIF, WebP of SVG is - ook voor HTML met een `<svg>` erin.
+ */
+function herkenLogo(kop: Buffer): LogoSoort | null {
+  if (kop.length >= 8 && kop.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return LOGO_SOORTEN.png;
+  }
+  if (kop.length >= 3 && kop[0] === 0xff && kop[1] === 0xd8 && kop[2] === 0xff) {
+    return LOGO_SOORTEN.jpeg;
+  }
+  const gif = kop.subarray(0, 6).toString('latin1');
+  if (gif === 'GIF87a' || gif === 'GIF89a') {
+    return LOGO_SOORTEN.gif;
+  }
+  if (
+    kop.length >= 12 &&
+    kop.subarray(0, 4).toString('latin1') === 'RIFF' &&
+    kop.subarray(8, 12).toString('latin1') === 'WEBP'
+  ) {
+    return LOGO_SOORTEN.webp;
+  }
+
+  // SVG is tekst. Het eerste element na een eventuele BOM, XML-declaratie,
+  // commentaar en doctype moet <svg zijn; een HTML-pagina die ergens een
+  // <svg> bevat valt daarmee af.
+  const tekst = kop
+    .toString('utf8')
+    .replace(/^\uFEFF/, '')
+    .replace(/^\s*<\?xml[^>]*\?>/i, '')
+    .replace(/^(\s*<!--[\s\S]*?-->)*/, '')
+    .replace(/^\s*<!DOCTYPE\s+svg[^>]*>/i, '')
+    .replace(/^(\s*<!--[\s\S]*?-->)*/, '');
+  if (/^\s*<svg[\s>]/i.test(tekst)) {
+    return LOGO_SOORTEN.svg;
+  }
+
+  return null;
+}
+
+// In het geheugen ontvangen (hooguit 2 MB), zodat de inhoud gecontroleerd is
+// voordat er iets op schijf staat en de extensie van de client nergens meer
+// aan te pas komt.
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
 });
 
-const logoUpload = multer({
-  storage: logoStorage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
-  fileFilter: (_req, file, cb) => {
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Alleen PNG, JPG, SVG of WebP bestanden zijn toegestaan.'));
+const ontvangLogo = (req: AuthRequest, res: Response, next: NextFunction) => {
+  logoUpload.single('logo')(req, res, (err: unknown) => {
+    if (!err) return next();
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      return next(new ApiError(400, 'Bestand is te groot. Maximaal 2MB.'));
     }
-  },
-});
+    next(new ApiError(400, 'Upload mislukt.'));
+  });
+};
 
 /**
  * GET /settings - Get association settings (any authenticated user)
@@ -125,20 +197,25 @@ router.put(
 /**
  * POST /settings/logo - Upload association logo (admin only)
  */
-router.post('/logo', authenticateToken, requireRole('admin'), (req: AuthRequest, res: Response) => {
-  logoUpload.single('logo')(req, res, async (err: any) => {
-    if (err) {
-      if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ error: 'Bestand is te groot. Maximaal 2MB.' });
-        }
-      }
-      return res.status(400).json({ error: err.message || 'Upload mislukt.' });
+router.post(
+  '/logo',
+  authenticateToken,
+  requireRole('admin'),
+  ontvangLogo,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.file) {
+      throw new ApiError(400, 'Geen bestand geüpload.');
     }
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'Geen bestand geüpload.' });
+    const soort = herkenLogo(req.file.buffer.subarray(0, LOGO_KOP_LENGTE));
+    if (!soort) {
+      throw new ApiError(400, 'Alleen PNG, JPG, GIF, WebP of SVG bestanden zijn toegestaan.');
     }
+
+    // De naam komt helemaal van de server: tijd, toeval en de extensie die
+    // bij de herkende inhoud hoort.
+    const logoPath = path.join(logoDir, `logo-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${soort.extensie}`);
+    await fs.promises.writeFile(logoPath, req.file.buffer);
 
     try {
       // Remove old logo if exists
@@ -153,39 +230,36 @@ router.post('/logo', authenticateToken, requireRole('admin'), (req: AuthRequest,
       }
 
       // Save new logo path
-      const logoPath = req.file.path;
       db.prepare('UPDATE associations SET logo_path = ? WHERE id = ?').run(logoPath, req.user!.associationId);
-
-      logger.info(`Logo uploaded for association`, {
-        associationId: req.user!.associationId,
-        uploadedBy: req.user!.id,
-      });
-
-      // Log audit event
-      logAuditEvent(
-        req.user!.id,
-        'upload',
-        'settings',
-        req.user!.associationId || '',
-        'Logo',
-        { filename: path.basename(logoPath) },
-        req.ip,
-        req.get('user-agent'),
-      );
-
-      res.json({
-        message: 'Logo succesvol geüpload.',
-        logoUrl: `/api/settings/logo/${path.basename(logoPath)}`,
-      });
     } catch (error) {
       // Clean up uploaded file on error
-      if (req.file && fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
+      await fs.promises.unlink(logoPath).catch(() => {});
       throw error;
     }
-  });
-});
+
+    logger.info(`Logo uploaded for association`, {
+      associationId: req.user!.associationId,
+      uploadedBy: req.user!.id,
+    });
+
+    // Log audit event
+    logAuditEvent(
+      req.user!.id,
+      'upload',
+      'settings',
+      req.user!.associationId || '',
+      'Logo',
+      { filename: path.basename(logoPath) },
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({
+      message: 'Logo succesvol geüpload.',
+      logoUrl: `/api/settings/logo/${path.basename(logoPath)}`,
+    });
+  }),
+);
 
 /**
  * DELETE /settings/logo - Remove association logo (admin only)
@@ -428,6 +502,24 @@ router.get(
       throw new ApiError(404, 'Logo niet gevonden.');
     }
 
+    // Het Content-Type volgt uit de inhoud, niet uit de extensie: een logo van
+    // vóór deze controle kan nog logo-….html heten. Wat geen afbeelding is,
+    // komt hier nooit terug - ook niet als tekst of html.
+    const soort = herkenLogo(await readFileHeader(filePath, LOGO_KOP_LENGTE));
+    if (!soort) {
+      logger.warn('Logo met onbekende inhoud niet geserveerd', { filename: safeFilename });
+      throw new ApiError(404, 'Logo niet gevonden.');
+    }
+
+    res.setHeader('Content-Type', soort.contentType);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (soort === LOGO_SOORTEN.svg) {
+      // Als <img> blijft een SVG gewoon zichtbaar; rechtstreeks geopend wordt
+      // hij gedownload, en mocht een browser hem toch tonen, dan zonder script.
+      res.setHeader('Content-Disposition', 'attachment; filename="logo.svg"');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox");
+    }
+
     // Cache logo for 1 hour
     res.set('Cache-Control', 'public, max-age=3600');
     res.sendFile(filePath);
@@ -565,6 +657,42 @@ router.delete(
 );
 
 /**
+ * Mag de server met deze SMTP-host verbinden?
+ *
+ * De host komt van een beheerder, en dus niet vanzelf van buiten: zonder
+ * controle is de testknop een manier om vanaf de server `127.0.0.1:6379` of
+ * een adres in het interne netwerk te benaderen. controleerUitgaandAdres
+ * kent alleen URL's; de host gaat er daarom als https-adres in. De poort doet
+ * voor die controle niet mee: het gaat om waar de naam heen wijst.
+ *
+ * @returns de host zoals gecontroleerd, om precies die aan te roepen.
+ */
+async function controleerSmtpHost(ruw: string): Promise<string> {
+  const host = ruw.trim().toLowerCase();
+  const alsUrlHost = net.isIPv6(host) ? `[${host}]` : host;
+
+  let url: URL;
+  try {
+    url = await controleerUitgaandAdres(`https://${alsUrlHost}/`);
+  } catch (error) {
+    if (error instanceof OnveiligAdresFout) {
+      throw new ApiError(400, `SMTP-host geweigerd: ${error.message}`);
+    }
+    throw error;
+  }
+
+  // Een host met `/`, `@` of `:` erin leest als URL anders dan als hostnaam:
+  // dan is iets anders gecontroleerd dan wat nodemailer zou aanroepen.
+  // Een naam met bijzondere letters staat in de URL in zijn ASCII-vorm.
+  const gecontroleerd = url.hostname.replace(/^\[|\]$/g, '');
+  const verwacht = net.isIP(host) ? host : domainToASCII(host);
+  if (!verwacht || gecontroleerd !== verwacht) {
+    throw new ApiError(400, 'SMTP-host geweigerd: dit is geen geldige hostnaam.');
+  }
+  return gecontroleerd;
+}
+
+/**
  * POST /settings/smtp/test - Send a test email (admin only)
  */
 router.post(
@@ -586,8 +714,10 @@ router.post(
       throw new ApiError(400, 'SMTP is niet geconfigureerd. Sla eerst de instellingen op.');
     }
 
+    const host = await controleerSmtpHost(association.smtp_host);
+
     const testTransporter = nodemailer.createTransport({
-      host: association.smtp_host,
+      host,
       port: association.smtp_port || 587,
       secure: !!association.smtp_secure,
       auth: association.smtp_user
@@ -598,6 +728,7 @@ router.post(
         : undefined,
       connectionTimeout: 10000,
       greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
 
     try {
@@ -619,8 +750,24 @@ router.post(
 
       res.json({ message: `Testmail verzonden naar ${user.email}.` });
     } catch (error: any) {
-      logger.error('SMTP test failed', { error: error.message, associationId: req.user!.associationId });
-      throw new ApiError(400, `SMTP-test mislukt: ${error.message}`);
+      // De ruwe melding (`connect ECONNREFUSED 10.0.0.5:25`, de begroeting van
+      // de server) gaat alleen naar het logboek: aan de client verklapt hij
+      // welke hosts en poorten er achter de server openstaan.
+      logger.error('SMTP test failed', {
+        error: error?.message,
+        code: error?.code,
+        associationId: req.user!.associationId,
+      });
+      if (error?.code === 'EAUTH') {
+        throw new ApiError(
+          400,
+          'SMTP-test mislukt: inloggen bij de mailserver lukte niet. Controleer gebruikersnaam en wachtwoord.',
+        );
+      }
+      throw new ApiError(
+        400,
+        'SMTP-test mislukt. Controleer host, poort en beveiliging; de precieze fout staat in het logboek van de server.',
+      );
     }
   }),
 );
