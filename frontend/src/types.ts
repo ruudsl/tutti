@@ -559,129 +559,138 @@ export interface WhatsAppConfig {
 // =============================================================================
 // EQUIPMENT MANAGEMENT (INSTRUMENTENBEHEER)
 // =============================================================================
+//
+// Deze vormen volgen backend/src/routes/equipment.ts (tabel equipment_items)
+// veld voor veld. De vorige versie beschreef een model dat de backend nooit
+// heeft gehad (instrumentType, brandModel, yearOfManufacture, een lener direct
+// op het item); de pagina las daardoor velden die altijd leeg waren.
 
-/**
- * Represents a physical equipment item (typically a musical instrument).
- * @property id - Unique identifier
- * @property instrumentType - Type of instrument (e.g., "Clarinet", "Tuba")
- * @property brandModel - Brand and model information
- * @property serialNumber - Manufacturer serial number
- * @property yearOfManufacture - Year the instrument was made
- * @property status - Current availability status
- * @property notes - General notes about the equipment
- * @property maintenanceIntervalMonths - Months between scheduled maintenance
- * @property lastMaintenanceDate - Date of last maintenance service
- * @property nextMaintenanceDate - Calculated date for next maintenance
- * @property purchasePrice - Original purchase price
- * @property currentValue - Current estimated value
- * @property currentUser - User currently assigned to this equipment
- * @property createdAt - Record creation timestamp
- * @property updatedAt - Record last update timestamp
- */
+/** Soort apparatuur; de enum uit createEquipmentSchema. */
+export type EquipmentType = 'instrument' | 'accessory' | 'audio' | 'lighting' | 'furniture' | 'transport' | 'misc';
+
+/** Status van een item. `in_use` zet de backend zelf bij een uitlening. */
+export type EquipmentStatus = 'available' | 'in_use' | 'maintenance' | 'repair' | 'retired' | 'lost' | 'sold';
+
+/** Staat van een item. Een schademelding verlaagt die in de backend. */
+export type EquipmentCondition = 'new' | 'excellent' | 'good' | 'fair' | 'poor' | 'broken';
+
+/** Soort onderhoud; de enum uit maintenanceSchema. */
+export type EquipmentMaintenanceType = 'inspection' | 'cleaning' | 'repair' | 'service' | 'calibration' | 'replacement';
+
+/** Ernst van een schademelding; de enum uit createDamageReportSchema. */
+export type EquipmentDamageSeverity = 'minor' | 'moderate' | 'severe' | 'unusable';
+
+/** Status van een uitlening; de CHECK op equipment_item_loans.status. */
+export type EquipmentLoanStatus = 'active' | 'returned' | 'overdue' | 'lost';
+
+/** Eén item zoals GET /equipment het in de lijst teruggeeft (een kale array). */
 export interface Equipment {
   id: string;
-  instrumentType: string;
-  brandModel: string | null;
+  name: string;
+  description: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  categoryColor: string | null;
+  inventoryNumber: string | null;
   serialNumber: string | null;
-  yearOfManufacture: number | null;
-  status: 'available' | 'on_loan' | 'in_repair' | 'written_off' | 'personal';
-  notes: string | null;
-  maintenanceIntervalMonths: number;
-  lastMaintenanceDate: string | null;
-  nextMaintenanceDate: string | null;
-  purchasePrice: number | null;
+  brand: string | null;
+  model: string | null;
+  equipmentType: EquipmentType;
+  status: EquipmentStatus;
+  condition: EquipmentCondition;
+  location: string | null;
+  isLoanable: boolean;
   currentValue: number | null;
-  currentUser: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  } | null;
-  createdAt: string;
-  updatedAt: string;
+  /** Aantal lopende uitleningen; in de praktijk 0 of 1. */
+  activeLoans: number;
+  imagePath: string | null;
 }
 
-/**
- * Record of damage reported for an equipment item.
- * @property id - Unique identifier
- * @property date - Date damage was reported
- * @property description - Description of the damage
- * @property repairCost - Cost of repairs if completed
- * @property repairedBy - Name of repair technician/shop
- * @property status - Current repair status
- * @property createdAt - Record creation timestamp
- */
-export interface EquipmentDamageLog {
-  id: string;
-  date: string;
-  description: string;
-  repairCost: number | null;
-  repairedBy: string | null;
-  status: 'reported' | 'in_repair' | 'repaired' | 'written_off';
-  createdAt: string;
-}
-
-/**
- * Record of an equipment loan to a member.
- * @property id - Unique identifier
- * @property user - User who borrowed the equipment
- * @property loanDate - Date equipment was loaned out
- * @property returnDate - Date equipment was returned (null if still on loan)
- * @property conditionAtLoan - Condition when loaned
- * @property conditionAtReturn - Condition when returned
- * @property notes - Additional notes about the loan
- * @property agreementPdfPath - Path to signed loan agreement PDF
- */
+/** Een uitlening zoals GET /equipment/:id haar in `loans` meestuurt. */
 export interface EquipmentLoan {
   id: string;
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  loanDate: string;
-  returnDate: string | null;
-  conditionAtLoan: string | null;
-  conditionAtReturn: string | null;
-  notes: string | null;
-  agreementPdfPath: string | null;
+  userId: string;
+  userName: string;
+  checkoutDate: string;
+  expectedReturnDate: string | null;
+  actualReturnDate: string | null;
+  status: EquipmentLoanStatus;
 }
 
-/**
- * Detailed equipment information including history.
- * Extends Equipment with damage logs and loan history.
- * @property damageLogs - History of damage reports
- * @property loanHistory - History of loans
- */
-export interface EquipmentDetail extends Equipment {
-  damageLogs: EquipmentDamageLog[];
-  loanHistory: EquipmentLoan[];
-}
-
-/**
- * Alert for equipment needing maintenance.
- * @property id - Equipment ID
- * @property instrumentType - Type of instrument
- * @property brandModel - Brand and model
- * @property serialNumber - Serial number
- * @property nextMaintenanceDate - Scheduled maintenance date
- * @property isOverdue - Whether maintenance is past due
- * @property currentUser - User currently assigned
- */
-export interface MaintenanceAlert {
+/** Een onderhoudsregel zoals GET /equipment/:id hem in `maintenance` meestuurt. */
+export interface EquipmentMaintenance {
   id: string;
-  instrumentType: string;
-  brandModel: string | null;
+  maintenanceType: EquipmentMaintenanceType;
+  description: string;
+  performedDate: string;
+  performedByName: string | null;
+  cost: number | null;
+}
+
+/**
+ * Eén item met geschiedenis, zoals GET /equipment/:id het teruggeeft.
+ *
+ * Schademeldingen zitten er niet in; die komen van GET /equipment/:id/damage.
+ * Het onderhoudsinterval wordt wel opgeslagen maar niet teruggegeven.
+ */
+export interface EquipmentDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  inventoryNumber: string | null;
   serialNumber: string | null;
-  nextMaintenanceDate: string;
-  isOverdue: boolean;
-  currentUser: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  } | null;
+  brand: string | null;
+  model: string | null;
+  equipmentType: EquipmentType;
+  status: EquipmentStatus;
+  condition: EquipmentCondition;
+  location: string | null;
+  storageLocation: string | null;
+  purchaseDate: string | null;
+  purchasePrice: number | null;
+  currentValue: number | null;
+  warrantyExpiry: string | null;
+  lastMaintenance: string | null;
+  nextMaintenance: string | null;
+  isLoanable: boolean;
+  requiresTraining: boolean;
+  imagePath: string | null;
+  notes: string | null;
+  createdAt: string;
+  loans: EquipmentLoan[];
+  maintenance: EquipmentMaintenance[];
+}
+
+/** Een schademelding zoals GET /equipment/:id/damage haar teruggeeft. */
+export interface EquipmentDamageLog {
+  id: string;
+  description: string;
+  severity: EquipmentDamageSeverity;
+  photos: string[];
+  repairCost: number | null;
+  /** Gezet zodra de schade als gerepareerd is gemarkeerd; anders null. */
+  repairedAt: string | null;
+  repairedBy: string | null;
+  repairedByName: string | null;
+  notes: string | null;
+  reportedBy: string | null;
+  reportedByName: string | null;
+  createdAt: string;
+}
+
+/** Een categorie zoals GET /equipment/categories haar teruggeeft. */
+export interface EquipmentCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  parentId: string | null;
+  parentName: string | null;
+  color: string | null;
+  icon: string | null;
+  sortOrder: number | null;
+  itemCount: number;
 }
 
 // =============================================================================

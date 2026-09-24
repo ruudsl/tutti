@@ -18,11 +18,19 @@
  * stond er "geen apparatuur gevonden", met de uitnodiging om het eerste
  * apparaat toe te voegen. Dat is onwaar: de inventaris kon alleen niet
  * opgehaald worden.
+ *
+ * BEWIJS - een gevuld magazijn zag er ook uit als een leeg magazijn.
+ * GET /equipment antwoordt met een kale array; de pagina las
+ * `equipmentData?.data`, alsof er een pagineringsobject terugkwam. Dat veld
+ * bestaat niet, dus de lijst bleef altijd leeg. De mocks hier gaven die
+ * verzonnen vorm terug, en daarom zag geen test het. Ze geven nu de vorm die
+ * backend/src/routes/equipment.ts echt stuurt.
  */
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -58,23 +66,27 @@ vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'lid-1', role: huidigeRol } }),
 }));
 
+/** Een item in precies de vorm waarin GET /equipment het in de lijst stuurt. */
 function apparaat(overschrijving: Partial<EquipmentItem> = {}): EquipmentItem {
   return {
     id: 'apparaat-1',
-    instrumentType: 'Trompet',
-    brandModel: 'Yamaha YTR-2330',
+    name: 'Trompet',
+    description: null,
+    categoryId: null,
+    categoryName: null,
+    categoryColor: null,
+    inventoryNumber: 'EQ-00001',
     serialNumber: 'SN-001',
-    yearOfManufacture: 2020,
+    brand: 'Yamaha',
+    model: 'YTR-2330',
+    equipmentType: 'instrument',
     status: 'available',
-    notes: null,
-    maintenanceIntervalMonths: 12,
-    lastMaintenanceDate: null,
-    nextMaintenanceDate: null,
-    purchasePrice: 850,
+    condition: 'good',
+    location: null,
+    isLoanable: true,
     currentValue: 700,
-    currentUser: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
+    activeLoans: 0,
+    imagePath: null,
     ...overschrijving,
   };
 }
@@ -103,10 +115,22 @@ beforeEach(() => {
   vi.clearAllMocks();
   huidigeRol = 'member';
   // Bewust andere namen dan de apparaten hieronder: staat dezelfde tekst in
-  // het typefilter, dan slaagt een assertie op die naam ook als de lijst leeg
-  // blijft.
-  vi.mocked(api.getEquipmentTypes).mockResolvedValue(['Blaasinstrument', 'Slagwerk']);
-  vi.mocked(api.getEquipment).mockResolvedValue({ data: [apparaat()], total: 1, page: 1, limit: 20 });
+  // het categoriefilter, dan slaagt een assertie op die naam ook als de lijst
+  // leeg blijft.
+  vi.mocked(api.getEquipmentCategories).mockResolvedValue([
+    {
+      id: 'cat-1',
+      name: 'Blaasinstrumenten',
+      description: null,
+      parentId: null,
+      parentName: null,
+      color: null,
+      icon: null,
+      sortOrder: 0,
+      itemCount: 1,
+    },
+  ]);
+  vi.mocked(api.getEquipment).mockResolvedValue([apparaat()]);
 });
 
 describe('apparatuur - de beheerknoppen volgen de rol', () => {
@@ -137,7 +161,7 @@ describe('apparatuur - de beheerknoppen volgen de rol', () => {
 
   it('biedt een gewoon lid in de lege staat geen knop aan die toch niet mag', async () => {
     huidigeRol = 'member';
-    vi.mocked(api.getEquipment).mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
+    vi.mocked(api.getEquipment).mockResolvedValue([]);
     render(<Equipment />, { wrapper: wikkel });
 
     expect(await screen.findByText('equipment.noEquipment')).toBeInTheDocument();
@@ -146,7 +170,7 @@ describe('apparatuur - de beheerknoppen volgen de rol', () => {
 
   it('biedt een beheerder in de lege staat wel die knop', async () => {
     huidigeRol = 'admin';
-    vi.mocked(api.getEquipment).mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
+    vi.mocked(api.getEquipment).mockResolvedValue([]);
     render(<Equipment />, { wrapper: wikkel });
 
     expect(await screen.findByText('equipment.noEquipment')).toBeInTheDocument();
@@ -166,7 +190,7 @@ describe('apparatuur - een storing is geen leeg magazijn', () => {
   });
 
   it('toont de lege staat wel als het magazijn echt leeg is', async () => {
-    vi.mocked(api.getEquipment).mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
+    vi.mocked(api.getEquipment).mockResolvedValue([]);
     render(<Equipment />, { wrapper: wikkel });
 
     expect(await screen.findByText('equipment.noEquipment')).toBeInTheDocument();
@@ -175,17 +199,25 @@ describe('apparatuur - een storing is geen leeg magazijn', () => {
 });
 
 describe('apparatuur - de hoofdweg', () => {
-  it('toont wat de server stuurt', async () => {
-    vi.mocked(api.getEquipment).mockResolvedValue({
-      data: [apparaat(), apparaat({ id: 'apparaat-2', instrumentType: 'Klarinet', status: 'on_loan' })],
-      total: 2,
-      page: 1,
-      limit: 20,
-    });
+  it('toont de lijst in de vorm die de backend stuurt: een kale array', async () => {
+    // Dit is de kern van de reparatie: zonder haar las de pagina `.data` van
+    // deze array, kreeg undefined, en toonde "geen apparatuur gevonden".
+    vi.mocked(api.getEquipment).mockResolvedValue([
+      apparaat(),
+      apparaat({ id: 'apparaat-2', name: 'Klarinet', status: 'in_use', activeLoans: 1 }),
+    ]);
     render(<Equipment />, { wrapper: wikkel });
 
-    expect(await screen.findByText('Trompet')).toBeInTheDocument();
-    expect(screen.getByText('Klarinet')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Trompet' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Klarinet' })).toBeInTheDocument();
+    expect(screen.queryByText('equipment.noEquipment')).not.toBeInTheDocument();
+    // Merk en model staan in de backend los en worden samen getoond.
+    expect(screen.getAllByText(/Yamaha YTR-2330/)).toHaveLength(2);
+    // De status komt uit de enum van de backend, niet uit de oude. Dezelfde
+    // tekst staat ook als keuze in het statusfilter; het gaat om het label op
+    // de kaart.
+    const statuslabels = screen.getAllByText('equipment.statuses.in_use').filter((el) => el.tagName === 'SPAN');
+    expect(statuslabels).toHaveLength(1);
   });
 
   it('laat het skelet zien zolang er nog niets binnen is', () => {
@@ -200,7 +232,39 @@ describe('apparatuur - de hoofdweg', () => {
 
     await waitFor(() => expect(api.getEquipment).toHaveBeenCalled());
     const argumenten = vi.mocked(api.getEquipment).mock.calls[0][0] as Record<string, unknown>;
-    expect(argumenten.search).toBeUndefined();
     expect(argumenten.status).toBeUndefined();
+    expect(argumenten.type).toBeUndefined();
+    expect(argumenten.categoryId).toBeUndefined();
+  });
+
+  it('stuurt soort, status en categorie door onder de namen die de backend kent', async () => {
+    const gebruiker = userEvent.setup();
+    render(<Equipment />, { wrapper: wikkel });
+    await screen.findByRole('heading', { name: 'Trompet' });
+
+    await gebruiker.selectOptions(screen.getByLabelText('equipment.equipmentType'), 'audio');
+    await gebruiker.selectOptions(screen.getByLabelText('common.status'), 'repair');
+    await gebruiker.selectOptions(screen.getByLabelText('equipment.category'), 'cat-1');
+
+    await waitFor(() =>
+      expect(api.getEquipment).toHaveBeenLastCalledWith({ type: 'audio', status: 'repair', categoryId: 'cat-1' }),
+    );
+  });
+
+  it('zoekt in de lijst zelf, want de backend kent geen zoekterm', async () => {
+    vi.mocked(api.getEquipment).mockResolvedValue([
+      apparaat(),
+      apparaat({ id: 'apparaat-2', name: 'Klarinet', brand: 'Buffet', model: 'E11', serialNumber: 'SN-002' }),
+    ]);
+    const gebruiker = userEvent.setup();
+    render(<Equipment />, { wrapper: wikkel });
+    await screen.findByRole('heading', { name: 'Trompet' });
+
+    await gebruiker.type(screen.getByLabelText('common.search'), 'buffet');
+
+    expect(screen.queryByRole('heading', { name: 'Trompet' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Klarinet' })).toBeInTheDocument();
+    // Zoeken is geen serververzoek: de lijst is maar één keer opgehaald.
+    expect(api.getEquipment).toHaveBeenCalledTimes(1);
   });
 });

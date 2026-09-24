@@ -227,7 +227,7 @@ export const queryKeys = {
   equipment: (filters?: Record<string, string>) => ['equipment', filters] as const,
   equipmentItem: (id: string) => ['equipment', id] as const,
   equipmentTypes: ['equipment', 'types'] as const,
-  maintenanceAlerts: ['equipment', 'maintenance-alerts'] as const,
+  equipmentDamage: (id: string) => ['equipment', id, 'damage'] as const,
 
   // Uniforms
   uniformItems: (filters?: Record<string, string>) => ['uniforms', 'items', filters] as const,

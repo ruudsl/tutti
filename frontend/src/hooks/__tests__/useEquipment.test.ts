@@ -8,7 +8,7 @@ vi.mock('../../api', () => ({
   getEquipment: vi.fn(),
   getEquipmentItem: vi.fn(),
   getEquipmentTypes: vi.fn(),
-  getMaintenanceAlerts: vi.fn(),
+  getEquipmentDamageLogs: vi.fn(),
   createEquipment: vi.fn(),
   updateEquipment: vi.fn(),
   deleteEquipment: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock('../../utils/toast', () => ({
 
 import {
   useEquipmentTypes,
-  useMaintenanceAlerts,
+  useEquipmentDamageLogs,
   useEquipment,
   useEquipmentItem,
   useCreateEquipment,
@@ -44,7 +44,7 @@ import {
   getEquipment,
   getEquipmentItem,
   getEquipmentTypes,
-  getMaintenanceAlerts,
+  getEquipmentDamageLogs,
   createEquipment,
   updateEquipment,
   deleteEquipment,
@@ -108,18 +108,22 @@ describe('useEquipment - ophalen', () => {
     expect(result.current.data).toEqual(['lessenaar', 'pauk']);
   });
 
-  it('haalt de onderhoudsmeldingen op', async () => {
-    alsMock(getMaintenanceAlerts).mockResolvedValue([{ id: 'e1', daysOverdue: 12 }]);
+  // Hier stond een test voor useMaintenanceAlerts. Die hook vroeg
+  // /equipment/maintenance-alerts op, een route die de backend nooit heeft
+  // gehad (Express antwoordde via /:id met 404). De hook is weg; de
+  // schademeldingen zijn wel een eigen route en krijgen deze plek.
+  it('haalt de schademeldingen van een item op', async () => {
+    alsMock(getEquipmentDamageLogs).mockResolvedValue([{ id: 's1', severity: 'minor' }]);
 
-    const { result } = renderHook(() => useMaintenanceAlerts(), { wrapper });
+    const { result } = renderHook(() => useEquipmentDamageLogs('e1'), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(getMaintenanceAlerts).toHaveBeenCalledTimes(1);
+    expect(getEquipmentDamageLogs).toHaveBeenCalledWith('e1');
   });
 
   it('geeft de filters ongewijzigd door aan de api', async () => {
     alsMock(getEquipment).mockResolvedValue([]);
-    const filters = { search: 'pauk', status: 'available', type: 'percussie' };
+    const filters = { status: 'available', type: 'instrument', categoryId: 'c1' } as const;
 
     const { result } = renderHook(() => useEquipment(filters), { wrapper });
 
@@ -130,10 +134,13 @@ describe('useEquipment - ophalen', () => {
   it('haalt opnieuw op als het filter verandert', async () => {
     alsMock(getEquipment).mockResolvedValue([]);
 
-    const { result, rerender } = renderHook(({ status }: { status: string }) => useEquipment({ status }), {
-      wrapper,
-      initialProps: { status: 'available' },
-    });
+    const { result, rerender } = renderHook(
+      ({ status }: { status: 'available' | 'repair' }) => useEquipment({ status }),
+      {
+        wrapper,
+        initialProps: { status: 'available' as 'available' | 'repair' },
+      },
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     rerender({ status: 'repair' });
@@ -173,7 +180,7 @@ describe('useEquipment - ophalen', () => {
 describe('useEquipment - aanmaken, wijzigen, verwijderen', () => {
   it('stuurt het nieuwe materiaal door en vernieuwt alles onder equipment', async () => {
     alsMock(createEquipment).mockResolvedValue({ id: 'e9' });
-    const nieuw = { instrumentType: 'lessenaar', brandModel: 'Manhasset 48' };
+    const nieuw = { name: 'Lessenaar', equipmentType: 'furniture', brand: 'Manhasset', model: '48' } as const;
 
     const { result } = renderHook(() => useCreateEquipment(), { wrapper });
     await act(async () => {
@@ -193,7 +200,7 @@ describe('useEquipment - aanmaken, wijzigen, verwijderen', () => {
 
     const { result } = renderHook(() => useCreateEquipment(), { wrapper });
     await act(async () => {
-      await expect(result.current.mutateAsync({ instrumentType: '' })).rejects.toBeDefined();
+      await expect(result.current.mutateAsync({ name: '', equipmentType: 'misc' })).rejects.toBeDefined();
     });
 
     expect(showError).toHaveBeenCalledWith('Naam is verplicht');
@@ -206,10 +213,10 @@ describe('useEquipment - aanmaken, wijzigen, verwijderen', () => {
 
     const { result } = renderHook(() => useUpdateEquipment(), { wrapper });
     await act(async () => {
-      await result.current.mutateAsync({ id: 'e1', data: { brandModel: 'Andere naam' } });
+      await result.current.mutateAsync({ id: 'e1', data: { name: 'Andere naam' } });
     });
 
-    expect(updateEquipment).toHaveBeenCalledWith('e1', { brandModel: 'Andere naam' });
+    expect(updateEquipment).toHaveBeenCalledWith('e1', { name: 'Andere naam' });
     expect(isOngeldigGemaakt(['equipment'])).toBe(true);
     expect(isOngeldigGemaakt(['equipment', 'e1'])).toBe(true);
     expect(showSuccess).toHaveBeenCalledWith('Instrument bijgewerkt');
@@ -230,7 +237,7 @@ describe('useEquipment - aanmaken, wijzigen, verwijderen', () => {
 
     alsMock(getEquipmentItem).mockResolvedValue({ id: 'e1', name: 'Nieuw' });
     await act(async () => {
-      await result.current.wijzig.mutateAsync({ id: 'e1', data: { brandModel: 'Nieuw' } });
+      await result.current.wijzig.mutateAsync({ id: 'e1', data: { name: 'Nieuw' } });
     });
 
     await waitFor(() => expect(result.current.detail.data).toEqual({ id: 'e1', name: 'Nieuw' }));
@@ -267,7 +274,7 @@ describe('useEquipment - aanmaken, wijzigen, verwijderen', () => {
 describe('useEquipment - schademeldingen', () => {
   it('meldt schade met materiaal-id en gegevens gescheiden', async () => {
     alsMock(addEquipmentDamageLog).mockResolvedValue({ id: 's1' });
-    const melding = { date: '2024-04-01', description: 'Vel gescheurd' };
+    const melding = { description: 'Vel gescheurd', severity: 'moderate' } as const;
 
     const { result } = renderHook(() => useAddEquipmentDamageLog(), { wrapper });
     await act(async () => {
@@ -287,11 +294,11 @@ describe('useEquipment - schademeldingen', () => {
 
     const { result } = renderHook(() => useUpdateEquipmentDamageLog(), { wrapper });
     await act(async () => {
-      await result.current.mutateAsync({ equipmentId: 'e1', logId: 's1', log: { status: 'repaired' } });
+      await result.current.mutateAsync({ equipmentId: 'e1', logId: 's1', log: { repairedAt: '2024-04-10' } });
     });
 
-    expect(updateEquipmentDamageLog).toHaveBeenCalledWith('e1', 's1', { status: 'repaired' });
-    // Bij 'gerepareerd' zet de backend het item terug op 'available'; zonder
+    expect(updateEquipmentDamageLog).toHaveBeenCalledWith('e1', 's1', { repairedAt: '2024-04-10' });
+    // Met een reparatiedatum zet de backend het item terug op 'available'; zonder
     // de lijst mee te vernieuwen blijft het overzicht 'in reparatie' tonen.
     expect(isOngeldigGemaakt(['equipment'])).toBe(true);
     expect(isOngeldigGemaakt(['equipment', 'e1'])).toBe(true);
@@ -315,13 +322,34 @@ describe('useEquipment - schademeldingen', () => {
     expect(showSuccess).toHaveBeenCalledWith('Schademelding verwijderd');
   });
 
+  it('haalt de schademeldingen daadwerkelijk opnieuw op na een nieuwe melding', async () => {
+    // GET /equipment/:id stuurt geen schade mee; de lijst komt van een eigen
+    // route. Haar sleutel hangt onder die van het item, dus de invalidatie
+    // van het item moet haar meenemen.
+    alsMock(getEquipmentDamageLogs).mockResolvedValue([]);
+    alsMock(addEquipmentDamageLog).mockResolvedValue({ id: 's1' });
+
+    const { result } = renderHook(
+      () => ({ meldingen: useEquipmentDamageLogs('e1'), meld: useAddEquipmentDamageLog() }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.meldingen.isSuccess).toBe(true));
+
+    alsMock(getEquipmentDamageLogs).mockResolvedValue([{ id: 's1', description: 'Deuk', severity: 'minor' }]);
+    await act(async () => {
+      await result.current.meld.mutateAsync({ equipmentId: 'e1', log: { description: 'Deuk', severity: 'minor' } });
+    });
+
+    await waitFor(() => expect(result.current.meldingen.data).toHaveLength(1));
+  });
+
   it('raakt de cache niet aan als een schademelding niet opgeslagen kan worden', async () => {
     alsMock(addEquipmentDamageLog).mockRejectedValue(serverfout('Omschrijving is verplicht'));
 
     const { result } = renderHook(() => useAddEquipmentDamageLog(), { wrapper });
     await act(async () => {
       await expect(
-        result.current.mutateAsync({ equipmentId: 'e1', log: { date: '2024-04-01', description: '' } }),
+        result.current.mutateAsync({ equipmentId: 'e1', log: { description: '', severity: 'minor' } }),
       ).rejects.toBeDefined();
     });
 
@@ -335,7 +363,7 @@ describe('useEquipment - schademeldingen', () => {
 describe('useEquipment - uitlenen', () => {
   it('leent materiaal uit met materiaal-id en leengegevens gescheiden', async () => {
     alsMock(createEquipmentLoan).mockResolvedValue({ id: 'u1' });
-    const bruikleen = { userId: 'u1', loanDate: '2024-11-01', conditionAtLoan: 'good' };
+    const bruikleen = { userId: 'u1', expectedReturnDate: '2024-12-01', conditionAtCheckout: 'good' };
 
     const { result } = renderHook(() => useCreateEquipmentLoan(), { wrapper });
     await act(async () => {
@@ -349,7 +377,7 @@ describe('useEquipment - uitlenen', () => {
     expect(showSuccess).toHaveBeenCalledWith('Instrument uitgeleend');
   });
 
-  it('neemt materiaal terug met materiaal-, bruikleen-id en teruggavegegevens', async () => {
+  it('neemt materiaal terug op de bruikleen-id en vernieuwt het item waar hij bij hoort', async () => {
     alsMock(returnEquipmentLoan).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useReturnEquipmentLoan(), { wrapper });
@@ -357,15 +385,18 @@ describe('useEquipment - uitlenen', () => {
       await result.current.mutateAsync({
         equipmentId: 'e1',
         loanId: 'l1',
-        returnData: { returnDate: '2024-11-01', conditionAtReturn: 'good' },
+        returnData: { conditionAtReturn: 'good', returnNotes: 'Kras op de klep' },
       });
     });
 
-    expect(returnEquipmentLoan).toHaveBeenCalledWith('e1', 'l1', {
-      returnDate: '2024-11-01',
+    // De backend neemt in via PATCH /equipment/loans/:id/return: alleen de
+    // bruikleen-id gaat mee naar de api. Het materiaal-id is voor de cache.
+    expect(returnEquipmentLoan).toHaveBeenCalledWith('l1', {
       conditionAtReturn: 'good',
+      returnNotes: 'Kras op de klep',
     });
     expect(isOngeldigGemaakt(['equipment'])).toBe(true);
+    expect(isOngeldigGemaakt(['equipment', 'e1'])).toBe(true);
     expect(showSuccess).toHaveBeenCalledWith('Instrument teruggebracht');
   });
 
@@ -374,9 +405,7 @@ describe('useEquipment - uitlenen', () => {
 
     const { result } = renderHook(() => useCreateEquipmentLoan(), { wrapper });
     await act(async () => {
-      await expect(
-        result.current.mutateAsync({ equipmentId: 'e1', loan: { userId: 'u1', loanDate: '2024-11-01' } }),
-      ).rejects.toBeDefined();
+      await expect(result.current.mutateAsync({ equipmentId: 'e1', loan: { userId: 'u1' } })).rejects.toBeDefined();
     });
 
     expect(showError).toHaveBeenCalledWith('Item is al uitgeleend');
@@ -387,9 +416,14 @@ describe('useEquipment - uitlenen', () => {
 // ==================== ONDERHOUD ====================
 
 describe('useEquipment - onderhoud', () => {
-  it('registreert onderhoud en vernieuwt lijst, detail en onderhoudsmeldingen', async () => {
-    alsMock(recordEquipmentMaintenance).mockResolvedValue(undefined);
-    const onderhoud = { date: '2024-05-01', notes: 'Vel vervangen' };
+  const onderhoud = {
+    maintenanceType: 'service',
+    description: 'Vel vervangen',
+    performedDate: '2024-05-01',
+  } as const;
+
+  it('registreert onderhoud en vernieuwt lijst en detail', async () => {
+    alsMock(recordEquipmentMaintenance).mockResolvedValue({ id: 'm1' });
 
     const { result } = renderHook(() => useRecordEquipmentMaintenance(), { wrapper });
     await act(async () => {
@@ -398,37 +432,42 @@ describe('useEquipment - onderhoud', () => {
 
     expect(recordEquipmentMaintenance).toHaveBeenCalledWith('e1', onderhoud);
     expect(isOngeldigGemaakt(['equipment'])).toBe(true);
+    // De backend zet laatste en volgende onderhoudsdatum op het item zelf;
+    // het detail moet die nieuwe datums tonen.
     expect(isOngeldigGemaakt(['equipment', 'e1'])).toBe(true);
-    // Het item hoort na registratie van de onderhoudslijst af te vallen.
-    expect(isOngeldigGemaakt(['equipment', 'maintenance-alerts'])).toBe(true);
     expect(showSuccess).toHaveBeenCalledWith('Onderhoud geregistreerd');
   });
 
-  it('haalt de onderhoudsmeldingen daadwerkelijk opnieuw op na een registratie', async () => {
-    alsMock(getMaintenanceAlerts).mockResolvedValue([{ id: 'e1', daysOverdue: 12 }]);
-    alsMock(recordEquipmentMaintenance).mockResolvedValue(undefined);
+  it('haalt het materiaaldetail daadwerkelijk opnieuw op na een registratie', async () => {
+    // Hier stond dezelfde test voor de onderhoudsmeldingen van
+    // /equipment/maintenance-alerts, een route die niet bestaat. Wat na een
+    // registratie echt verandert is `nextMaintenance` op het detail.
+    alsMock(getEquipmentItem).mockResolvedValue({ id: 'e1', nextMaintenance: '2024-01-01' });
+    alsMock(recordEquipmentMaintenance).mockResolvedValue({ id: 'm1' });
 
     const { result } = renderHook(
-      () => ({ meldingen: useMaintenanceAlerts(), registreer: useRecordEquipmentMaintenance() }),
+      () => ({ detail: useEquipmentItem('e1'), registreer: useRecordEquipmentMaintenance() }),
       { wrapper },
     );
 
-    await waitFor(() => expect(result.current.meldingen.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.detail.isSuccess).toBe(true));
 
-    alsMock(getMaintenanceAlerts).mockResolvedValue([]);
+    alsMock(getEquipmentItem).mockResolvedValue({ id: 'e1', nextMaintenance: '2025-05-01' });
     await act(async () => {
-      await result.current.registreer.mutateAsync({ equipmentId: 'e1', maintenance: {} });
+      await result.current.registreer.mutateAsync({ equipmentId: 'e1', maintenance: onderhoud });
     });
 
-    await waitFor(() => expect(result.current.meldingen.data).toEqual([]));
+    await waitFor(() => expect(result.current.detail.data).toEqual({ id: 'e1', nextMaintenance: '2025-05-01' }));
   });
 
-  it('laat de onderhoudsmeldingen staan als de registratie mislukt', async () => {
+  it('raakt de cache niet aan als de registratie mislukt', async () => {
     alsMock(recordEquipmentMaintenance).mockRejectedValue(serverfout('Datum is verplicht'));
 
     const { result } = renderHook(() => useRecordEquipmentMaintenance(), { wrapper });
     await act(async () => {
-      await expect(result.current.mutateAsync({ equipmentId: 'e1', maintenance: {} })).rejects.toBeDefined();
+      await expect(
+        result.current.mutateAsync({ equipmentId: 'e1', maintenance: { ...onderhoud, performedDate: '' } }),
+      ).rejects.toBeDefined();
     });
 
     expect(showError).toHaveBeenCalledWith('Datum is verplicht');
