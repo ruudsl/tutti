@@ -147,17 +147,19 @@ describe('de importpagina', () => {
   const soorten = () =>
     screen.queryAllByRole('button', { name: /^importeren\.soorten\./ }).map((knop) => knop.textContent);
 
-  it('laat de beheerder alle vier de soorten kiezen als de modules aan staan', () => {
+  it('laat de beheerder alle soorten kiezen als de modules aan staan', () => {
     toon();
     expect(soorten()).toEqual([
       'importeren.soorten.leden',
       'importeren.soorten.muziektitels',
       'importeren.soorten.instrumenten',
       'importeren.soorten.contacten',
+      'importeren.soorten.uniformen',
+      'importeren.soorten.apparatuur',
     ]);
   });
 
-  it('biedt instrumenten en contacten niet aan als hun module uit staat', () => {
+  it('biedt instrumenten, contacten, uniformen en apparatuur niet aan als hun module uit staat', () => {
     gebruiker.modules = [];
     toon();
     expect(soorten()).toEqual(['importeren.soorten.leden', 'importeren.soorten.muziektitels']);
@@ -173,7 +175,80 @@ describe('de importpagina', () => {
     expect(api.bekijkImport).toHaveBeenCalledWith('muziektitels', 'Titel\nBolero\n');
   });
 
-  it('laat de instrumentencommissie alleen instrumenten importeren, en toont de status in woorden', async () => {
+  it('laat de uniformcommissie alleen uniformen importeren, met drager en het deel dat nieuw is', async () => {
+    gebruiker.rol = 'uniforms_committee';
+    vi.mocked(api.bekijkImport).mockResolvedValue({
+      kolommen: { soort: 'Soort' },
+      genegeerd: [],
+      regels: [
+        {
+          rij: 2,
+          status: 'nieuw',
+          gegevens: {
+            soort: 'jacket',
+            maat: '52',
+            lengte: null,
+            wijdte: null,
+            kleur: 'Rood',
+            aantal: 4,
+            toeTeVoegen: 2,
+            staat: 'good',
+            status: 'available',
+            uitgegevenAan: null,
+            uitgiftedatum: null,
+            aankoopdatum: null,
+            aankoopprijs: null,
+            opmerkingen: null,
+          },
+          fouten: [],
+          waarschuwingen: [],
+        },
+        {
+          rij: 3,
+          status: 'nieuw',
+          gegevens: {
+            soort: 'pants',
+            maat: null,
+            lengte: 84,
+            wijdte: 32,
+            kleur: null,
+            aantal: 1,
+            toeTeVoegen: 1,
+            staat: 'good',
+            status: 'issued',
+            uitgegevenAan: 'anna@voorbeeld.nl',
+            uitgiftedatum: '2024-09-01',
+            aankoopdatum: null,
+            aankoopprijs: null,
+            opmerkingen: null,
+          },
+          fouten: [],
+          waarschuwingen: [],
+        },
+      ],
+      tellingen: { nieuw: 2, bestaat: 0, fout: 0 },
+    } as never);
+    toon();
+
+    expect(soorten()).toEqual([]);
+    await kiesBestand('Soort\nJas\n');
+
+    expect(api.bekijkImport).toHaveBeenCalledWith('uniformen', 'Soort\nJas\n');
+    expect(await screen.findByText('uniforms.itemTypes.jacket')).toBeInTheDocument();
+    expect(screen.getByText('importeren.aantalVan {"nieuw":2,"aantal":4}')).toBeInTheDocument();
+    expect(screen.getByText('84/32')).toBeInTheDocument();
+    expect(screen.getByText('anna@voorbeeld.nl')).toBeInTheDocument();
+    expect(screen.getByText('uniforms.status.issued')).toBeInTheDocument();
+  });
+
+  it('laat de materiaalcommissie instrumenten en apparatuur importeren', () => {
+    gebruiker.rol = 'equipment_committee';
+    toon();
+
+    expect(soorten()).toEqual(['importeren.soorten.instrumenten', 'importeren.soorten.apparatuur']);
+  });
+
+  it('begint voor de materiaalcommissie bij de instrumenten, en toont de status in woorden', async () => {
     gebruiker.rol = 'equipment_committee';
     vi.mocked(api.bekijkImport).mockResolvedValue({
       kolommen: { naam: 'Naam', soort: 'Soort' },
@@ -206,8 +281,6 @@ describe('de importpagina', () => {
     } as never);
     toon();
 
-    // Eén soort: dan is er niets te kiezen.
-    expect(soorten()).toEqual([]);
     await kiesBestand('Naam;Soort\nTrompet 1;Trompet\n');
 
     expect(api.bekijkImport).toHaveBeenCalledWith('instrumenten', 'Naam;Soort\nTrompet 1;Trompet\n');

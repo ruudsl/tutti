@@ -1387,7 +1387,7 @@ Zet de taak terug op `wachtend` met een verse teller. Alleen voor een taak met s
 
 ## Import API
 
-Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit een spreadsheet. Instrumenten horen bij de module inventaris en contacten bij de module contacten; staat die uit, dan geeft de route `404`. De kolommen en wat er per regel gebeurt staan in [IMPORTEREN.md](./IMPORTEREN.md).
+Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en apparatuur inlezen uit een spreadsheet. Instrumenten, uniformen en apparatuur horen bij de module inventaris en contacten bij de module contacten; staat die uit, dan geeft de route `404`. De kolommen en wat er per regel gebeurt staan in [IMPORTEREN.md](./IMPORTEREN.md).
 
 | Route                                     | Wie                              | Wat                                     |
 | ----------------------------------------- | -------------------------------- | --------------------------------------- |
@@ -1399,6 +1399,10 @@ Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit een 
 | `POST /api/import/instrumenten`           | beheerder, instrumentencommissie | Importeert de regels met status `nieuw` |
 | `POST /api/import/contacten/voorbeeld`    | beheerder, muziekcommissie       | Beoordeelt het bestand, verandert niets |
 | `POST /api/import/contacten`              | beheerder, muziekcommissie       | Importeert de regels met status `nieuw` |
+| `POST /api/import/uniformen/voorbeeld`    | beheerder, uniformcommissie      | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/uniformen`              | beheerder, uniformcommissie      | Importeert de regels met status `nieuw` |
+| `POST /api/import/apparatuur/voorbeeld`   | beheerder, instrumentencommissie | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/apparatuur`             | beheerder, instrumentencommissie | Importeert de regels met status `nieuw` |
 
 De body is het bestand als tekst, hooguit 5 MB en 2000 regels:
 

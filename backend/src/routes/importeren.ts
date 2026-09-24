@@ -5,24 +5,29 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler';
 import { validate } from '../middleware/validate';
 import {
+  beoordeelApparatuur,
   beoordeelContacten,
   beoordeelInstrumenten,
   beoordeelLeden,
   beoordeelTitels,
+  beoordeelUniformen,
+  importeerApparatuur,
   importeerContacten,
   importeerInstrumenten,
   importeerLeden,
   importeerTitels,
+  importeerUniformen,
 } from '../services/importeren';
 import { MAX_TEKENS } from '../utils/csvLezen';
 import { logAuditEvent } from './audit-logs';
 
 /**
- * Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit
- * een spreadsheet (WP11). Zie docs/IMPORTEREN.md voor de kolommen.
+ * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en
+ * apparatuur inlezen uit een spreadsheet (WP11). Zie docs/IMPORTEREN.md voor
+ * de kolommen.
  *
- * Instrumenten horen bij de module inventaris en contacten bij de module
- * contacten. Die guards staan op de mount in index.ts, net als bij de routes
+ * Instrumenten, uniformen en apparatuur horen bij de module inventaris en
+ * contacten bij de module contacten. Die guards staan op de mount in index.ts, net als bij de routes
  * van die modules zelf: staat de module uit, dan bestaat de import niet (404).
  *
  * Per soort twee routes: `/voorbeeld` beoordeelt het bestand en verandert
@@ -165,6 +170,70 @@ router.post(
         'contact',
         uuidv4(),
         `${uitkomst.geimporteerd} contacten uit een spreadsheet`,
+        uitkomst.tellingen,
+        req.ip,
+        req.get('user-agent'),
+      );
+    }
+    res.status(uitkomst.geimporteerd > 0 ? 201 : 200).json(uitkomst);
+  }),
+);
+
+// Dezelfde rollen als het aanmaken van een onderdeel in routes/uniforms.ts.
+router.post(
+  '/uniformen/voorbeeld',
+  requireRole('admin', 'uniforms_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(beoordeelUniformen(req.user!.associationId!, req.body.csv));
+  }),
+);
+
+router.post(
+  '/uniformen',
+  requireRole('admin', 'uniforms_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const uitkomst = importeerUniformen(req.user!.associationId!, req.body.csv);
+    if (uitkomst.geimporteerd > 0) {
+      logAuditEvent(
+        req.user!.id,
+        'import',
+        'uniform_item',
+        uuidv4(),
+        `${uitkomst.geimporteerd} uniformonderdelen uit een spreadsheet`,
+        uitkomst.tellingen,
+        req.ip,
+        req.get('user-agent'),
+      );
+    }
+    res.status(uitkomst.geimporteerd > 0 ? 201 : 200).json(uitkomst);
+  }),
+);
+
+// Dezelfde rollen als het aanmaken van apparatuur in routes/equipment.ts.
+router.post(
+  '/apparatuur/voorbeeld',
+  requireRole('admin', 'equipment_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(beoordeelApparatuur(req.user!.associationId!, req.body.csv));
+  }),
+);
+
+router.post(
+  '/apparatuur',
+  requireRole('admin', 'equipment_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const uitkomst = importeerApparatuur(req.user!.associationId!, req.body.csv);
+    if (uitkomst.geimporteerd > 0) {
+      logAuditEvent(
+        req.user!.id,
+        'import',
+        'equipment_item',
+        uuidv4(),
+        `${uitkomst.geimporteerd} stuks apparatuur uit een spreadsheet`,
         uitkomst.tellingen,
         req.ip,
         req.get('user-agent'),

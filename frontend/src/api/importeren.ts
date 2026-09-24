@@ -1,15 +1,15 @@
 import api from './client';
 
 /**
- * Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit
- * een spreadsheet (WP11); zie backend/src/routes/importeren.ts en
+ * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en
+ * apparatuur inlezen uit een spreadsheet (WP11); zie backend/src/routes/importeren.ts en
  * docs/IMPORTEREN.md.
  *
  * Per soort een voorbeeld dat niets verandert, en de import zelf. De server
  * beoordeelt het bestand bij het importeren opnieuw.
  */
 
-export type ImportSoort = 'leden' | 'muziektitels' | 'instrumenten' | 'contacten';
+export type ImportSoort = 'leden' | 'muziektitels' | 'instrumenten' | 'contacten' | 'uniformen' | 'apparatuur';
 
 export type RegelStatus = 'nieuw' | 'bestaat' | 'fout';
 
@@ -68,6 +68,49 @@ export interface ContactGegevens {
   opmerkingen: string | null;
 }
 
+export interface UniformGegevens {
+  soort: string;
+  maat: string | null;
+  lengte: number | null;
+  wijdte: number | null;
+  kleur: string | null;
+  /** Hoeveel gelijke onderdelen de regel beschrijft. */
+  aantal: number;
+  /** Hoeveel daarvan er nog niet zijn en worden toegevoegd. */
+  toeTeVoegen: number;
+  staat: string;
+  status: string;
+  /** Het e-mailadres van het lid dat het onderdeel krijgt. */
+  uitgegevenAan: string | null;
+  uitgiftedatum: string | null;
+  aankoopdatum: string | null;
+  aankoopprijs: number | null;
+  opmerkingen: string | null;
+}
+
+export interface ApparatuurGegevens {
+  naam: string;
+  soort: string;
+  categorie: string | null;
+  /** Uit het bestand, of bij een nieuwe regel het nummer dat hij krijgt. */
+  inventarisnummer: string | null;
+  serienummer: string | null;
+  merk: string | null;
+  model: string | null;
+  status: string;
+  staat: string;
+  locatie: string | null;
+  opslag: string | null;
+  aankoopdatum: string | null;
+  aankoopprijs: number | null;
+  waarde: number | null;
+  garantieTot: string | null;
+  onderhoudsintervalMaanden: number | null;
+  laatsteOnderhoud: string | null;
+  uitleenbaar: boolean;
+  opmerkingen: string | null;
+}
+
 export interface Beoordeling<T> {
   rij: number;
   status: RegelStatus;
@@ -92,6 +135,8 @@ export type GegevensVan<S extends ImportSoort> = {
   muziektitels: TitelGegevens;
   instrumenten: InstrumentGegevens;
   contacten: ContactGegevens;
+  uniformen: UniformGegevens;
+  apparatuur: ApparatuurGegevens;
 }[S];
 
 export const bekijkImport = async <S extends ImportSoort>(

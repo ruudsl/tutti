@@ -6000,13 +6000,17 @@
       "leden": "Leden",
       "muziektitels": "Muziekbibliotheek",
       "instrumenten": "Instrumenten in bezit",
-      "contacten": "Contacten"
+      "contacten": "Contacten",
+      "uniformen": "Uniformen",
+      "apparatuur": "Apparatuur"
     },
     "uitleg": {
       "leden": "Lees leden in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Leden die er al zijn, worden overgeslagen.",
       "muziektitels": "Lees titels voor de muziekbibliotheek in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Titels die er al zijn, met dezelfde arrangeur, worden overgeslagen.",
       "instrumenten": "Lees de instrumenten van de vereniging in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Een instrument met hetzelfde serienummer, of zonder serienummer met dezelfde naam, wordt overgeslagen.",
-      "contacten": "Lees contacten in uit een CSV-bestand: leveranciers, zalen, sponsors. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Een contact met dezelfde naam wordt overgeslagen."
+      "contacten": "Lees contacten in uit een CSV-bestand: leveranciers, zalen, sponsors. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Een contact met dezelfde naam wordt overgeslagen.",
+      "uniformen": "Lees uniformonderdelen in uit een CSV-bestand, met een aantal per regel of met het e-mailadres van het lid dat het draagt. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Onderdelen hebben geen nummer: zijn er al evenveel van dezelfde soort, maat, kleur en drager, dan wordt de regel overgeslagen. Hetzelfde bestand twee keer inlezen verdubbelt dus niets.",
+      "apparatuur": "Lees apparatuur in uit een CSV-bestand: geluid, licht, lessenaars, een aanhanger. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Apparatuur met hetzelfde inventarisnummer, serienummer of (zonder die twee) dezelfde naam wordt overgeslagen. Zonder inventarisnummer krijgt een stuk er een."
     },
     "kiesBestand": "Kies een CSV-bestand",
     "sjabloon": "Voorbeeldbestand downloaden",
@@ -6058,7 +6062,15 @@
       "instrumentStatus": "Status",
       "contactsoort": "Soort",
       "contactpersoon": "Contactpersoon",
-      "plaats": "Plaats"
+      "plaats": "Plaats",
+      "maat": "Maat",
+      "kleur": "Kleur",
+      "aantal": "Aantal",
+      "drager": "Uitgegeven aan",
+      "inventarisnummer": "Inventarisnummer",
+      "uniformStatus": "Status",
+      "apparatuurStatus": "Status",
+      "apparatuurSoort": "Soort"
     },
     "instrumentStatus": {
       "available": "Beschikbaar",
@@ -6068,6 +6080,25 @@
       "written_off": "Afgeschreven",
       "sold": "Verkocht",
       "lost": "Kwijt"
-    }
+    },
+    "apparatuurSoort": {
+      "instrument": "Instrument",
+      "accessory": "Accessoire",
+      "audio": "Geluid",
+      "lighting": "Licht",
+      "furniture": "Meubilair",
+      "transport": "Vervoer",
+      "misc": "Overig"
+    },
+    "apparatuurStatus": {
+      "available": "Beschikbaar",
+      "in_use": "In gebruik",
+      "maintenance": "In onderhoud",
+      "repair": "In reparatie",
+      "retired": "Afgeschreven",
+      "lost": "Kwijt",
+      "sold": "Verkocht"
+    },
+    "aantalVan": "{{nieuw}} van {{aantal}}"
   }
 }

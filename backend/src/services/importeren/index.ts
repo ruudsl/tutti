@@ -1,6 +1,6 @@
 /**
- * Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit
- * een spreadsheet (WP11).
+ * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en
+ * apparatuur inlezen uit een spreadsheet (WP11).
  *
  * Een vereniging die overstapt heeft dat meestal in Excel. Deze map
  * beoordeelt zo'n bestand regel voor regel en voert daarna uit wat klopt. De route roept eerst `beoordeel...` aan voor het voorbeeld dat
@@ -24,3 +24,5 @@ export * from './leden';
 export * from './muziektitels';
 export * from './instrumenten';
 export * from './contacten';
+export * from './uniformen';
+export * from './apparatuur';

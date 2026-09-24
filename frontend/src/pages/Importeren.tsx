@@ -11,6 +11,7 @@ import { leesTekstbestand } from '../utils/leesTekstbestand';
 import {
   bekijkImport,
   voerImportUit,
+  type ApparatuurGegevens,
   type Beoordeling,
   type ContactGegevens,
   type ImportSoort,
@@ -20,17 +21,18 @@ import {
   type LidGegevens,
   type RegelStatus,
   type TitelGegevens,
+  type UniformGegevens,
 } from '../api/importeren';
 
 /**
- * Leden, de muziekbibliotheek, instrumenten in bezit en contacten inlezen uit
- * een spreadsheet (WP11).
+ * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en
+ * apparatuur inlezen uit een spreadsheet (WP11).
  *
  * Kies een bestand, bekijk per regel wat er gebeurt, en importeer. Het
  * voorbeeld verandert niets; bij het importeren beoordeelt de server het
  * bestand opnieuw. Wie welke soort mag, volgt de routes in
- * backend/src/routes/importeren.ts; instrumenten en contacten verschijnen
- * alleen als hun module aan staat.
+ * backend/src/routes/importeren.ts; instrumenten, contacten, uniformen en
+ * apparatuur verschijnen alleen als hun module aan staat.
  */
 
 /** Per soort de rollen die hem mogen importeren, en de module waar hij bij hoort. */
@@ -39,6 +41,8 @@ const SOORTEN: { soort: ImportSoort; rollen: string[]; module?: string }[] = [
   { soort: 'muziektitels', rollen: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
   { soort: 'instrumenten', rollen: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE], module: 'inventory' },
   { soort: 'contacten', rollen: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE], module: 'contacts' },
+  { soort: 'uniformen', rollen: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE], module: 'inventory' },
+  { soort: 'apparatuur', rollen: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE], module: 'inventory' },
 ];
 
 /** Een voorbeeldbestand per soort, met de kolomnamen die herkend worden. */
@@ -63,6 +67,16 @@ const SJABLONEN: Record<ImportSoort, string> = {
     'Muziekhandel De Toon;leverancier;Piet de Wit;info@detoon.nl;030-1234567;Kerkstraat 1;3511 AB;Utrecht;;www.detoon.nl;',
     'Stadsschouwburg;zaal;;;;;;Zwolle;;;',
   ].join('\r\n'),
+  uniformen: [
+    'Soort;Maat;Lengte;Wijdte;Kleur;Aantal;Staat;Status;Uitgegeven aan;Uitgiftedatum',
+    'Jas;52;;;Bordeauxrood;4;goed;beschikbaar;;',
+    'Broek;;84;32;Zwart;1;goed;;anna@voorbeeld.nl;01-09-2024',
+  ].join('\r\n'),
+  apparatuur: [
+    'Naam;Soort;Inventarisnummer;Merk;Model;Serienummer;Status;Staat;Locatie;Aankoopprijs;Laatste onderhoud;Onderhoudsinterval;Uitleenbaar',
+    'Mengtafel;geluid;;Yamaha;MG12XU;Y-123456;beschikbaar;goed;Repetitielokaal;449,00;15-01-2025;12;nee',
+    'Lessenaar 1;meubilair;;K&M;;;;redelijk;Kast 3;;;;ja',
+  ].join('\r\n'),
 };
 
 /** Welke lijst in de rest van de app na een import opnieuw opgehaald moet worden. */
@@ -71,6 +85,8 @@ const TE_VERVERSEN: Record<ImportSoort, string> = {
   muziektitels: 'musicTitles',
   instrumenten: 'instrumentAssets',
   contacten: 'contacts',
+  uniformen: 'uniforms',
+  apparatuur: 'equipment',
 };
 
 const STATUSKLEUR: Record<RegelStatus, string> = {
@@ -97,7 +113,8 @@ function downloadSjabloon(soort: ImportSoort) {
   URL.revokeObjectURL(url);
 }
 
-type Gegevens = LidGegevens | TitelGegevens | InstrumentGegevens | ContactGegevens;
+type Gegevens =
+  LidGegevens | TitelGegevens | InstrumentGegevens | ContactGegevens | UniformGegevens | ApparatuurGegevens;
 type Voorbeeld = ImportVoorbeeld<Gegevens>;
 
 /** Per soort de kolommen van de voorbeeldtabel: de kop en wat erin staat. */
@@ -130,6 +147,35 @@ const KOLOMMEN: Record<ImportSoort, Kolom[]> = {
     { kop: 'contactpersoon', waarde: (g: ContactGegevens) => g.contactpersoon },
     { kop: 'email', waarde: (g: ContactGegevens) => g.email },
     { kop: 'plaats', waarde: (g: ContactGegevens) => g.plaats },
+  ],
+  uniformen: [
+    { kop: 'soort', waarde: (g: UniformGegevens, t) => t(`uniforms.itemTypes.${g.soort}`) },
+    {
+      kop: 'maat',
+      waarde: (g: UniformGegevens) =>
+        [g.maat, [g.lengte, g.wijdte].filter((m) => m !== null).join('/')].filter(Boolean).join(' '),
+    },
+    { kop: 'kleur', waarde: (g: UniformGegevens) => g.kleur },
+    {
+      kop: 'aantal',
+      waarde: (g: UniformGegevens, t) =>
+        g.toeTeVoegen > 0 && g.toeTeVoegen < g.aantal
+          ? t('importeren.aantalVan', { nieuw: g.toeTeVoegen, aantal: g.aantal })
+          : g.aantal,
+    },
+    { kop: 'uniformStatus', waarde: (g: UniformGegevens, t) => t(`uniforms.status.${g.status}`) },
+    { kop: 'drager', waarde: (g: UniformGegevens) => g.uitgegevenAan },
+  ],
+  apparatuur: [
+    { kop: 'naam', waarde: (g: ApparatuurGegevens) => g.naam },
+    { kop: 'inventarisnummer', waarde: (g: ApparatuurGegevens) => g.inventarisnummer },
+    { kop: 'apparatuurSoort', waarde: (g: ApparatuurGegevens, t) => t(`importeren.apparatuurSoort.${g.soort}`) },
+    { kop: 'merk', waarde: (g: ApparatuurGegevens) => [g.merk, g.model].filter(Boolean).join(' ') },
+    { kop: 'serienummer', waarde: (g: ApparatuurGegevens) => g.serienummer },
+    {
+      kop: 'apparatuurStatus',
+      waarde: (g: ApparatuurGegevens, t) => t(`importeren.apparatuurStatus.${g.status}`),
+    },
   ],
 } as Record<ImportSoort, Kolom[]>;
 

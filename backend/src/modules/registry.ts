@@ -168,6 +168,8 @@ export const MODULES: ModuleDefinition[] = [
       '/outfits',
       '/maintenance',
       '/import/instrumenten',
+      '/import/uniformen',
+      '/import/apparatuur',
     ],
     navPaths: ['/instrument-assets', '/uniforms', '/equipment', '/outfits'],
   },
