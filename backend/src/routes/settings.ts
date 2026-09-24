@@ -94,11 +94,15 @@ function herkenLogo(kop: Buffer): LogoSoort | null {
   return null;
 }
 
-// In het geheugen ontvangen (hooguit 2 MB), zodat de inhoud gecontroleerd is
-// voordat er iets op schijf staat en de extensie van de client nergens meer
-// aan te pas komt.
+// Multer schrijft onder een voorlopige naam van de server, zonder bruikbare
+// extensie; de extensie van de client komt nergens aan te pas. Na de controle
+// op de inhoud krijgt het bestand de extensie die daarbij hoort, of het gaat
+// weg. Zo doet de profielfoto het ook (routes/users.ts).
 const logoUpload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, logoDir),
+    filename: (_req, _file, cb) => cb(null, `logo-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.upload`),
+  }),
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
 });
 
@@ -207,15 +211,17 @@ router.post(
       throw new ApiError(400, 'Geen bestand geüpload.');
     }
 
-    const soort = herkenLogo(req.file.buffer.subarray(0, LOGO_KOP_LENGTE));
+    const voorlopig = req.file.path;
+    const soort = herkenLogo(await readFileHeader(voorlopig, LOGO_KOP_LENGTE).catch(() => Buffer.alloc(0)));
     if (!soort) {
+      await fs.promises.unlink(voorlopig).catch(() => {});
       throw new ApiError(400, 'Alleen PNG, JPG, GIF, WebP of SVG bestanden zijn toegestaan.');
     }
 
-    // De naam komt helemaal van de server: tijd, toeval en de extensie die
-    // bij de herkende inhoud hoort.
-    const logoPath = path.join(logoDir, `logo-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${soort.extensie}`);
-    await fs.promises.writeFile(logoPath, req.file.buffer);
+    // De naam komt helemaal van de server: de voorlopige naam van multer met
+    // de extensie die bij de herkende inhoud hoort.
+    const logoPath = path.join(logoDir, `${path.basename(voorlopig, '.upload')}${soort.extensie}`);
+    await fs.promises.rename(voorlopig, logoPath);
 
     try {
       // Remove old logo if exists

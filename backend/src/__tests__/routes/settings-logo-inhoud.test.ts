@@ -82,10 +82,13 @@ describe('logo van een vereniging', () => {
 
   describe('uploaden', () => {
     it('weigert html, ook als de browser zegt dat het een png is', async () => {
+      const voor = fs.existsSync(logoMap) ? fs.readdirSync(logoMap) : [];
       const antwoord = await upload(HTML, 'logo.html', 'image/png');
 
       expect(antwoord.status).toBe(400);
       expect(logoPad()).toBeNull();
+      // Ook het voorlopige bestand van multer is weer weg.
+      expect(fs.readdirSync(logoMap).filter((naam) => !voor.includes(naam))).toEqual([]);
     });
 
     it('weigert een html-pagina waar een svg in staat', async () => {
