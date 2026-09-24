@@ -16,7 +16,7 @@
  * | --- | --- |
  * | availability/team | wie de vereniging had verlaten stond nog in het overzicht van de dirigent |
  * | concerts (twee queries) | uitgeschreven leden telden mee in de opkomstvoorspelling en in member_count |
- * | scheduler/email-digest | de wekelijkse samenvatting bleef naar ex-leden gemaild |
+ * | scheduler/email-digest | de wekelijkse samenvatting bleef naar ex-leden gemaild (die planner startte nooit en is inmiddels weggehaald) |
  *
  * Deze test leest de bron en houdt de vergissing weg. Hij kijkt naar de
  * combinatie role + inactive, niet naar `role !=` in het algemeen: een rol

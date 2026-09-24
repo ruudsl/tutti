@@ -125,9 +125,17 @@ vereniging horen. Komen er taken die wel bij een vereniging horen
 (`association_id` gevuld), dan krijgt de beheerder van die vereniging een eigen
 route die op `association_id` filtert.
 
-## Nog niet af
+## Weggehaald
 
-WP12 heeft meer onderdelen dan dit fundament. Nog open:
+Twee planners waren geschreven en getest, maar werden nergens gestart:
+`scheduler/workflow-runner.ts` (geplande workflows en workflows op een
+datumveld) en `scheduler/email-digest.ts` (een wekelijkse samenvatting per mail
+aan alle leden). Ze zijn in september 2026 weggehaald in plaats van aangezet.
+Aanzetten had betekend dat leden ineens een wekelijkse mail kregen waar niemand
+om had gevraagd, en dat workflows die beheerders ooit hadden ingesteld zonder
+waarschuwing gingen lopen.
 
-- `scheduler/workflow-runner.ts` en `scheduler/email-digest.ts`, die nooit
-  starten: aanzetten of weghalen.
+Komt een van de twee terug, dan als taak in deze wachtrij. Het werk voor de
+workflows staat nog in `services/workflowEngine.ts`
+(`processScheduledWorkflows`, `processDateFieldWorkflows`), omdat de routes
+onder `/api/workflows/process/` het per vereniging handmatig aftrappen.

@@ -109,7 +109,7 @@ interface WelcomeEmailData {
 
 ### Rehearsal Reminder (`rehearsal-reminder.{lang}.ts`)
 
-Reminder for a single upcoming rehearsal. **Not yet wired to a flow.** The weekly digest (`/backend/src/scheduler/email-digest.ts`) aggregates all upcoming rehearsals into one summary e-mail with its own combined format, so this per-rehearsal template does not fit there. Intended integration point: a day-before rehearsal reminder scheduler, once such a job exists.
+Reminder for a single upcoming rehearsal. **Not yet wired to a flow.** Intended integration point: a day-before rehearsal reminder, as a periodic task in the background queue (`backend/src/taken/`, see `docs/ACHTERGRONDTAKEN.md`).
 
 ```typescript
 interface RehearsalReminderEmailData {

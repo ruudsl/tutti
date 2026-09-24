@@ -197,7 +197,6 @@ Wat er is nagelopen en wat eruit kwam:
 | ---------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------- |
 | Dashboard-widgets                        | `tasks`, `practice`, `posts` | ja — widgets van een uitgezette module vallen weg, ook uit het instellingenscherm |
 | Infoscherm (`/api/calendar/info-screen`) | `posts`                      | ja — geen vastgezet bericht op het scherm in de hal                               |
-| Wekelijkse e-mail-digest                 | `practice`                   | ja — geen oefenoverzicht in de mail                                               |
 | Workflow-uitvoering                      | `workflows`                  | ja — in `executeWorkflow`, het knooppunt waar alle triggers langskomen            |
 | Opstellingsmeldingen                     | `stage`                      | ja — `scheduler/seating-notifications`                                            |
 | Globale zoekfunctie                      | alleen kern                  | niet nodig                                                                        |
@@ -209,7 +208,8 @@ niet verwijderen.
 
 De guard op workflows staat bewust in `executeWorkflow` en niet in de scheduler.
 Handmatig, gepland en op gebeurtenis komen daar allemaal langs, dus één controle
-dekt ze alle drie. De regels zelf blijven staan en doen het weer zodra de module
+dekt ze alle drie. (Een planner voor geplande workflows is er sinds september
+2026 niet meer; zie `docs/ACHTERGRONDTAKEN.md`.) De regels zelf blijven staan en doen het weer zodra de module
 aan gaat.
 
 ## Wat nog aandacht vraagt
