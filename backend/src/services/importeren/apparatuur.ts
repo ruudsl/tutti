@@ -8,23 +8,33 @@
  * inventarisnummer; zonder inventarisnummer telt het serienummer, en zonder
  * beide de naam. Wie geen inventarisnummer opgeeft krijgt er een, in dezelfde
  * reeks als bij het aanmaken op de pagina Apparatuur (EQ-00001).
+ *
+ * Met `bijwerken` krijgt bestaande apparatuur wat in het bestand anders is;
+ * zie `bepaalWijzigingen` in gemeenschappelijk.ts. De categorie wordt daarbij
+ * niet gewijzigd.
  */
 
 import { v4 as uuidv4 } from 'uuid';
 import db from '../../database/connection';
 import { withTransaction } from '../../utils/database';
 import {
+  bepaalWijzigingen,
   herkenKolommen,
   lees,
   leesBedrag,
   leesDatum,
   maakKeuze,
   tel,
+  werkBij,
   type Beoordeling,
+  type Bijwerkbaar,
+  type Bijwerking,
+  type ImportOpties,
   type ImportUitkomst,
   type RegelStatus,
   type Veld,
   type Voorbeeld,
+  type Wijziging,
 } from './gemeenschappelijk';
 
 const APPARATUURVELDEN: Record<string, Veld> = {
@@ -126,21 +136,27 @@ function plusMaanden(datum: string, maanden: number): string {
   return doel.toISOString().slice(0, 10);
 }
 
-function beoordeelApparatuurIntern(associationId: string, csv: string) {
+function beoordeelApparatuurIntern(associationId: string, csv: string, opties: ImportOpties = {}) {
   const { kopregel, rijen } = lees(csv);
   const { index, kolommen, genegeerd } = herkenKolommen(kopregel, APPARATUURVELDEN);
   const cel = (rij: string[], veld: string) => (index[veld] === undefined ? '' : (rij[index[veld]] ?? '').trim());
 
-  const bestaand = db
-    .prepare(
-      `SELECT LOWER(name) AS naam, LOWER(serial_number) AS serie, LOWER(inventory_number) AS nummer, deleted_at
-       FROM equipment_items WHERE association_id = ?`,
-    )
-    .all(associationId) as { naam: string; serie: string | null; nummer: string | null; deleted_at: string | null }[];
-  const actief = bestaand.filter((b) => !b.deleted_at);
-  const bestaandeNummers = new Set(actief.map((b) => b.nummer).filter((n): n is string => !!n));
-  const bestaandeSeries = new Set(actief.map((b) => b.serie).filter((s): s is string => !!s));
-  const bestaandeNamen = new Set(actief.map((b) => b.naam));
+  const bestaand = db.prepare('SELECT * FROM equipment_items WHERE association_id = ?').all(associationId) as Record<
+    string,
+    unknown
+  >[];
+  const kleine = (waarde: unknown) => (waarde ? String(waarde).toLowerCase() : null);
+  const bestaandeNummers = new Map<string, Record<string, unknown>>();
+  const bestaandeSeries = new Map<string, Record<string, unknown>>();
+  const bestaandeNamen = new Map<string, Record<string, unknown>>();
+  for (const rij of bestaand.filter((b) => !b.deleted_at)) {
+    const nummer = kleine(rij.inventory_number);
+    const serie = kleine(rij.serial_number);
+    if (nummer) bestaandeNummers.set(nummer, rij);
+    if (serie) bestaandeSeries.set(serie, rij);
+    bestaandeNamen.set(String(rij.name).toLowerCase(), rij);
+  }
+  const bijwerkingen: Bijwerking[] = [];
 
   const categorieen = new Map(
     (
@@ -252,32 +268,104 @@ function beoordeelApparatuurIntern(associationId: string, csv: string) {
     };
 
     let uitkomst: RegelStatus = 'nieuw';
+    let gevonden: Record<string, unknown> | undefined;
     const nummer = gegevens.inventarisnummer?.toLowerCase();
     const serie = gegevens.serienummer?.toLowerCase();
     const naamSleutel = naam.toLowerCase();
     if (nummer) {
       if (gezienNummer.has(nummer)) fouten.push('Dit inventarisnummer staat eerder in het bestand.');
-      else if (bestaandeNummers.has(nummer)) uitkomst = 'bestaat';
+      else gevonden = bestaandeNummers.get(nummer);
       gezienNummer.add(nummer);
     } else if (serie) {
       if (gezienSerie.has(serie)) fouten.push('Dit serienummer staat eerder in het bestand.');
-      else if (bestaandeSeries.has(serie)) uitkomst = 'bestaat';
+      else gevonden = bestaandeSeries.get(serie);
       gezienSerie.add(serie);
     } else if (naam) {
       if (gezienNaam.has(naamSleutel))
         fouten.push('Apparatuur zonder inventaris- of serienummer met deze naam staat eerder in het bestand.');
-      else if (bestaandeNamen.has(naamSleutel)) uitkomst = 'bestaat';
+      else gevonden = bestaandeNamen.get(naamSleutel);
       gezienNaam.add(naamSleutel);
     }
-    if (fouten.length > 0) uitkomst = 'fout';
+    if (gevonden) uitkomst = 'bestaat';
 
-    return { rij: i + 2, status: uitkomst, gegevens, fouten, waarschuwingen, categorieId: categorie?.id ?? null };
+    let wijzigingen: Wijziging[] | undefined;
+    if (fouten.length > 0) uitkomst = 'fout';
+    else if (gevonden && opties.bijwerken) {
+      // Alleen wat ingevuld is en gelezen kon worden; een keuze die onbekend
+      // was (en dus de standaardwaarde kreeg) laat het oude staan.
+      const gelezen = <T>(veld: string, lezer: (t: string) => T | undefined) =>
+        cel(rij, veld) ? (lezer(cel(rij, veld)) ?? null) : null;
+      const velden: Bijwerkbaar[] = [
+        // De sleutel zelf verandert niet; wat na de sleutel komt wel.
+        { veld: 'naam', kolom: 'name', waarde: nummer || serie ? naam || null : null },
+        { veld: 'serienummer', kolom: 'serial_number', waarde: nummer ? gegevens.serienummer : null },
+        { veld: 'soort', kolom: 'equipment_type', waarde: gelezen('soort', soort) },
+        { veld: 'merk', kolom: 'brand', waarde: gegevens.merk },
+        { veld: 'model', kolom: 'model', waarde: gegevens.model },
+        { veld: 'status', kolom: 'status', waarde: gelezen('status', status) },
+        { veld: 'staat', kolom: 'condition', waarde: gelezen('staat', staat) },
+        { veld: 'locatie', kolom: 'location', waarde: gegevens.locatie },
+        { veld: 'opslag', kolom: 'storage_location', waarde: gegevens.opslag },
+        { veld: 'aankoopdatum', kolom: 'purchase_date', waarde: gegevens.aankoopdatum },
+        { veld: 'aankoopprijs', kolom: 'purchase_price', waarde: gegevens.aankoopprijs },
+        { veld: 'waarde', kolom: 'current_value', waarde: gegevens.waarde },
+        { veld: 'garantieTot', kolom: 'warranty_expiry', waarde: gegevens.garantieTot },
+        {
+          veld: 'onderhoudsinterval',
+          kolom: 'maintenance_interval_months',
+          waarde: gegevens.onderhoudsintervalMaanden,
+        },
+        { veld: 'laatsteOnderhoud', kolom: 'last_maintenance', waarde: gegevens.laatsteOnderhoud },
+        {
+          veld: 'uitleenbaar',
+          kolom: 'is_loanable',
+          waarde: gelezen('uitleenbaar', janee) === null ? null : gegevens.uitleenbaar,
+        },
+        { veld: 'opmerkingen', kolom: 'notes', waarde: gegevens.opmerkingen },
+      ];
+      const gevondenId = String(gevonden.id);
+      const bepaald = bepaalWijzigingen(gevondenId, gevonden, velden);
+      // Verandert het laatste onderhoud of het interval, dan ook het volgende.
+      const { kolommen: nieuweKolommen } = bepaald.bijwerking;
+      if ('last_maintenance' in nieuweKolommen || 'maintenance_interval_months' in nieuweKolommen) {
+        const laatste = (nieuweKolommen.last_maintenance ?? gevonden.last_maintenance) as string | null;
+        const interval = (nieuweKolommen.maintenance_interval_months ?? gevonden.maintenance_interval_months) as
+          number | null;
+        const volgende = laatste && interval ? plusMaanden(String(laatste).slice(0, 10), Number(interval)) : null;
+        if (volgende && volgende !== gevonden.next_maintenance) {
+          bepaald.wijzigingen.push({
+            veld: 'volgendOnderhoud',
+            oud: (gevonden.next_maintenance ?? null) as string | null,
+            nieuw: volgende,
+          });
+          nieuweKolommen.next_maintenance = volgende;
+        }
+      }
+      if (bepaald.wijzigingen.length > 0) {
+        uitkomst = 'bijwerken';
+        wijzigingen = bepaald.wijzigingen;
+        bijwerkingen.push(bepaald.bijwerking);
+      }
+    }
+
+    return {
+      rij: i + 2,
+      status: uitkomst,
+      gegevens,
+      fouten,
+      waarschuwingen,
+      ...(wijzigingen && { wijzigingen }),
+      categorieId: categorie?.id ?? null,
+    };
   });
 
   // Nummers voor wie er geen heeft, in de reeks van routes/equipment.ts: het
   // aantal rijen (ook verwijderde) plus één, en verder tot een vrij nummer.
   // Ook nummers van verwijderde apparatuur en uit het bestand zelf zijn bezet.
-  const bezet = new Set([...bestaand.map((b) => b.nummer).filter((n): n is string => !!n), ...gezienNummer]);
+  const bezet = new Set([
+    ...bestaand.map((b) => kleine(b.inventory_number)).filter((n): n is string => !!n),
+    ...gezienNummer,
+  ]);
   let volgende = bestaand.length + 1;
   for (const regel of regels) {
     if (regel.status !== 'nieuw' || regel.gegevens.inventarisnummer) continue;
@@ -288,24 +376,34 @@ function beoordeelApparatuurIntern(associationId: string, csv: string) {
     regel.gegevens.inventarisnummer = nummer;
   }
 
-  return { kolommen, genegeerd, regels };
+  return { kolommen, genegeerd, regels, bijwerkingen };
 }
 
 function openbaar(regels: (Beoordeling<ApparatuurGegevens> & { categorieId: string | null })[]) {
   return regels.map(({ categorieId: _categorieId, ...regel }) => regel);
 }
 
-export function beoordeelApparatuur(associationId: string, csv: string): Voorbeeld<ApparatuurGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelApparatuurIntern(associationId, csv);
+export function beoordeelApparatuur(
+  associationId: string,
+  csv: string,
+  opties: ImportOpties = {},
+): Voorbeeld<ApparatuurGegevens> {
+  const { kolommen, genegeerd, regels } = beoordeelApparatuurIntern(associationId, csv, opties);
   const zichtbaar = openbaar(regels);
   return { kolommen, genegeerd, regels: zichtbaar, tellingen: tel(zichtbaar) };
 }
 
-export function importeerApparatuur(associationId: string, csv: string): ImportUitkomst<ApparatuurGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelApparatuurIntern(associationId, csv);
+export function importeerApparatuur(
+  associationId: string,
+  csv: string,
+  opties: ImportOpties = {},
+): ImportUitkomst<ApparatuurGegevens> {
+  const { kolommen, genegeerd, regels, bijwerkingen } = beoordeelApparatuurIntern(associationId, csv, opties);
   const nieuw = regels.filter((regel) => regel.status === 'nieuw');
+  let bijgewerkt = 0;
 
   withTransaction(() => {
+    bijgewerkt = werkBij('equipment_items', associationId, bijwerkingen);
     const invoegen = db.prepare(
       `INSERT INTO equipment_items (
          id, association_id, category_id, name, inventory_number, serial_number, brand, model,
@@ -347,5 +445,12 @@ export function importeerApparatuur(associationId: string, csv: string): ImportU
   });
 
   const zichtbaar = openbaar(regels);
-  return { kolommen, genegeerd, regels: zichtbaar, tellingen: tel(zichtbaar), geimporteerd: nieuw.length };
+  return {
+    kolommen,
+    genegeerd,
+    regels: zichtbaar,
+    tellingen: tel(zichtbaar),
+    geimporteerd: nieuw.length,
+    bijgewerkt,
+  };
 }

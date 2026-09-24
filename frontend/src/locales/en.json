@@ -6024,7 +6024,9 @@
       "bestaat_one": "{{count}} already exists",
       "bestaat_other": "{{count}} already exist",
       "fout_one": "{{count}} with an error",
-      "fout_other": "{{count}} with an error"
+      "fout_other": "{{count}} with an error",
+      "bijwerken_one": "{{count}} will be updated",
+      "bijwerken_other": "{{count}} will be updated"
     },
     "herkend": "Columns read: {{kolommen}}.",
     "genegeerd": "Not read: {{kolommen}}.",
@@ -6040,7 +6042,8 @@
     "status": {
       "nieuw": "New",
       "bestaat": "Already exists",
-      "fout": "Error"
+      "fout": "Error",
+      "bijwerken": "Update"
     },
     "kolom": {
       "rij": "Row",
@@ -6099,6 +6102,49 @@
       "lost": "Lost",
       "sold": "Sold"
     },
-    "aantalVan": "{{nieuw}} of {{aantal}}"
+    "aantalVan": "{{nieuw}} of {{aantal}}",
+    "bijwerken": "Update existing records with what is different in the file. An empty cell erases nothing.",
+    "bijgewerkt_one": "{{count}} row updated.",
+    "bijgewerkt_other": "{{count}} rows updated.",
+    "veld": {
+      "naam": "Name",
+      "soort": "Type",
+      "categorie": "Category",
+      "merk": "Brand",
+      "model": "Model",
+      "bouwjaar": "Year built",
+      "aankoopdatum": "Purchase date",
+      "aankoopprijs": "Purchase price",
+      "waarde": "Value",
+      "status": "Status",
+      "staat": "Condition",
+      "locatie": "Location",
+      "opmerkingen": "Notes",
+      "serienummer": "Serial number",
+      "opslag": "Storage",
+      "garantieTot": "Warranty until",
+      "onderhoudsinterval": "Maintenance interval (months)",
+      "laatsteOnderhoud": "Last maintenance",
+      "volgendOnderhoud": "Next maintenance",
+      "uitleenbaar": "Loanable",
+      "voornaam": "First name",
+      "achternaam": "Last name",
+      "priveEmail": "Private email",
+      "componist": "Composer",
+      "duur": "Duration",
+      "graad": "Grade",
+      "contactpersoon": "Contact person",
+      "email": "Email",
+      "telefoon": "Phone",
+      "mobiel": "Mobile",
+      "adres": "Address",
+      "postcode": "Postal code",
+      "plaats": "City",
+      "land": "Country",
+      "iban": "IBAN",
+      "website": "Website",
+      "kvk": "Chamber of Commerce number",
+      "btw": "VAT number"
+    }
   }
 }

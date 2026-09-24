@@ -109,7 +109,7 @@ describe('uniformen importeren', () => {
     await stuur(beheerderToken, '/uniformen', csv);
 
     const nogmaals = await stuur(beheerderToken, '/uniformen/voorbeeld', csv);
-    expect(nogmaals.body.tellingen).toEqual({ nieuw: 0, bestaat: 2, fout: 0 });
+    expect(nogmaals.body.tellingen).toEqual({ nieuw: 0, bestaat: 2, bijwerken: 0, fout: 0 });
 
     // Nu vier jassen in maat 52: twee zijn er al.
     const meer = await stuur(beheerderToken, '/uniformen', ['Soort;Maat;Kleur;Aantal', 'jas;52;rood;4'].join('\n'));

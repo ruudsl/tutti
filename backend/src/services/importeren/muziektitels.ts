@@ -4,15 +4,21 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../../database/connection';
 import { withTransaction } from '../../utils/database';
 import {
+  bepaalWijzigingen,
   herkenKolommen,
   lees,
   lijst,
   tel,
+  werkBij,
   type Beoordeling,
+  type Bijwerkbaar,
+  type Bijwerking,
+  type ImportOpties,
   type ImportUitkomst,
   type RegelStatus,
   type Veld,
   type Voorbeeld,
+  type Wijziging,
 } from './gemeenschappelijk';
 
 const TITELVELDEN: Record<string, Veld> = {
@@ -55,7 +61,7 @@ export function leesDuur(waarde: string): number | undefined {
   return undefined;
 }
 
-function beoordeelTitelsIntern(associationId: string, csv: string) {
+function beoordeelTitelsIntern(associationId: string, csv: string, opties: ImportOpties = {}) {
   const { kopregel, rijen } = lees(csv);
   const { index, kolommen, genegeerd } = herkenKolommen(kopregel, TITELVELDEN);
   const cel = (rij: string[], veld: string) => (index[veld] === undefined ? '' : (rij[index[veld]] ?? '').trim());
@@ -65,13 +71,14 @@ function beoordeelTitelsIntern(associationId: string, csv: string) {
 
   // Een titel is dezelfde als titel en arrangeur gelijk zijn, net als bij het
   // aanmaken van een titel in het scherm.
-  const bestaand = new Set(
+  const bestaand = new Map(
     (
       db
-        .prepare('SELECT title, arranger FROM music_titles WHERE association_id = ? AND deleted_at IS NULL')
-        .all(associationId) as { title: string; arranger: string | null }[]
-    ).map(({ title, arranger }) => sleutel(title, arranger)),
+        .prepare('SELECT * FROM music_titles WHERE association_id = ? AND deleted_at IS NULL')
+        .all(associationId) as Record<string, unknown>[]
+    ).map((rij) => [sleutel(String(rij.title), (rij.arranger as string | null) ?? null), rij]),
   );
+  const bijwerkingen: Bijwerking[] = [];
   const genres = new Map(
     (db.prepare('SELECT id, LOWER(name) AS naam FROM genres').all() as { id: string; naam: string }[]).map(
       ({ id, naam }) => [naam, id],
@@ -114,37 +121,56 @@ function beoordeelTitelsIntern(associationId: string, csv: string) {
 
     let status: RegelStatus = 'nieuw';
     const eigenSleutel = sleutel(titel, arrangeur);
+    let gevonden: Record<string, unknown> | undefined;
     if (titel && gezien.has(eigenSleutel)) fouten.push('Deze titel met deze arrangeur staat eerder in het bestand.');
-    else if (titel && bestaand.has(eigenSleutel)) status = 'bestaat';
+    else if (titel) gevonden = bestaand.get(eigenSleutel);
+    if (gevonden) status = 'bestaat';
     if (titel) gezien.add(eigenSleutel);
     if (fouten.length > 0) status = 'fout';
 
-    return {
-      rij: i + 2,
-      status,
-      gegevens: {
-        titel,
-        componist,
-        arrangeur,
-        duurSeconden: duur ?? null,
-        graad: graad && graad.length <= 20 ? graad : null,
-        genres: genreNamen,
-        genreIds: [...new Set(genreIds)],
-      },
-      fouten,
-      waarschuwingen,
+    const gegevens = {
+      titel,
+      componist,
+      arrangeur,
+      duurSeconden: duur ?? null,
+      graad: graad && graad.length <= 20 ? graad : null,
+      genres: genreNamen,
+      genreIds: [...new Set(genreIds)],
     };
+
+    // Titel en arrangeur zijn de sleutel; componist, duur en graad kunnen
+    // bijgewerkt worden. Genres niet.
+    let wijzigingen: Wijziging[] | undefined;
+    if (status === 'bestaat' && gevonden && opties.bijwerken) {
+      const velden: Bijwerkbaar[] = [
+        { veld: 'componist', kolom: 'composer', waarde: gegevens.componist },
+        { veld: 'duur', kolom: 'duration_seconds', waarde: gegevens.duurSeconden },
+        { veld: 'graad', kolom: 'grade', waarde: gegevens.graad },
+      ];
+      const bepaald = bepaalWijzigingen(String(gevonden.id), gevonden, velden);
+      if (bepaald.wijzigingen.length > 0) {
+        status = 'bijwerken';
+        wijzigingen = bepaald.wijzigingen;
+        bijwerkingen.push(bepaald.bijwerking);
+      }
+    }
+
+    return { rij: i + 2, status, gegevens, fouten, waarschuwingen, ...(wijzigingen && { wijzigingen }) };
   });
 
-  return { kolommen, genegeerd, regels };
+  return { kolommen, genegeerd, regels, bijwerkingen };
 }
 
 function zonderGenreIds({ genreIds: _g, ...rest }: TitelIntern): TitelGegevens {
   return rest;
 }
 
-export function beoordeelTitels(associationId: string, csv: string): Voorbeeld<TitelGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelTitelsIntern(associationId, csv);
+export function beoordeelTitels(
+  associationId: string,
+  csv: string,
+  opties: ImportOpties = {},
+): Voorbeeld<TitelGegevens> {
+  const { kolommen, genegeerd, regels } = beoordeelTitelsIntern(associationId, csv, opties);
   return {
     kolommen,
     genegeerd,
@@ -153,11 +179,17 @@ export function beoordeelTitels(associationId: string, csv: string): Voorbeeld<T
   };
 }
 
-export function importeerTitels(associationId: string, csv: string): ImportUitkomst<TitelGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelTitelsIntern(associationId, csv);
+export function importeerTitels(
+  associationId: string,
+  csv: string,
+  opties: ImportOpties = {},
+): ImportUitkomst<TitelGegevens> {
+  const { kolommen, genegeerd, regels, bijwerkingen } = beoordeelTitelsIntern(associationId, csv, opties);
   const nieuw = regels.filter((regel) => regel.status === 'nieuw');
+  let bijgewerkt = 0;
 
   withTransaction(() => {
+    bijgewerkt = werkBij('music_titles', associationId, bijwerkingen);
     const titel = db.prepare(
       `INSERT INTO music_titles (id, title, composer, arranger, duration_seconds, grade, association_id)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -185,5 +217,6 @@ export function importeerTitels(associationId: string, csv: string): ImportUitko
     regels: regels.map((regel) => ({ ...regel, gegevens: zonderGenreIds(regel.gegevens) })),
     tellingen: tel(regels),
     geimporteerd: nieuw.length,
+    bijgewerkt,
   };
 }

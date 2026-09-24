@@ -72,7 +72,7 @@ describe('leden importeren', () => {
     const antwoord = await stuur(beheerderToken, '/leden/voorbeeld', LEDEN);
 
     expect(antwoord.status).toBe(200);
-    expect(antwoord.body.tellingen).toEqual({ nieuw: 2, bestaat: 0, fout: 0 });
+    expect(antwoord.body.tellingen).toEqual({ nieuw: 2, bestaat: 0, bijwerken: 0, fout: 0 });
     expect(antwoord.body.kolommen).toMatchObject({ voornaam: 'Voornaam', email: 'E-mail', orkesten: 'Orkest' });
     const [anna, bram] = antwoord.body.regels;
     expect(anna).toMatchObject({ rij: 2, status: 'nieuw', gegevens: { email: 'anna@voorbeeld.nl', rol: 'member' } });
@@ -132,7 +132,7 @@ describe('leden importeren', () => {
 
     expect(antwoord.status).toBe(200);
     expect(antwoord.body.geimporteerd).toBe(0);
-    expect(antwoord.body.tellingen).toEqual({ nieuw: 0, bestaat: 2, fout: 0 });
+    expect(antwoord.body.tellingen).toEqual({ nieuw: 0, bestaat: 2, bijwerken: 0, fout: 0 });
     expect(ledenVan(vereniging.id).filter((l) => l.email.endsWith('@voorbeeld.nl'))).toHaveLength(2);
   });
 

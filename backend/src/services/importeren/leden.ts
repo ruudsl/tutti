@@ -8,17 +8,23 @@ import db from '../../database/connection';
 import { withTransaction } from '../../utils/database';
 import { ruimteVoorLeden } from '../abonnementLimieten';
 import {
+  bepaalWijzigingen,
   herkenKolommen,
   inStukken,
   lees,
   lijst,
   normaliseer,
   tel,
+  werkBij,
   type Beoordeling,
+  type Bijwerkbaar,
+  type Bijwerking,
+  type ImportOpties,
   type ImportUitkomst,
   type RegelStatus,
   type Veld,
   type Voorbeeld,
+  type Wijziging,
 } from './gemeenschappelijk';
 
 const LEDENVELDEN: Record<string, Veld> = {
@@ -101,7 +107,7 @@ function laadInstrumenten(): Map<string, string> {
   return kaart;
 }
 
-function beoordeelLedenIntern(associationId: string, csv: string) {
+function beoordeelLedenIntern(associationId: string, csv: string, opties: ImportOpties = {}) {
   const { kopregel, rijen } = lees(csv);
   const { index, kolommen, genegeerd } = herkenKolommen(kopregel, LEDENVELDEN);
   const cel = (rij: string[], veld: string) => (index[veld] === undefined ? '' : (rij[index[veld]] ?? '').trim());
@@ -132,6 +138,21 @@ function beoordeelLedenIntern(associationId: string, csv: string) {
         .all(associationId, associationId) as { email: string }[]
     ).map(({ email }) => email),
   );
+
+  // Bijwerken kan alleen bij wie deze vereniging als eigen vereniging heeft.
+  // Wie er via user_associations bij hoort, is ook lid elders; zijn naam
+  // wijzigen vanuit het bestand van deze vereniging verandert hem daar ook.
+  const bijTeWerken = new Map<string, Record<string, unknown>>();
+  if (opties.bijwerken) {
+    for (const rij of db
+      .prepare(
+        'SELECT id, LOWER(email) AS sleutel, first_name, last_name, private_email FROM users WHERE association_id = ? AND deleted_at IS NULL',
+      )
+      .all(associationId) as Record<string, unknown>[]) {
+      bijTeWerken.set(String(rij.sleutel), rij);
+    }
+  }
+  const bijwerkingen: Bijwerking[] = [];
 
   // Een e-mailadres is uniek over de hele installatie. Welke adressen uit het
   // bestand al bij een ander account horen, in één keer opgevraagd.
@@ -196,9 +217,34 @@ function beoordeelLedenIntern(associationId: string, csv: string) {
     if (email) gezien.add(email);
     if (fouten.length > 0) status = 'fout';
 
+    const geldigePriveEmail = priveEmail && emailSchema.safeParse(priveEmail).success ? priveEmail : null;
+
+    // Naam en privé-e-mail; de rol niet. Een rol verandert wat iemand mag, en
+    // dat hoort een beheerder per persoon te beslissen, niet per spreadsheet.
+    let wijzigingen: Wijziging[] | undefined;
+    if (status === 'bestaat' && opties.bijwerken) {
+      const gevonden = bijTeWerken.get(email);
+      if (!gevonden) {
+        waarschuwingen.push('Dit lid hoort ook bij een andere vereniging en wordt hier niet bijgewerkt.');
+      } else {
+        const velden: Bijwerkbaar[] = [
+          { veld: 'voornaam', kolom: 'first_name', waarde: voornaam || null },
+          { veld: 'achternaam', kolom: 'last_name', waarde: cel(rij, 'achternaam') ? achternaam : null },
+          { veld: 'priveEmail', kolom: 'private_email', waarde: geldigePriveEmail },
+        ];
+        const bepaald = bepaalWijzigingen(String(gevonden.id), gevonden, velden);
+        if (bepaald.wijzigingen.length > 0) {
+          status = 'bijwerken';
+          wijzigingen = bepaald.wijzigingen;
+          bijwerkingen.push(bepaald.bijwerking);
+        }
+      }
+    }
+
     return {
       rij: i + 2,
       status,
+      ...(wijzigingen && { wijzigingen }),
       gegevens: {
         voornaam,
         achternaam,
@@ -206,7 +252,7 @@ function beoordeelLedenIntern(associationId: string, csv: string) {
         rol: rol ?? 'member',
         instrumenten: instrumentNamen,
         orkesten: orkestNamen,
-        priveEmail: priveEmail && emailSchema.safeParse(priveEmail).success ? priveEmail : null,
+        priveEmail: geldigePriveEmail,
         instrumentIds: [...new Set(instrumentIds)],
         orkestIds: [...new Set(orkestIds)],
       },
@@ -230,7 +276,7 @@ function beoordeelLedenIntern(associationId: string, csv: string) {
     }
   }
 
-  return { kolommen, genegeerd, regels };
+  return { kolommen, genegeerd, regels, bijwerkingen };
 }
 
 /** Zonder de interne id's: die gaan niet naar de browser. */
@@ -238,8 +284,8 @@ function zonderIds({ instrumentIds: _i, orkestIds: _o, ...rest }: LidIntern): Li
   return rest;
 }
 
-export function beoordeelLeden(associationId: string, csv: string): Voorbeeld<LidGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelLedenIntern(associationId, csv);
+export function beoordeelLeden(associationId: string, csv: string, opties: ImportOpties = {}): Voorbeeld<LidGegevens> {
+  const { kolommen, genegeerd, regels } = beoordeelLedenIntern(associationId, csv, opties);
   return {
     kolommen,
     genegeerd,
@@ -256,9 +302,20 @@ export function beoordeelLeden(associationId: string, csv: string): Voorbeeld<Li
  * uitnodigingen wanneer de vereniging er klaar voor is. Een import van tachtig
  * leden hoort niet ongevraagd tachtig mails te versturen.
  */
-export async function importeerLeden(associationId: string, csv: string): Promise<ImportUitkomst<LidGegevens>> {
-  const { kolommen, genegeerd, regels } = beoordeelLedenIntern(associationId, csv);
+export async function importeerLeden(
+  associationId: string,
+  csv: string,
+  opties: ImportOpties = {},
+): Promise<ImportUitkomst<LidGegevens>> {
+  const { kolommen, genegeerd, regels, bijwerkingen } = beoordeelLedenIntern(associationId, csv, opties);
   const nieuw = regels.filter((regel) => regel.status === 'nieuw');
+  let bijgewerkt = 0;
+
+  if (bijwerkingen.length > 0) {
+    withTransaction(() => {
+      bijgewerkt = werkBij('users', associationId, bijwerkingen);
+    });
+  }
 
   if (nieuw.length > 0) {
     // Eén hash voor de hele import, van een geheim dat direct weer vergeten
@@ -299,5 +356,6 @@ export async function importeerLeden(associationId: string, csv: string): Promis
     regels: regels.map((regel) => ({ ...regel, gegevens: zonderIds(regel.gegevens) })),
     tellingen: tel(regels),
     geimporteerd: nieuw.length,
+    bijgewerkt,
   };
 }

@@ -4,6 +4,8 @@
  * docs/IMPORTEREN.md.
  *
  * Een contact bestaat al als de vereniging een contact met dezelfde naam heeft.
+ * Met `bijwerken` krijgt het wat in het bestand anders is (categorieën niet);
+ * zie `bepaalWijzigingen` in gemeenschappelijk.ts.
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -11,16 +13,22 @@ import { z } from 'zod';
 import db from '../../database/connection';
 import { withTransaction } from '../../utils/database';
 import {
+  bepaalWijzigingen,
   herkenKolommen,
   lees,
   lijst,
   maakKeuze,
   tel,
+  werkBij,
   type Beoordeling,
+  type Bijwerkbaar,
+  type Bijwerking,
+  type ImportOpties,
   type ImportUitkomst,
   type RegelStatus,
   type Veld,
   type Voorbeeld,
+  type Wijziging,
 } from './gemeenschappelijk';
 
 const CONTACTVELDEN: Record<string, Veld> = {
@@ -79,18 +87,20 @@ const emailSchema = z.string().email().max(255);
 const IBAN = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
 const MAX_TEKST = 255;
 
-function beoordeelContactenIntern(associationId: string, csv: string) {
+function beoordeelContactenIntern(associationId: string, csv: string, opties: ImportOpties = {}) {
   const { kopregel, rijen } = lees(csv);
   const { index, kolommen, genegeerd } = herkenKolommen(kopregel, CONTACTVELDEN);
   const cel = (rij: string[], veld: string) => (index[veld] === undefined ? '' : (rij[index[veld]] ?? '').trim());
 
-  const bestaand = new Set(
+  const bestaand = new Map(
     (
-      db
-        .prepare('SELECT LOWER(name) AS naam FROM contacts WHERE association_id = ? AND deleted_at IS NULL')
-        .all(associationId) as { naam: string }[]
-    ).map(({ naam }) => naam),
+      db.prepare('SELECT * FROM contacts WHERE association_id = ? AND deleted_at IS NULL').all(associationId) as Record<
+        string,
+        unknown
+      >[]
+    ).map((rij) => [String(rij.name).toLowerCase(), rij]),
   );
+  const bijwerkingen: Bijwerking[] = [];
   const categorieen = new Map(
     (
       db
@@ -157,47 +167,75 @@ function beoordeelContactenIntern(associationId: string, csv: string) {
 
     let status: RegelStatus = 'nieuw';
     const sleutel = naam.toLowerCase();
+    let gevonden: Record<string, unknown> | undefined;
     if (naam && gezien.has(sleutel)) fouten.push('Een contact met deze naam staat eerder in het bestand.');
-    else if (naam && bestaand.has(sleutel)) status = 'bestaat';
+    else if (naam) gevonden = bestaand.get(sleutel);
+    if (gevonden) status = 'bestaat';
     if (naam) gezien.add(sleutel);
     if (fouten.length > 0) status = 'fout';
 
-    return {
-      rij: i + 2,
-      status,
-      gegevens: {
-        naam,
-        soort: gekozenSoort,
-        contactpersoon: tekst('contactpersoon', 'Contactpersoon'),
-        email,
-        telefoon: tekst('telefoon', 'Telefoon'),
-        mobiel: tekst('mobiel', 'Mobiel'),
-        adres: tekst('adres', 'Adres'),
-        postcode: tekst('postcode', 'Postcode'),
-        plaats: tekst('plaats', 'Plaats'),
-        land: tekst('land', 'Land'),
-        iban,
-        website,
-        kvk: tekst('kvk', 'KvK-nummer'),
-        btw: tekst('btw', 'Btw-nummer'),
-        categorieen: categorieNamen,
-        opmerkingen: cel(rij, 'opmerkingen') || null,
-        categorieIds: [...new Set(categorieIds)],
-      },
-      fouten,
-      waarschuwingen,
+    const gegevens = {
+      naam,
+      soort: gekozenSoort,
+      contactpersoon: tekst('contactpersoon', 'Contactpersoon'),
+      email,
+      telefoon: tekst('telefoon', 'Telefoon'),
+      mobiel: tekst('mobiel', 'Mobiel'),
+      adres: tekst('adres', 'Adres'),
+      postcode: tekst('postcode', 'Postcode'),
+      plaats: tekst('plaats', 'Plaats'),
+      land: tekst('land', 'Land'),
+      iban,
+      website,
+      kvk: tekst('kvk', 'KvK-nummer'),
+      btw: tekst('btw', 'Btw-nummer'),
+      categorieen: categorieNamen,
+      opmerkingen: cel(rij, 'opmerkingen') || null,
+      categorieIds: [...new Set(categorieIds)],
     };
+
+    let wijzigingen: Wijziging[] | undefined;
+    if (status === 'bestaat' && gevonden && opties.bijwerken) {
+      const velden: Bijwerkbaar[] = [
+        { veld: 'soort', kolom: 'contact_type', waarde: soortTekst ? (soort(soortTekst) ?? null) : null },
+        { veld: 'contactpersoon', kolom: 'contact_person', waarde: gegevens.contactpersoon },
+        { veld: 'email', kolom: 'email', waarde: gegevens.email },
+        { veld: 'telefoon', kolom: 'phone', waarde: gegevens.telefoon },
+        { veld: 'mobiel', kolom: 'mobile', waarde: gegevens.mobiel },
+        { veld: 'adres', kolom: 'address_line', waarde: gegevens.adres },
+        { veld: 'postcode', kolom: 'postal_code', waarde: gegevens.postcode },
+        { veld: 'plaats', kolom: 'city', waarde: gegevens.plaats },
+        { veld: 'land', kolom: 'country', waarde: gegevens.land },
+        { veld: 'iban', kolom: 'iban', waarde: gegevens.iban },
+        { veld: 'website', kolom: 'website', waarde: gegevens.website },
+        { veld: 'kvk', kolom: 'chamber_of_commerce', waarde: gegevens.kvk },
+        { veld: 'btw', kolom: 'vat_number', waarde: gegevens.btw },
+        { veld: 'opmerkingen', kolom: 'notes', waarde: gegevens.opmerkingen },
+      ];
+      const bepaald = bepaalWijzigingen(String(gevonden.id), gevonden, velden);
+      if (bepaald.wijzigingen.length > 0) {
+        status = 'bijwerken';
+        wijzigingen = bepaald.wijzigingen;
+        bijwerkingen.push(bepaald.bijwerking);
+      }
+    }
+
+    return { rij: i + 2, status, gegevens, fouten, waarschuwingen, ...(wijzigingen && { wijzigingen }) };
   });
 
-  return { kolommen, genegeerd, regels };
+  return { kolommen, genegeerd, regels, bijwerkingen };
 }
 
 function zonderIds({ categorieIds: _c, ...rest }: ContactIntern): ContactGegevens {
   return rest;
 }
 
-export function beoordeelContacten(associationId: string, csv: string): Voorbeeld<ContactGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelContactenIntern(associationId, csv);
+export function beoordeelContacten(
+  associationId: string,
+  csv: string,
+  opties: ImportOpties = {},
+): Voorbeeld<ContactGegevens> {
+  const { kolommen, genegeerd, regels } = beoordeelContactenIntern(associationId, csv, opties);
   return {
     kolommen,
     genegeerd,
@@ -210,11 +248,14 @@ export function importeerContacten(
   associationId: string,
   gebruikerId: string,
   csv: string,
+  opties: ImportOpties = {},
 ): ImportUitkomst<ContactGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelContactenIntern(associationId, csv);
+  const { kolommen, genegeerd, regels, bijwerkingen } = beoordeelContactenIntern(associationId, csv, opties);
   const nieuw = regels.filter((regel) => regel.status === 'nieuw');
+  let bijgewerkt = 0;
 
   withTransaction(() => {
+    bijgewerkt = werkBij('contacts', associationId, bijwerkingen);
     const contact = db.prepare(
       `INSERT INTO contacts (
          id, association_id, contact_type, name, contact_person, email, phone, mobile,
@@ -258,5 +299,6 @@ export function importeerContacten(
     regels: regels.map((regel) => ({ ...regel, gegevens: zonderIds(regel.gegevens) })),
     tellingen: tel(regels),
     geimporteerd: nieuw.length,
+    bijgewerkt,
   };
 }

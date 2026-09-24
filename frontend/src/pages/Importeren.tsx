@@ -22,6 +22,7 @@ import {
   type RegelStatus,
   type TitelGegevens,
   type UniformGegevens,
+  type Wijziging,
 } from '../api/importeren';
 
 /**
@@ -30,7 +31,9 @@ import {
  *
  * Kies een bestand, bekijk per regel wat er gebeurt, en importeer. Het
  * voorbeeld verandert niets; bij het importeren beoordeelt de server het
- * bestand opnieuw. Wie welke soort mag, volgt de routes in
+ * bestand opnieuw. Met "Bestaande gegevens bijwerken" krijgen rijen die er al
+ * zijn wat in het bestand anders is; het voorbeeld toont per veld oud en
+ * nieuw. Wie welke soort mag, volgt de routes in
  * backend/src/routes/importeren.ts; instrumenten, contacten, uniformen en
  * apparatuur verschijnen alleen als hun module aan staat.
  */
@@ -92,8 +95,24 @@ const TE_VERVERSEN: Record<ImportSoort, string> = {
 const STATUSKLEUR: Record<RegelStatus, string> = {
   nieuw: 'badge-success',
   bestaat: 'badge-ghost',
+  bijwerken: 'badge-info',
   fout: 'badge-error',
 };
+
+/** Uniformen hebben geen sleutel; die kunnen niet bijgewerkt worden. */
+const ZONDER_BIJWERKEN: ImportSoort[] = ['uniformen'];
+
+/** Een waarde uit een wijziging zoals een mens hem leest. */
+function toonWaarde(soort: ImportSoort, { veld }: Wijziging, waarde: Wijziging['oud'], t: TFunction): string {
+  if (waarde === null || waarde === '') return '—';
+  if (typeof waarde === 'boolean') return t(waarde ? 'common.yes' : 'common.no');
+  if (veld === 'duur' && typeof waarde === 'number') return duur(waarde) || '0:00';
+  if (veld === 'status' && soort === 'instrumenten') return t(`importeren.instrumentStatus.${waarde}`);
+  if (veld === 'status' && soort === 'apparatuur') return t(`importeren.apparatuurStatus.${waarde}`);
+  if (veld === 'soort' && soort === 'apparatuur') return t(`importeren.apparatuurSoort.${waarde}`);
+  if (veld === 'soort' && soort === 'contacten') return t(`contacts.type.${waarde}`);
+  return String(waarde);
+}
 
 function duur(seconden: number | null): string {
   if (!seconden) return '';
@@ -209,6 +228,12 @@ function Regeltabel({ soort, regels }: { soort: ImportSoort; regels: Beoordeling
                 <td key={kop}>{waarde(regel.gegevens as never, t)}</td>
               ))}
               <td>
+                {regel.wijzigingen?.map((wijziging) => (
+                  <div key={wijziging.veld} className="text-sm">
+                    {t(`importeren.veld.${wijziging.veld}`)}: {toonWaarde(soort, wijziging, wijziging.oud, t)} →{' '}
+                    {toonWaarde(soort, wijziging, wijziging.nieuw, t)}
+                  </div>
+                ))}
                 {regel.fouten.map((fout) => (
                   <div key={fout} className="text-error text-sm">
                     {fout}
@@ -236,14 +261,19 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
   const [bestandsnaam, setBestandsnaam] = useState('');
   const [voorbeeld, setVoorbeeld] = useState<Voorbeeld | null>(null);
   const [uitkomst, setUitkomst] = useState<ImportUitkomst<Gegevens> | null>(null);
+  const [bijwerken, setBijwerken] = useState(false);
+  const kanBijwerken = !ZONDER_BIJWERKEN.includes(soort);
 
   const bekijken = useMutation({
-    mutationFn: (tekst: string) => bekijkImport(soort, tekst),
+    mutationFn: ({ tekst, metBijwerken }: { tekst: string; metBijwerken: boolean }) =>
+      bekijkImport(soort, tekst, { bijwerken: metBijwerken }),
     onSuccess: (data) => setVoorbeeld(data),
   });
 
+  // Het voorbeeld hoort bij de keuze om bij te werken: bij het importeren
+  // gaat dezelfde keuze mee als waarmee het voorbeeld gemaakt is.
   const importeren = useMutation({
-    mutationFn: (tekst: string) => voerImportUit(soort, tekst),
+    mutationFn: (tekst: string) => voerImportUit(soort, tekst, { bijwerken }),
     onSuccess: (data) => {
       setUitkomst(data);
       setVoorbeeld(null);
@@ -260,7 +290,16 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
     const tekst = await leesTekstbestand(bestand);
     setBestandsnaam(bestand.name);
     setCsv(tekst);
-    bekijken.mutate(tekst);
+    bekijken.mutate({ tekst, metBijwerken: bijwerken });
+  };
+
+  const wisselBijwerken = (aan: boolean) => {
+    setBijwerken(aan);
+    setUitkomst(null);
+    if (csv) {
+      setVoorbeeld(null);
+      bekijken.mutate({ tekst: csv, metBijwerken: aan });
+    }
   };
 
   const fout = bekijken.error ?? importeren.error;
@@ -289,6 +328,18 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
       <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
         {t('importeren.alleenCsv')}
       </p>
+      {kanBijwerken && (
+        <label className="label cursor-pointer justify-start gap-2">
+          <input
+            type="checkbox"
+            className="checkbox checkbox-sm"
+            checked={bijwerken}
+            disabled={bekijken.isPending || importeren.isPending}
+            onChange={(e) => wisselBijwerken(e.target.checked)}
+          />
+          <span className="label-text">{t('importeren.bijwerken')}</span>
+        </label>
+      )}
 
       {bekijken.isPending && <p>{t('importeren.bezigMetLezen')}</p>}
 
@@ -301,6 +352,7 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
       {uitkomst && (
         <div role="status" className="alert alert-success">
           {t('importeren.gelukt', { count: uitkomst.geimporteerd })}{' '}
+          {uitkomst.bijgewerkt > 0 && t('importeren.bijgewerkt', { count: uitkomst.bijgewerkt })}{' '}
           {uitkomst.tellingen.bestaat > 0 && t('importeren.overgeslagen', { count: uitkomst.tellingen.bestaat })}{' '}
           {uitkomst.tellingen.fout > 0 && t('importeren.nietGelukt', { count: uitkomst.tellingen.fout })}
           {soort === 'leden' && uitkomst.geimporteerd > 0 && <div className="mt-1">{t('importeren.wachtwoord')}</div>}
@@ -311,11 +363,13 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">{t('importeren.voorbeeldVan', { bestand: bestandsnaam })}</h2>
           <div className="flex flex-wrap gap-2" aria-label={t('importeren.tellingen')}>
-            {(['nieuw', 'bestaat', 'fout'] as RegelStatus[]).map((status) => (
-              <span key={status} className={`badge ${STATUSKLEUR[status]}`}>
-                {t(`importeren.telling.${status}`, { count: voorbeeld.tellingen[status] })}
-              </span>
-            ))}
+            {(['nieuw', 'bijwerken', 'bestaat', 'fout'] as RegelStatus[])
+              .filter((status) => status !== 'bijwerken' || bijwerken)
+              .map((status) => (
+                <span key={status} className={`badge ${STATUSKLEUR[status]}`}>
+                  {t(`importeren.telling.${status}`, { count: voorbeeld.tellingen[status] })}
+                </span>
+              ))}
           </div>
           <p className="text-sm">
             {t('importeren.herkend', { kolommen: Object.values(voorbeeld.kolommen).join(', ') })}
@@ -327,10 +381,10 @@ function ImportStap({ soort }: { soort: ImportSoort }) {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={voorbeeld.tellingen.nieuw === 0 || importeren.isPending}
+            disabled={voorbeeld.tellingen.nieuw + (voorbeeld.tellingen.bijwerken ?? 0) === 0 || importeren.isPending}
             onClick={() => importeren.mutate(csv)}
           >
-            {t('importeren.importeer', { count: voorbeeld.tellingen.nieuw })}
+            {t('importeren.importeer', { count: voorbeeld.tellingen.nieuw + (voorbeeld.tellingen.bijwerken ?? 0) })}
           </button>
         </div>
       )}

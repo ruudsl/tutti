@@ -3,13 +3,23 @@
  * uitkomst per regel. Zie index.ts voor het geheel.
  */
 
+import db from '../../database/connection';
 import { ApiError } from '../../middleware/errorHandler';
 import { leesCsv } from '../../utils/csvLezen';
 
 /** Meer regels per keer maakt het voorbeeld onleesbaar en de import traag. */
 export const MAX_REGELS = 2000;
 
-export type RegelStatus = 'nieuw' | 'bestaat' | 'fout';
+export type RegelStatus = 'nieuw' | 'bestaat' | 'bijwerken' | 'fout';
+
+export type Waarde = string | number | boolean | null;
+
+/** Een veld van een bestaande rij dat door de import verandert. */
+export interface Wijziging {
+  veld: string;
+  oud: Waarde;
+  nieuw: Waarde;
+}
 
 export interface Beoordeling<T> {
   /** De rij in de spreadsheet: de kopregel is rij 1. */
@@ -18,6 +28,13 @@ export interface Beoordeling<T> {
   gegevens: T;
   fouten: string[];
   waarschuwingen: string[];
+  /** Bij `bijwerken`: wat er verandert. */
+  wijzigingen?: Wijziging[];
+}
+
+export interface ImportOpties {
+  /** Bestaande rijen bijwerken met wat in het bestand anders is. Zonder dit worden ze overgeslagen. */
+  bijwerken?: boolean;
 }
 
 export interface Voorbeeld<T> {
@@ -31,6 +48,7 @@ export interface Voorbeeld<T> {
 
 export interface ImportUitkomst<T> extends Voorbeeld<T> {
   geimporteerd: number;
+  bijgewerkt: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +121,7 @@ export function lijst(waarde: string): string[] {
 }
 
 export function tel<T>(regels: Beoordeling<T>[]): Record<RegelStatus, number> {
-  const tellingen: Record<RegelStatus, number> = { nieuw: 0, bestaat: 0, fout: 0 };
+  const tellingen: Record<RegelStatus, number> = { nieuw: 0, bestaat: 0, bijwerken: 0, fout: 0 };
   for (const regel of regels) tellingen[regel.status]++;
   return tellingen;
 }
@@ -163,4 +181,83 @@ export function leesDatum(tekst: string): string | undefined {
     return undefined;
   }
   return datum.toISOString().slice(0, 10);
+}
+
+// ---------------------------------------------------------------------------
+// Bestaande rijen bijwerken
+// ---------------------------------------------------------------------------
+
+/** Een veld dat de import in een bestaande rij kan zetten: de kolom in de tabel en de waarde uit het bestand. */
+export interface Bijwerkbaar {
+  veld: string;
+  kolom: string;
+  waarde: Waarde;
+}
+
+/** Wat bij het uitvoeren in één bestaande rij verandert. */
+export interface Bijwerking {
+  id: string;
+  kolommen: Record<string, Waarde>;
+}
+
+function gelijk(oud: unknown, nieuw: Waarde): boolean {
+  if (typeof nieuw === 'boolean') return Boolean(oud) === nieuw;
+  if (typeof nieuw === 'number') return oud !== null && oud !== undefined && Number(oud) === nieuw;
+  return (oud ?? null) === nieuw;
+}
+
+/**
+ * Wat er in een bestaande rij anders wordt.
+ *
+ * De importeur geeft alleen velden mee die in het bestand ingevuld zijn en
+ * gelezen konden worden: een lege cel wist niets, en een waarde die niet te
+ * lezen was (een waarschuwing) laat het oude staan.
+ */
+export function bepaalWijzigingen(
+  id: string,
+  bestaand: Record<string, unknown>,
+  velden: Bijwerkbaar[],
+): { wijzigingen: Wijziging[]; bijwerking: Bijwerking } {
+  const wijzigingen: Wijziging[] = [];
+  const kolommen: Record<string, Waarde> = {};
+  for (const { veld, kolom, waarde } of velden) {
+    if (waarde === null || gelijk(bestaand[kolom], waarde)) continue;
+    const oud = bestaand[kolom];
+    wijzigingen.push({
+      veld,
+      oud: typeof waarde === 'boolean' ? Boolean(oud) : ((oud ?? null) as Waarde),
+      nieuw: waarde,
+    });
+    kolommen[kolom] = waarde;
+  }
+  return { wijzigingen, bijwerking: { id, kolommen } };
+}
+
+/** De tabellen die een import kan bijwerken; de kolomnamen komen uit de importeurs zelf, nooit uit het bestand. */
+export type BijwerkbareTabel = 'users' | 'music_titles' | 'instrument_assets' | 'contacts' | 'equipment_items';
+
+/** users heeft geen updated_at. */
+const MET_UPDATED_AT = new Set<BijwerkbareTabel>(['music_titles', 'instrument_assets', 'contacts', 'equipment_items']);
+
+/**
+ * Voer de wijzigingen uit, per rij binnen de vereniging. Hoort binnen de
+ * transactie van de import te draaien.
+ */
+export function werkBij(tabel: BijwerkbareTabel, associationId: string, bijwerkingen: Bijwerking[]): number {
+  let aantal = 0;
+  for (const { id, kolommen } of bijwerkingen) {
+    const namen = Object.keys(kolommen);
+    if (namen.length === 0) continue;
+    const waarden = namen.map((naam) => {
+      const waarde = kolommen[naam];
+      return typeof waarde === 'boolean' ? (waarde ? 1 : 0) : waarde;
+    });
+    db.prepare(
+      `UPDATE ${tabel} SET ${namen.map((naam) => `${naam} = ?`).join(', ')}${
+        MET_UPDATED_AT.has(tabel) ? ', updated_at = CURRENT_TIMESTAMP' : ''
+      } WHERE id = ? AND association_id = ?`,
+    ).run(...waarden, id, associationId);
+    aantal++;
+  }
+  return aantal;
 }

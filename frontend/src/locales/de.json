@@ -6024,7 +6024,9 @@
       "bestaat_one": "{{count}} bereits vorhanden",
       "bestaat_other": "{{count}} bereits vorhanden",
       "fout_one": "{{count}} mit Fehler",
-      "fout_other": "{{count}} mit Fehler"
+      "fout_other": "{{count}} mit Fehler",
+      "bijwerken_one": "{{count}} wird aktualisiert",
+      "bijwerken_other": "{{count}} werden aktualisiert"
     },
     "herkend": "Gelesene Spalten: {{kolommen}}.",
     "genegeerd": "Nicht gelesen: {{kolommen}}.",
@@ -6040,7 +6042,8 @@
     "status": {
       "nieuw": "Neu",
       "bestaat": "Bereits vorhanden",
-      "fout": "Fehler"
+      "fout": "Fehler",
+      "bijwerken": "Aktualisieren"
     },
     "kolom": {
       "rij": "Zeile",
@@ -6099,6 +6102,49 @@
       "lost": "Verloren",
       "sold": "Verkauft"
     },
-    "aantalVan": "{{nieuw}} von {{aantal}}"
+    "aantalVan": "{{nieuw}} von {{aantal}}",
+    "bijwerken": "Vorhandene Daten mit dem aktualisieren, was in der Datei anders ist. Eine leere Zelle löscht nichts.",
+    "bijgewerkt_one": "{{count}} Zeile aktualisiert.",
+    "bijgewerkt_other": "{{count}} Zeilen aktualisiert.",
+    "veld": {
+      "naam": "Name",
+      "soort": "Art",
+      "categorie": "Kategorie",
+      "merk": "Marke",
+      "model": "Modell",
+      "bouwjaar": "Baujahr",
+      "aankoopdatum": "Kaufdatum",
+      "aankoopprijs": "Kaufpreis",
+      "waarde": "Wert",
+      "status": "Status",
+      "staat": "Zustand",
+      "locatie": "Standort",
+      "opmerkingen": "Bemerkungen",
+      "serienummer": "Seriennummer",
+      "opslag": "Lagerort",
+      "garantieTot": "Garantie bis",
+      "onderhoudsinterval": "Wartungsintervall (Monate)",
+      "laatsteOnderhoud": "Letzte Wartung",
+      "volgendOnderhoud": "Nächste Wartung",
+      "uitleenbaar": "Ausleihbar",
+      "voornaam": "Vorname",
+      "achternaam": "Nachname",
+      "priveEmail": "Private E-Mail",
+      "componist": "Komponist",
+      "duur": "Dauer",
+      "graad": "Grad",
+      "contactpersoon": "Ansprechpartner",
+      "email": "E-Mail",
+      "telefoon": "Telefon",
+      "mobiel": "Mobil",
+      "adres": "Adresse",
+      "postcode": "Postleitzahl",
+      "plaats": "Ort",
+      "land": "Land",
+      "iban": "IBAN",
+      "website": "Webseite",
+      "kvk": "Handelsregisternummer",
+      "btw": "USt-IdNr."
+    }
   }
 }

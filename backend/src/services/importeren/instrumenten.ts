@@ -6,23 +6,32 @@
  * Een instrument bestaat al als de vereniging een instrument heeft met
  * hetzelfde serienummer. Zonder serienummer is de naam de sleutel
  * ("Trompet 3"): een vereniging nummert haar instrumenten zo meestal zelf.
+ *
+ * Met `bijwerken` krijgt een bestaand instrument wat in het bestand anders is;
+ * zie `bepaalWijzigingen` in gemeenschappelijk.ts.
  */
 
 import { v4 as uuidv4 } from 'uuid';
 import db from '../../database/connection';
 import { withTransaction } from '../../utils/database';
 import {
+  bepaalWijzigingen,
   herkenKolommen,
   lees,
   leesBedrag,
   leesDatum,
   maakKeuze,
   tel,
+  werkBij,
   type Beoordeling,
+  type Bijwerkbaar,
+  type Bijwerking,
+  type ImportOpties,
   type ImportUitkomst,
   type RegelStatus,
   type Veld,
   type Voorbeeld,
+  type Wijziging,
 } from './gemeenschappelijk';
 
 const INSTRUMENTVELDEN: Record<string, Veld> = {
@@ -95,18 +104,38 @@ export interface InstrumentGegevens {
 /** Tekstvelden langer dan dit worden afgekapt met een waarschuwing, behalve opmerkingen. */
 const MAX_TEKST = 255;
 
-function beoordeelInstrumentenIntern(associationId: string, csv: string) {
+/** Per veld de kolom in instrument_assets, voor het bijwerken. */
+const KOLOM: Record<string, string> = {
+  naam: 'name',
+  soort: 'instrument_type',
+  categorie: 'category',
+  merk: 'brand',
+  model: 'model',
+  bouwjaar: 'year_manufactured',
+  aankoopdatum: 'purchase_date',
+  aankoopprijs: 'purchase_price',
+  waarde: 'current_value',
+  status: 'status',
+  staat: 'condition',
+  locatie: 'location',
+  opmerkingen: 'notes',
+};
+
+function beoordeelInstrumentenIntern(associationId: string, csv: string, opties: ImportOpties = {}) {
   const { kopregel, rijen } = lees(csv);
   const { index, kolommen, genegeerd } = herkenKolommen(kopregel, INSTRUMENTVELDEN);
   const cel = (rij: string[], veld: string) => (index[veld] === undefined ? '' : (rij[index[veld]] ?? '').trim());
 
   const bestaand = db
-    .prepare(
-      'SELECT LOWER(name) AS naam, LOWER(serial_number) AS serie FROM instrument_assets WHERE association_id = ? AND deleted_at IS NULL',
-    )
-    .all(associationId) as { naam: string; serie: string | null }[];
-  const bestaandeSeries = new Set(bestaand.map((b) => b.serie).filter((s): s is string => !!s));
-  const bestaandeNamen = new Set(bestaand.map((b) => b.naam));
+    .prepare('SELECT * FROM instrument_assets WHERE association_id = ? AND deleted_at IS NULL')
+    .all(associationId) as Record<string, unknown>[];
+  const bestaandeSeries = new Map<string, Record<string, unknown>>();
+  const bestaandeNamen = new Map<string, Record<string, unknown>>();
+  for (const rij of bestaand) {
+    if (rij.serial_number) bestaandeSeries.set(String(rij.serial_number).toLowerCase(), rij);
+    bestaandeNamen.set(String(rij.name).toLowerCase(), rij);
+  }
+  const bijwerkingen: Bijwerking[] = [];
 
   const dezeJaar = new Date().getFullYear();
   const gezienSerie = new Set<string>();
@@ -189,28 +218,63 @@ function beoordeelInstrumentenIntern(associationId: string, csv: string) {
     };
 
     let uitkomst: RegelStatus = 'nieuw';
+    let gevonden: Record<string, unknown> | undefined;
     const serie = gegevens.serienummer?.toLowerCase();
     const naamSleutel = naam.toLowerCase();
     if (serie) {
       if (gezienSerie.has(serie)) fouten.push('Dit serienummer staat eerder in het bestand.');
-      else if (bestaandeSeries.has(serie)) uitkomst = 'bestaat';
+      else gevonden = bestaandeSeries.get(serie);
       gezienSerie.add(serie);
     } else if (naam) {
       if (gezienNaam.has(naamSleutel))
         fouten.push('Een instrument zonder serienummer met deze naam staat eerder in het bestand.');
-      else if (bestaandeNamen.has(naamSleutel)) uitkomst = 'bestaat';
+      else gevonden = bestaandeNamen.get(naamSleutel);
       gezienNaam.add(naamSleutel);
     }
-    if (fouten.length > 0) uitkomst = 'fout';
+    if (gevonden) uitkomst = 'bestaat';
 
-    return { rij: i + 2, status: uitkomst, gegevens, fouten, waarschuwingen };
+    let wijzigingen: Wijziging[] | undefined;
+    if (fouten.length > 0) uitkomst = 'fout';
+    else if (gevonden && opties.bijwerken) {
+      // Alleen wat ingevuld is en gelezen kon worden; een keuze die onbekend
+      // was (en dus de standaardwaarde kreeg) laat het oude staan.
+      const gelezen = <T>(veld: string, lezer: (t: string) => T | undefined) =>
+        cel(rij, veld) ? (lezer(cel(rij, veld)) ?? null) : null;
+      const velden: Bijwerkbaar[] = [
+        { veld: 'naam', kolom: KOLOM.naam, waarde: serie ? naam || null : null },
+        { veld: 'soort', kolom: KOLOM.soort, waarde: soort || null },
+        { veld: 'categorie', kolom: KOLOM.categorie, waarde: gelezen('categorie', categorie) },
+        { veld: 'merk', kolom: KOLOM.merk, waarde: gegevens.merk },
+        { veld: 'model', kolom: KOLOM.model, waarde: gegevens.model },
+        { veld: 'bouwjaar', kolom: KOLOM.bouwjaar, waarde: gegevens.bouwjaar },
+        { veld: 'aankoopdatum', kolom: KOLOM.aankoopdatum, waarde: gegevens.aankoopdatum },
+        { veld: 'aankoopprijs', kolom: KOLOM.aankoopprijs, waarde: gegevens.aankoopprijs },
+        { veld: 'waarde', kolom: KOLOM.waarde, waarde: gegevens.waarde },
+        { veld: 'status', kolom: KOLOM.status, waarde: gelezen('status', status) },
+        { veld: 'staat', kolom: KOLOM.staat, waarde: gelezen('staat', staat) },
+        { veld: 'locatie', kolom: KOLOM.locatie, waarde: gegevens.locatie },
+        { veld: 'opmerkingen', kolom: KOLOM.opmerkingen, waarde: gegevens.opmerkingen },
+      ];
+      const uitkomstWijziging = bepaalWijzigingen(String(gevonden.id), gevonden, velden);
+      if (uitkomstWijziging.wijzigingen.length > 0) {
+        uitkomst = 'bijwerken';
+        wijzigingen = uitkomstWijziging.wijzigingen;
+        bijwerkingen.push(uitkomstWijziging.bijwerking);
+      }
+    }
+
+    return { rij: i + 2, status: uitkomst, gegevens, fouten, waarschuwingen, ...(wijzigingen && { wijzigingen }) };
   });
 
-  return { kolommen, genegeerd, regels };
+  return { kolommen, genegeerd, regels, bijwerkingen };
 }
 
-export function beoordeelInstrumenten(associationId: string, csv: string): Voorbeeld<InstrumentGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelInstrumentenIntern(associationId, csv);
+export function beoordeelInstrumenten(
+  associationId: string,
+  csv: string,
+  opties: ImportOpties = {},
+): Voorbeeld<InstrumentGegevens> {
+  const { kolommen, genegeerd, regels } = beoordeelInstrumentenIntern(associationId, csv, opties);
   return { kolommen, genegeerd, regels, tellingen: tel(regels) };
 }
 
@@ -218,11 +282,14 @@ export function importeerInstrumenten(
   associationId: string,
   gebruikerId: string,
   csv: string,
+  opties: ImportOpties = {},
 ): ImportUitkomst<InstrumentGegevens> {
-  const { kolommen, genegeerd, regels } = beoordeelInstrumentenIntern(associationId, csv);
+  const { kolommen, genegeerd, regels, bijwerkingen } = beoordeelInstrumentenIntern(associationId, csv, opties);
   const nieuw = regels.filter((regel) => regel.status === 'nieuw');
+  let bijgewerkt = 0;
 
   withTransaction(() => {
+    bijgewerkt = werkBij('instrument_assets', associationId, bijwerkingen);
     const invoegen = db.prepare(
       `INSERT INTO instrument_assets (
          id, association_id, name, instrument_type, category, brand, model, serial_number,
@@ -253,5 +320,5 @@ export function importeerInstrumenten(
     }
   });
 
-  return { kolommen, genegeerd, regels, tellingen: tel(regels), geimporteerd: nieuw.length };
+  return { kolommen, genegeerd, regels, tellingen: tel(regels), geimporteerd: nieuw.length, bijgewerkt };
 }

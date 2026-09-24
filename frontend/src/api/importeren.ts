@@ -11,7 +11,14 @@ import api from './client';
 
 export type ImportSoort = 'leden' | 'muziektitels' | 'instrumenten' | 'contacten' | 'uniformen' | 'apparatuur';
 
-export type RegelStatus = 'nieuw' | 'bestaat' | 'fout';
+export type RegelStatus = 'nieuw' | 'bestaat' | 'bijwerken' | 'fout';
+
+/** Een veld van een bestaande rij dat de import verandert. */
+export interface Wijziging {
+  veld: string;
+  oud: string | number | boolean | null;
+  nieuw: string | number | boolean | null;
+}
 
 export interface LidGegevens {
   voornaam: string;
@@ -117,6 +124,8 @@ export interface Beoordeling<T> {
   gegevens: T;
   fouten: string[];
   waarschuwingen: string[];
+  /** Bij `bijwerken`: wat er verandert. */
+  wijzigingen?: Wijziging[];
 }
 
 export interface ImportVoorbeeld<T> {
@@ -128,6 +137,12 @@ export interface ImportVoorbeeld<T> {
 
 export interface ImportUitkomst<T> extends ImportVoorbeeld<T> {
   geimporteerd: number;
+  bijgewerkt: number;
+}
+
+export interface ImportOpties {
+  /** Bestaande rijen bijwerken met wat in het bestand anders is. Uniformen negeren dit. */
+  bijwerken?: boolean;
 }
 
 export type GegevensVan<S extends ImportSoort> = {
@@ -142,15 +157,17 @@ export type GegevensVan<S extends ImportSoort> = {
 export const bekijkImport = async <S extends ImportSoort>(
   soort: S,
   csv: string,
+  opties: ImportOpties = {},
 ): Promise<ImportVoorbeeld<GegevensVan<S>>> => {
-  const { data } = await api.post(`/import/${soort}/voorbeeld`, { csv });
+  const { data } = await api.post(`/import/${soort}/voorbeeld`, { csv, ...opties });
   return data;
 };
 
 export const voerImportUit = async <S extends ImportSoort>(
   soort: S,
   csv: string,
+  opties: ImportOpties = {},
 ): Promise<ImportUitkomst<GegevensVan<S>>> => {
-  const { data } = await api.post(`/import/${soort}`, { csv });
+  const { data } = await api.post(`/import/${soort}`, { csv, ...opties });
   return data;
 };

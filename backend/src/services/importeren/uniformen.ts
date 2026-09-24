@@ -382,5 +382,5 @@ export function importeerUniformen(associationId: string, csv: string): ImportUi
   });
 
   const openbaar = zonderDrager(regels);
-  return { kolommen, genegeerd, regels: openbaar, tellingen: tel(openbaar), geimporteerd };
+  return { kolommen, genegeerd, regels: openbaar, tellingen: tel(openbaar), geimporteerd, bijgewerkt: 0 };
 }

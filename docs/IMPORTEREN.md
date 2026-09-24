@@ -21,19 +21,49 @@ soort er niet, ook niet via de API.
 2. Kies het bestand. Je ziet per regel wat er gaat gebeuren; er verandert nog
    niets.
 3. Klik op importeren. De server beoordeelt het bestand opnieuw en neemt de
-   regels over die `nieuw` zijn.
+   regels over die `nieuw` zijn, en met _Bestaande gegevens bijwerken_ ook de
+   regels die `bijwerken` zijn.
 
 Per regel is de uitkomst:
 
-| Uitkomst | Betekenis                         |
-| -------- | --------------------------------- |
-| Nieuw    | Wordt geïmporteerd                |
-| Bestaat  | Staat er al en wordt overgeslagen |
-| Fout     | Kan niet, met de reden erbij      |
+| Uitkomst  | Betekenis                                    |
+| --------- | -------------------------------------------- |
+| Nieuw     | Wordt geïmporteerd                           |
+| Bestaat   | Staat er al en wordt overgeslagen            |
+| Bijwerken | Staat er al; wat anders is wordt overgenomen |
+| Fout      | Kan niet, met de reden erbij                 |
 
 Een waarschuwing houdt een regel niet tegen. Het gegeven waar hij over gaat valt
 dan weg, bijvoorbeeld een instrument dat Tutti niet kent. Twee keer hetzelfde
 bestand importeren is dus veilig: de tweede keer is alles `bestaat`.
+
+### Bestaande gegevens bijwerken
+
+Vink _Bestaande gegevens bijwerken_ aan om rijen die er al zijn bij te werken
+met wat in het bestand anders is: een nieuw telefoonnummer, een instrument dat
+naar een andere kast is verhuisd. Het voorbeeld toont per regel welk veld van
+wat naar wat gaat; een regel waarin niets verschilt blijft `bestaat`.
+
+- **Een lege cel wist niets.** Staat het merk niet in het bestand, dan blijft
+  het merk dat er was. Leegmaken doe je in het scherm.
+- **Een waarde die niet te lezen is, laat het oude staan.** Een onbekende
+  status of een bedrag als `veel` is een waarschuwing, en wordt niet de
+  standaardwaarde.
+- **De sleutel verandert niet.** Wat bepaalt dat een regel al bestaat (het
+  e-mailadres, het serienummer, de titel met arrangeur) blijft hetzelfde; wat
+  erna komt kan wel veranderen. Een instrument dat op serienummer is gevonden,
+  kan zo een andere naam krijgen.
+- **Wat je kunt bijwerken:**
+  - _Leden:_ voornaam, achternaam en privé-e-mail. De rol niet: die verandert
+    wat iemand mag, en dat beslist een beheerder per persoon. Een lid dat ook
+    bij een andere vereniging hoort, wordt niet bijgewerkt; zijn naam is daar
+    ook zichtbaar.
+  - _Muziekbibliotheek:_ componist, duur en graad. Genres niet.
+  - _Instrumenten en apparatuur:_ alle velden behalve de categorie van
+    apparatuur. Verandert het laatste onderhoud of het interval, dan wordt het
+    volgende onderhoud opnieuw uitgerekend.
+  - _Contacten:_ alle velden behalve de categorieën.
+  - _Uniformen_ kunnen niet bijgewerkt worden: ze hebben geen sleutel.
 
 ## Het bestand
 
@@ -232,8 +262,8 @@ instrument is. Instrumenten hebben hun eigen soort hierboven.
 ## Wat (nog) niet kan
 
 - Concertkleding importeren.
-- Een bestaand lid of een bestaande titel bijwerken vanuit een spreadsheet: een
-  import voegt alleen toe.
+- Iets leegmaken of weghalen vanuit een spreadsheet, en genres, categorieën,
+  instrumenten of orkesten van bestaande rijen bijwerken.
 - Onbekende orkesten, instrumenten of genres laten aanmaken.
 
 De techniek staat in `backend/src/services/importeren/` en

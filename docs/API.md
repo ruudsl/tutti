@@ -1407,10 +1407,12 @@ Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en appa
 De body is het bestand als tekst, hooguit 5 MB en 2000 regels:
 
 ```json
-{ "csv": "Voornaam;Achternaam;E-mail\nAnna;Jansen;anna@voorbeeld.nl\n" }
+{ "csv": "Voornaam;Achternaam;E-mail\nAnna;Jansen;anna@voorbeeld.nl\n", "bijwerken": false }
 ```
 
-Het antwoord geeft per regel de uitkomst. De import beoordeelt het bestand opnieuw en voegt `geimporteerd` toe; hij antwoordt `201` als er iets is geïmporteerd, anders `200`.
+Met `"bijwerken": true` krijgen bestaande rijen wat in het bestand anders is: zulke regels hebben de status `bijwerken` en een lijst `wijzigingen` (`{ "veld", "oud", "nieuw" }`). Een lege cel wist niets. Uniformen negeren de optie. Zie [IMPORTEREN.md](./IMPORTEREN.md#bestaande-gegevens-bijwerken) voor wat per soort kan.
+
+Het antwoord geeft per regel de uitkomst. De import beoordeelt het bestand opnieuw en voegt `geimporteerd` en `bijgewerkt` toe; hij antwoordt `201` als er iets is geïmporteerd, anders `200`.
 
 ```json
 {
@@ -1425,8 +1427,9 @@ Het antwoord geeft per regel de uitkomst. De import beoordeelt het bestand opnie
       "waarschuwingen": []
     }
   ],
-  "tellingen": { "nieuw": 1, "bestaat": 0, "fout": 0 },
-  "geimporteerd": 1
+  "tellingen": { "nieuw": 1, "bestaat": 0, "bijwerken": 0, "fout": 0 },
+  "geimporteerd": 1,
+  "bijgewerkt": 0
 }
 ```
 

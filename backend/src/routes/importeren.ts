@@ -46,14 +46,19 @@ router.use(authenticateToken);
 // JSON-parser.
 const bestandSchema = z.object({
   csv: z.string().min(1, 'Het bestand is leeg.').max(MAX_TEKENS, 'Het bestand is groter dan 5 MB.'),
+  // Bestaande rijen bijwerken met wat in het bestand anders is. Uniformen
+  // hebben geen sleutel en negeren dit.
+  bijwerken: z.boolean().optional(),
 });
+
+const opties = (req: AuthRequest) => ({ bijwerken: req.body.bijwerken === true });
 
 router.post(
   '/leden/voorbeeld',
   requireRole('admin'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(beoordeelLeden(req.user!.associationId!, req.body.csv));
+    res.json(beoordeelLeden(req.user!.associationId!, req.body.csv, opties(req)));
   }),
 );
 
@@ -62,17 +67,17 @@ router.post(
   requireRole('admin'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const uitkomst = await importeerLeden(req.user!.associationId!, req.body.csv);
+    const uitkomst = await importeerLeden(req.user!.associationId!, req.body.csv, opties(req));
 
     // Aantallen, geen namen of adressen: het auditlog bewaart geen
     // persoonsgegevens van wie er binnenkwam.
-    if (uitkomst.geimporteerd > 0) {
+    if (uitkomst.geimporteerd > 0 || uitkomst.bijgewerkt > 0) {
       logAuditEvent(
         req.user!.id,
         'import',
         'user',
         uuidv4(),
-        `${uitkomst.geimporteerd} leden uit een spreadsheet`,
+        `${uitkomst.geimporteerd} leden uit een spreadsheet, ${uitkomst.bijgewerkt} bijgewerkt`,
         uitkomst.tellingen,
         req.ip,
         req.get('user-agent'),
@@ -88,7 +93,7 @@ router.post(
   requireRole('admin', 'music_committee'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(beoordeelTitels(req.user!.associationId!, req.body.csv));
+    res.json(beoordeelTitels(req.user!.associationId!, req.body.csv, opties(req)));
   }),
 );
 
@@ -97,15 +102,15 @@ router.post(
   requireRole('admin', 'music_committee'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const uitkomst = importeerTitels(req.user!.associationId!, req.body.csv);
+    const uitkomst = importeerTitels(req.user!.associationId!, req.body.csv, opties(req));
 
-    if (uitkomst.geimporteerd > 0) {
+    if (uitkomst.geimporteerd > 0 || uitkomst.bijgewerkt > 0) {
       logAuditEvent(
         req.user!.id,
         'import',
         'music_title',
         uuidv4(),
-        `${uitkomst.geimporteerd} muziektitels uit een spreadsheet`,
+        `${uitkomst.geimporteerd} muziektitels uit een spreadsheet, ${uitkomst.bijgewerkt} bijgewerkt`,
         uitkomst.tellingen,
         req.ip,
         req.get('user-agent'),
@@ -121,7 +126,7 @@ router.post(
   requireRole('admin', 'equipment_committee'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(beoordeelInstrumenten(req.user!.associationId!, req.body.csv));
+    res.json(beoordeelInstrumenten(req.user!.associationId!, req.body.csv, opties(req)));
   }),
 );
 
@@ -130,14 +135,14 @@ router.post(
   requireRole('admin', 'equipment_committee'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const uitkomst = importeerInstrumenten(req.user!.associationId!, req.user!.id, req.body.csv);
-    if (uitkomst.geimporteerd > 0) {
+    const uitkomst = importeerInstrumenten(req.user!.associationId!, req.user!.id, req.body.csv, opties(req));
+    if (uitkomst.geimporteerd > 0 || uitkomst.bijgewerkt > 0) {
       logAuditEvent(
         req.user!.id,
         'import',
         'instrument_asset',
         uuidv4(),
-        `${uitkomst.geimporteerd} instrumenten uit een spreadsheet`,
+        `${uitkomst.geimporteerd} instrumenten uit een spreadsheet, ${uitkomst.bijgewerkt} bijgewerkt`,
         uitkomst.tellingen,
         req.ip,
         req.get('user-agent'),
@@ -153,7 +158,7 @@ router.post(
   requireRole('admin', 'music_committee'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(beoordeelContacten(req.user!.associationId!, req.body.csv));
+    res.json(beoordeelContacten(req.user!.associationId!, req.body.csv, opties(req)));
   }),
 );
 
@@ -162,14 +167,14 @@ router.post(
   requireRole('admin', 'music_committee'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const uitkomst = importeerContacten(req.user!.associationId!, req.user!.id, req.body.csv);
-    if (uitkomst.geimporteerd > 0) {
+    const uitkomst = importeerContacten(req.user!.associationId!, req.user!.id, req.body.csv, opties(req));
+    if (uitkomst.geimporteerd > 0 || uitkomst.bijgewerkt > 0) {
       logAuditEvent(
         req.user!.id,
         'import',
         'contact',
         uuidv4(),
-        `${uitkomst.geimporteerd} contacten uit een spreadsheet`,
+        `${uitkomst.geimporteerd} contacten uit een spreadsheet, ${uitkomst.bijgewerkt} bijgewerkt`,
         uitkomst.tellingen,
         req.ip,
         req.get('user-agent'),
@@ -217,7 +222,7 @@ router.post(
   requireRole('admin', 'equipment_committee'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(beoordeelApparatuur(req.user!.associationId!, req.body.csv));
+    res.json(beoordeelApparatuur(req.user!.associationId!, req.body.csv, opties(req)));
   }),
 );
 
@@ -226,14 +231,14 @@ router.post(
   requireRole('admin', 'equipment_committee'),
   validate(bestandSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const uitkomst = importeerApparatuur(req.user!.associationId!, req.body.csv);
-    if (uitkomst.geimporteerd > 0) {
+    const uitkomst = importeerApparatuur(req.user!.associationId!, req.body.csv, opties(req));
+    if (uitkomst.geimporteerd > 0 || uitkomst.bijgewerkt > 0) {
       logAuditEvent(
         req.user!.id,
         'import',
         'equipment_item',
         uuidv4(),
-        `${uitkomst.geimporteerd} stuks apparatuur uit een spreadsheet`,
+        `${uitkomst.geimporteerd} stuks apparatuur uit een spreadsheet, ${uitkomst.bijgewerkt} bijgewerkt`,
         uitkomst.tellingen,
         req.ip,
         req.get('user-agent'),

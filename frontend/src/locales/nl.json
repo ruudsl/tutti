@@ -6024,7 +6024,9 @@
       "bestaat_one": "{{count}} bestaat al",
       "bestaat_other": "{{count}} bestaan al",
       "fout_one": "{{count}} met een fout",
-      "fout_other": "{{count}} met een fout"
+      "fout_other": "{{count}} met een fout",
+      "bijwerken_one": "{{count}} wordt bijgewerkt",
+      "bijwerken_other": "{{count}} worden bijgewerkt"
     },
     "herkend": "Gelezen kolommen: {{kolommen}}.",
     "genegeerd": "Niet gelezen: {{kolommen}}.",
@@ -6040,7 +6042,8 @@
     "status": {
       "nieuw": "Nieuw",
       "bestaat": "Bestaat al",
-      "fout": "Fout"
+      "fout": "Fout",
+      "bijwerken": "Bijwerken"
     },
     "kolom": {
       "rij": "Rij",
@@ -6099,6 +6102,49 @@
       "lost": "Kwijt",
       "sold": "Verkocht"
     },
-    "aantalVan": "{{nieuw}} van {{aantal}}"
+    "aantalVan": "{{nieuw}} van {{aantal}}",
+    "bijwerken": "Bestaande gegevens bijwerken met wat in het bestand anders is. Een lege cel wist niets.",
+    "bijgewerkt_one": "{{count}} regel bijgewerkt.",
+    "bijgewerkt_other": "{{count}} regels bijgewerkt.",
+    "veld": {
+      "naam": "Naam",
+      "soort": "Soort",
+      "categorie": "Categorie",
+      "merk": "Merk",
+      "model": "Model",
+      "bouwjaar": "Bouwjaar",
+      "aankoopdatum": "Aankoopdatum",
+      "aankoopprijs": "Aankoopprijs",
+      "waarde": "Waarde",
+      "status": "Status",
+      "staat": "Staat",
+      "locatie": "Locatie",
+      "opmerkingen": "Opmerkingen",
+      "serienummer": "Serienummer",
+      "opslag": "Opslag",
+      "garantieTot": "Garantie tot",
+      "onderhoudsinterval": "Onderhoudsinterval (maanden)",
+      "laatsteOnderhoud": "Laatste onderhoud",
+      "volgendOnderhoud": "Volgend onderhoud",
+      "uitleenbaar": "Uitleenbaar",
+      "voornaam": "Voornaam",
+      "achternaam": "Achternaam",
+      "priveEmail": "Privé-e-mail",
+      "componist": "Componist",
+      "duur": "Duur",
+      "graad": "Graad",
+      "contactpersoon": "Contactpersoon",
+      "email": "E-mail",
+      "telefoon": "Telefoon",
+      "mobiel": "Mobiel",
+      "adres": "Adres",
+      "postcode": "Postcode",
+      "plaats": "Plaats",
+      "land": "Land",
+      "iban": "IBAN",
+      "website": "Website",
+      "kvk": "KvK-nummer",
+      "btw": "Btw-nummer"
+    }
   }
 }
