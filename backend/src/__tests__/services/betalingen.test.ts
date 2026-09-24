@@ -606,7 +606,7 @@ describe('Mollie-webhook: de body wordt niet vertrouwd', () => {
     const { handleMollieWebhook } = await laadBetalingen({ MOLLIE_API_KEY: MOLLIE_SLEUTEL });
 
     expect((await handleMollieWebhook('')).success).toBe(false);
-    expect((await handleMollieWebhook('t'.repeat(65))).success).toBe(false);
+    expect((await handleMollieWebhook('t'.repeat(256))).success).toBe(false);
     expect(nep).not.toHaveBeenCalled();
   });
 
@@ -1255,18 +1255,26 @@ describe('Storingen bij het opvragen van een status', () => {
     expect(nep).not.toHaveBeenCalled();
   });
 
-  it('weigert een betaalkenmerk langer dan vierenzestig tekens', async () => {
+  it('vraagt de status op van een sessiekenmerk zo lang als Stripe het uitdeelt', async () => {
+    // Stripe-sessiekenmerken zijn cs_test_ plus een lange reeks. Tot september
+    // 2026 viel alles boven de 64 tekens af: dan kwam er stilzwijgend null
+    // terug, 'geen gegevens' in de beheerweergave en 'Refund service
+    // unavailable' bij een terugbetaling. De grens is nu die van Stripe, 255.
+    const sessie = `cs_test_${'a'.repeat(58)}`;
+    const nep = netwerk(antwoord(200, { id: sessie, payment_status: 'paid', amount_total: 100 }));
+    const { getPaymentStatus } = await laadBetalingen({ STRIPE_SECRET_KEY: STRIPE_SLEUTEL });
+
+    const status = await getPaymentStatus(sessie);
+
+    expect(String(nep.mock.calls[0][0])).toBe(`https://api.stripe.com/v1/checkout/sessions/${sessie}`);
+    expect(status?.status).toBe('paid');
+  });
+
+  it('weigert een betaalkenmerk langer dan de 255 tekens van Stripe', async () => {
     const nep = netwerk(antwoord(200, { id: 'cs_1', payment_status: 'paid', amount_total: 100 }));
     const { getPaymentStatus } = await laadBetalingen({ STRIPE_SECRET_KEY: STRIPE_SLEUTEL });
 
-    // BEVINDING - vastgelegd zoals het NU is. Stripe-sessiekenmerken zijn in de
-    // praktijk lang (cs_test_ gevolgd door een lange reeks). Een kenmerk van
-    // 65 tekens wordt hier geweigerd en levert stilzwijgend null op, wat in de
-    // beheerweergave 'geen gegevens' oplevert en bij een terugbetaling
-    // 'Refund service unavailable'. Niet gerepareerd: de grens verruimen raakt
-    // een invoercontrole die er niet voor niets staat, en zonder een echt
-    // Stripe-kenmerk naast me kan ik niet vaststellen welke grens klopt.
-    expect(await getPaymentStatus(`cs_test_${'a'.repeat(57)}`)).toBeNull();
+    expect(await getPaymentStatus(`cs_test_${'a'.repeat(248)}`)).toBeNull();
     expect(nep).not.toHaveBeenCalled();
   });
 });

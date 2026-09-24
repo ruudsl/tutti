@@ -53,6 +53,7 @@ const routeConfig: Record<string, { labelKey: string; parent?: string }> = {
   '/changelog': { labelKey: 'nav.changelog', parent: '/' },
   '/uniforms': { labelKey: 'nav.uniforms', parent: '/' },
   '/entra-sync': { labelKey: 'nav.entraSync', parent: '/' },
+  '/importeren': { labelKey: 'nav.importeren', parent: '/' },
   '/onboarding': { labelKey: 'nav.onboarding', parent: '/' },
   '/user-guide': { labelKey: 'userGuide.title', parent: '/' },
   '/audit-logs': { labelKey: 'auditLogs.title', parent: '/' },

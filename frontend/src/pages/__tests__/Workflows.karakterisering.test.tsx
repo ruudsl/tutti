@@ -318,6 +318,31 @@ describe('workflowpagina - het detailvenster', () => {
     expect(gegevens).toMatchObject({ triggerType: 'event', eventName: 'concert.created' });
   });
 
+  it('biedt bij een nieuwe trigger alleen handmatig en event aan', async () => {
+    // Gepland en Datumveld gaan niet vanzelf af sinds de planner in september
+    // 2026 is weggehaald; een beheerder hoort ze niet meer te kunnen instellen.
+    const venster = await openDetail();
+
+    await userEvent.click(within(venster).getByRole('button', { name: /workflows\.addTrigger/ }));
+    const keuze = within(venster).getByDisplayValue('workflows.triggerType.manual') as HTMLSelectElement;
+
+    expect([...keuze.options].map((o) => o.value)).toEqual(['manual', 'event']);
+  });
+
+  it('zegt bij een bestaande geplande trigger dat hij niet vanzelf afgaat', async () => {
+    const venster = await openDetail();
+
+    expect(within(rijMet(venster, '0 9 * * 1')).getByText('workflows.nietAutomatisch')).toBeInTheDocument();
+    expect(
+      within(rijMet(venster, 'rehearsal.created')).queryByText('workflows.nietAutomatisch'),
+    ).not.toBeInTheDocument();
+
+    // Bewerken blijft kunnen, met de uitleg erbij.
+    await userEvent.click(within(rijMet(venster, '0 9 * * 1')).getByTitle('common.edit'));
+    expect(within(venster).getByDisplayValue('workflows.triggerType.schedule')).toBeInTheDocument();
+    expect(within(venster).getByText('workflows.nietAutomatischUitleg')).toBeInTheDocument();
+  });
+
   it('laat het toevoegformulier weer los bij annuleren', async () => {
     const venster = await openDetail();
 
@@ -460,6 +485,13 @@ describe('workflowpagina - een workflow aanmaken', () => {
     return screen.findByRole('dialog');
   }
 
+  it('biedt bij een nieuwe workflow alleen handmatig en event als trigger aan', async () => {
+    const venster = await openAanmaken();
+
+    const keuze = within(venster).getByDisplayValue('workflows.triggerType.manual') as HTMLSelectElement;
+    expect([...keuze.options].map((o) => o.value)).toEqual(['manual', 'event']);
+  });
+
   it('verstuurt niets zolang de verplichte naam leeg is', async () => {
     const venster = await openAanmaken();
 
@@ -475,7 +507,7 @@ describe('workflowpagina - een workflow aanmaken', () => {
     const velden = within(venster).getAllByRole('textbox');
     await userEvent.type(velden[0], 'Verjaardagsmail');
     await userEvent.type(velden[1], 'Feliciteert leden op hun verjaardag');
-    await userEvent.selectOptions(within(venster).getByDisplayValue('workflows.triggerType.manual'), 'schedule');
+    await userEvent.selectOptions(within(venster).getByDisplayValue('workflows.triggerType.manual'), 'event');
     await userEvent.selectOptions(
       within(venster).getByDisplayValue('workflows.actionType.send_notification'),
       'send_email',
@@ -487,7 +519,7 @@ describe('workflowpagina - een workflow aanmaken', () => {
       name: 'Verjaardagsmail',
       description: 'Feliciteert leden op hun verjaardag',
       isActive: true,
-      triggers: [{ triggerType: 'schedule' }],
+      triggers: [{ triggerType: 'event' }],
       actions: [{ actionType: 'send_email', actionOrder: 0 }],
     });
   });

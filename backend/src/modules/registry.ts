@@ -120,7 +120,7 @@ export const MODULES: ModuleDefinition[] = [
     description:
       'Adresboek voor mensen buiten de vereniging: zalen, sponsoren, dirigenten van buiten. Zet dit uit als dat elders wordt bijgehouden.',
     defaultEnabled: false,
-    apiPrefixes: ['/contacts'],
+    apiPrefixes: ['/contacts', '/import/contacten'],
     navPaths: ['/contacts'],
   },
   {
@@ -160,7 +160,15 @@ export const MODULES: ModuleDefinition[] = [
     description:
       'Instrumenten, uniformen, apparatuur en concertkleding: wie heeft wat, in welke staat, en wanneer terug. Zet dit uit als de vereniging geen eigen bezit uitleent.',
     defaultEnabled: false,
-    apiPrefixes: ['/instrument-assets', '/instrument-insurance', '/uniforms', '/equipment', '/outfits', '/maintenance'],
+    apiPrefixes: [
+      '/instrument-assets',
+      '/instrument-insurance',
+      '/uniforms',
+      '/equipment',
+      '/outfits',
+      '/maintenance',
+      '/import/instrumenten',
+    ],
     navPaths: ['/instrument-assets', '/uniforms', '/equipment', '/outfits'],
   },
   {

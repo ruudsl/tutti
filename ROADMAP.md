@@ -58,12 +58,18 @@ pull request achterblijven.
    indruk dat verenigingen hun eigen betaalaccount kunnen instellen
 3. **`notificationChannels` geeft geen `associationId` door.** Of dat erbij moet
    hangt ervan af of een kanaal per vereniging verschilt
-4. **`controleerBetaalId` kapt af op 64 tekens.** Echte Stripe-sessie-id's zijn
-   langer, dus die worden geweigerd. Of dat erg is hangt ervan af of Stripe
-   ooit gebruikt gaat worden
-5. **`backend/src/database/migrations.ts` is dood gewicht** naast de echte
-   migratieloper. Weghalen is veilig, maar het is een bestand dat iemand ooit
-   met opzet heeft neergezet
+4. ~~`controleerBetaalId` kapt af op 64 tekens.~~ **Opgelost op 24-09-2026.**
+   De grens is nu die van Stripe, 255 tekens. Een echt sessiekenmerk
+   (`cs_test_` plus 58 tekens) leverde eerder stilzwijgend 'geen gegevens' op,
+   en bij een terugbetaling 'Refund service unavailable'. De test die de oude
+   grens vastlegde, legt nu de nieuwe vast
+5. ~~`backend/src/database/migrations.ts` is dood gewicht.~~ **Onjuist,
+   24-09-2026.** `database/connection.ts` roept bij elke start `runMigrations`
+   uit dat bestand aan, en die draait vijftien oudere, genummerde migraties
+   (tabel `schema_migrations`), met een eigen test in
+   `schema-migraties.test.ts`. Weghalen zou installaties breken die er nog niet
+   langs zijn gekomen. Het blijft staan; opruimen kan pas als die migraties in
+   de nieuwe loper zijn opgenomen
 6. **De captcha valt open bij een fout.** Gaat de controledienst plat, dan komt
    iedereen erdoor. Dat is bewust zo gelaten (een captcha die dichtvalt sluit
    bij een storing álle echte gebruikers buiten); vastgelegd in een test zodat
@@ -491,7 +497,7 @@ Gestructureerde pilot deployments:
 ### Deliverables
 
 - [ ] 2-3 live deployments
-- [ ] Import tooling voor spreadsheets/legacy data
+- [x] Import tooling voor spreadsheets/legacy data — _leden, muziekbibliotheek, instrumenten in bezit en contacten uit CSV, met eerst een voorbeeld per regel, 24-09-2026; zie `docs/IMPORTEREN.md`. Nog niet: materiaal, uniformen en concertkleding, en bijwerken van wat er al is_
 - [ ] Onboarding handleiding
 - [ ] Feedback rapport per pilot
 - [ ] Publieke case studies
@@ -583,7 +589,7 @@ status = 'wachtend'`; wordt het er meer, dan hoort dit werk na de
 - [x] Werker met sluis, herkansing en eindstation — _`backend/src/taken/wachtrij.ts`. Een niet-herhaalbare taak die door een herstart werd onderbroken, wordt niet opnieuw gedaan maar als mislukt gemarkeerd, met die reden erbij_
 - [x] De vier draaiende planners omgezet, en de twee verborgen opruimlussen in `routes/thumbnails.ts` en `routes/pdf-tools.ts` — _`backend/src/taken/index.ts`. Elke periodieke taak heeft een sleutel per tijdvak en draait daardoor één keer per vak, ook na een herstart. Dat was bij de AVG-opschoning niet zo: die draaide opnieuw als er binnen het opschoonuur werd uitgerold. En een mislukte back-up staat nu als mislukt in de wachtrij in plaats van alleen in het logboek_
 - [x] `workflow-runner` en `email-digest` aangezet of weggehaald, met een reden — _weggehaald, 24-09-2026, op keuze van de eigenaar. Ze zijn nooit gestart; aanzetten had leden een ongevraagde wekelijkse mail gestuurd en door beheerders ingestelde workflows zonder waarschuwing laten lopen. Het werk voor de workflows blijft in `services/workflowEngine.ts`, omdat de routes onder `/api/workflows/process/` het handmatig aftrappen_
-  - **Nog open, los hiervan:** het workflowscherm biedt de triggers _Gepland_ en _Datumveld_ nog aan. Die gingen al nooit vanzelf af, en doen dat nu ook niet. Weghalen uit het scherm of een taak in de wachtrij maken is een keuze voor later
+  - **Daarna, 24-09-2026:** het workflowscherm biedt de triggers _Gepland_ en _Datumveld_ niet meer aan bij een nieuwe trigger. Bestaande triggers van die soort blijven zichtbaar en te bewerken, met de melding dat ze niet vanzelf afgaan. De API accepteert ze nog, zodat bestaande triggers geldig blijven en met de hand af te trappen zijn
 - [x] `backgroundQueue.ts` vervangen of verwijderd — _verwijderd, met zijn test; hij werd nergens gebruikt en de wachtrij vervangt hem_
 - [x] Beheerscherm voor de wachtrij en de mislukte taken — _tabblad Achtergrondtaken op de superbeheerderspagina, met `GET /api/achtergrondtaken` en `POST /api/achtergrondtaken/:id/opnieuw`. Alleen superbeheerders: de taken van nu horen bij geen vereniging_
 - [x] Zwaar werk binnen een verzoek onderzocht — _gemeten en **niet** naar de wachtrij verplaatst, 24-09-2026. Terug te draaien als de afweging anders uitvalt_

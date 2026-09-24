@@ -138,4 +138,6 @@ waarschuwing gingen lopen.
 Komt een van de twee terug, dan als taak in deze wachtrij. Het werk voor de
 workflows staat nog in `services/workflowEngine.ts`
 (`processScheduledWorkflows`, `processDateFieldWorkflows`), omdat de routes
-onder `/api/workflows/process/` het per vereniging handmatig aftrappen.
+onder `/api/workflows/process/` het per vereniging handmatig aftrappen. Het
+workflowscherm biedt beide triggers niet meer aan bij een nieuwe trigger;
+bestaande staan er met de melding dat ze niet vanzelf afgaan.

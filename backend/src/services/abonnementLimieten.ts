@@ -81,6 +81,17 @@ export function bewaakLedenLimiet(associationId: string): void {
   }
 }
 
+/**
+ * Hoeveel leden er nog bij kunnen voordat de grens van het abonnement bereikt
+ * is, of `null` als er geen grens is. Voor een import van veel leden tegelijk,
+ * waar `bewaakLedenLimiet` per lid te laat zou zijn.
+ */
+export function ruimteVoorLeden(associationId: string): number | null {
+  const limiet = haalLimiet(associationId, 'max_members');
+  if (!isBegrensd(limiet)) return null;
+  return Math.max(0, limiet - telLeden(associationId));
+}
+
 /** Blokkeer het toevoegen van een orkest zodra de grens bereikt is. */
 export function bewaakOrkestLimiet(associationId: string): void {
   const limiet = haalLimiet(associationId, 'max_orchestras');

@@ -280,7 +280,8 @@
     "externalMusicians": "Externe Muzikanten",
     "replacementRequests": "Invalverzoeken",
     "musicSharing": "Muziek delen",
-    "mobileMenu": "Menu"
+    "mobileMenu": "Menu",
+    "importeren": "Importeren"
   },
   "roles": {
     "admin": "Beheerder",
@@ -3235,7 +3236,8 @@
     "users": "$t(users.title)",
     "voiceParts": "$t(nav.voiceParts)",
     "wiki": "$t(nav.wiki)",
-    "workflows": "$t(nav.workflows)"
+    "workflows": "$t(nav.workflows)",
+    "importeren": "$t(nav.importeren)"
   },
   "seating": {
     "title": "Orkestopstelling",
@@ -5244,7 +5246,9 @@
     "triggerTypeLabel": "Type trigger",
     "triggerUpdated": "Trigger bijgewerkt",
     "webhookMethod": "HTTP methode",
-    "webhookUrl": "Webhook URL"
+    "webhookUrl": "Webhook URL",
+    "nietAutomatisch": "Gaat niet vanzelf af",
+    "nietAutomatischUitleg": "Deze trigger gaat niet vanzelf af. Voer de workflow met de hand uit, of kies een trigger bij een event."
   },
   "gdprAdmin": {
     "title": "AVG Beheer",
@@ -5988,6 +5992,83 @@
       "database-back-up": "Back-up van de database",
       "miniaturen-opruimen": "Oude miniaturen opruimen",
       "pdf-tijdelijk-opruimen": "Tijdelijke pdf-bestanden opruimen"
+    }
+  },
+  "importeren": {
+    "titel": "Importeren uit een spreadsheet",
+    "soort": "Wat importeer je?",
+    "soorten": {
+      "leden": "Leden",
+      "muziektitels": "Muziekbibliotheek",
+      "instrumenten": "Instrumenten in bezit",
+      "contacten": "Contacten"
+    },
+    "uitleg": {
+      "leden": "Lees leden in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Leden die er al zijn, worden overgeslagen.",
+      "muziektitels": "Lees titels voor de muziekbibliotheek in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Titels die er al zijn, met dezelfde arrangeur, worden overgeslagen.",
+      "instrumenten": "Lees de instrumenten van de vereniging in uit een CSV-bestand. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Een instrument met hetzelfde serienummer, of zonder serienummer met dezelfde naam, wordt overgeslagen.",
+      "contacten": "Lees contacten in uit een CSV-bestand: leveranciers, zalen, sponsors. Je ziet eerst per regel wat er gebeurt; er verandert niets tot je op importeren klikt. Een contact met dezelfde naam wordt overgeslagen."
+    },
+    "kiesBestand": "Kies een CSV-bestand",
+    "sjabloon": "Voorbeeldbestand downloaden",
+    "alleenCsv": "Werk je in Excel? Kies Opslaan als en dan CSV. Kolomnamen in het Nederlands, Engels en Duits worden herkend.",
+    "bezigMetLezen": "Bestand wordt gelezen…",
+    "voorbeeldVan": "Voorbeeld van {{bestand}}",
+    "tellingen": "Aantallen per uitkomst",
+    "telling": {
+      "nieuw_one": "{{count}} nieuw",
+      "nieuw_other": "{{count}} nieuw",
+      "bestaat_one": "{{count}} bestaat al",
+      "bestaat_other": "{{count}} bestaan al",
+      "fout_one": "{{count}} met een fout",
+      "fout_other": "{{count}} met een fout"
+    },
+    "herkend": "Gelezen kolommen: {{kolommen}}.",
+    "genegeerd": "Niet gelezen: {{kolommen}}.",
+    "importeer_one": "{{count}} regel importeren",
+    "importeer_other": "{{count}} regels importeren",
+    "gelukt_one": "{{count}} regel geïmporteerd.",
+    "gelukt_other": "{{count}} regels geïmporteerd.",
+    "overgeslagen_one": "{{count}} bestond al en is overgeslagen.",
+    "overgeslagen_other": "{{count}} bestonden al en zijn overgeslagen.",
+    "nietGelukt_one": "{{count}} regel had een fout.",
+    "nietGelukt_other": "{{count}} regels hadden een fout.",
+    "wachtwoord": "Geïmporteerde leden krijgen geen mail en nog geen wachtwoord. Ze stellen er een in via \"Wachtwoord vergeten\" op het inlogscherm.",
+    "status": {
+      "nieuw": "Nieuw",
+      "bestaat": "Bestaat al",
+      "fout": "Fout"
+    },
+    "kolom": {
+      "rij": "Rij",
+      "status": "Uitkomst",
+      "naam": "Naam",
+      "email": "E-mail",
+      "rol": "Rol",
+      "instrumenten": "Instrumenten",
+      "orkesten": "Orkesten",
+      "titel": "Titel",
+      "componist": "Componist",
+      "arrangeur": "Arrangeur",
+      "duur": "Duur",
+      "graad": "Graad",
+      "meldingen": "Meldingen",
+      "soort": "Soort",
+      "merk": "Merk en model",
+      "serienummer": "Serienummer",
+      "instrumentStatus": "Status",
+      "contactsoort": "Soort",
+      "contactpersoon": "Contactpersoon",
+      "plaats": "Plaats"
+    },
+    "instrumentStatus": {
+      "available": "Beschikbaar",
+      "on_loan": "Uitgeleend",
+      "in_repair": "In reparatie",
+      "in_storage": "Opgeslagen",
+      "written_off": "Afgeschreven",
+      "sold": "Verkocht",
+      "lost": "Kwijt"
     }
   }
 }

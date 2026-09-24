@@ -124,6 +124,7 @@ const Modules = lui(() => import('./pages/Modules'));
 const ThemeSettings = lui(() => import('./pages/ThemeSettings'));
 const Changelog = lui(() => import('./pages/Changelog'));
 const EntraSync = lui(() => import('./pages/EntraSync'));
+const Importeren = lui(() => import('./pages/Importeren'));
 const Onboarding = lui(() => import('./pages/Onboarding'));
 
 // Rehearsals and events
@@ -660,6 +661,14 @@ function AppRoutes() {
             element={
               <PrivateRoute roles={[ROLES.ADMIN]}>
                 <EntraSync />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="importeren"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.EQUIPMENT_COMMITTEE]}>
+                <Importeren />
               </PrivateRoute>
             }
           />

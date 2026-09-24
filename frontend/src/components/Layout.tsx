@@ -182,6 +182,8 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/pdf-tools', labelKey: 'nav.pdfTools', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/genres', labelKey: 'nav.genres', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/statistics', labelKey: 'nav.statistics', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      // De beheerder vindt het importeren onder Beheer.
+      { path: '/importeren', labelKey: 'nav.importeren', roles: [ROLES.MUSIC_COMMITTEE] },
     ],
   },
   {
@@ -192,6 +194,8 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/instrument-assets', labelKey: 'nav.instrumentAssets', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
       { path: '/uniforms', labelKey: 'nav.uniforms', roles: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE] },
       { path: '/equipment', labelKey: 'nav.equipment', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
+      // De beheerder vindt het importeren onder Beheer.
+      { path: '/importeren', labelKey: 'nav.importeren', roles: [ROLES.EQUIPMENT_COMMITTEE] },
     ],
   },
   {
@@ -225,6 +229,7 @@ const navGroups: SidebarNavGroup[] = [
       '/modules',
       '/payment-settings',
       '/entra-sync',
+      '/importeren',
       '/onboarding',
       '/theme',
       '/changelog',
@@ -243,6 +248,7 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/modules', labelKey: 'nav.modules', roles: [ROLES.ADMIN] },
       { path: '/payment-settings', labelKey: 'nav.paymentSettings', roles: [ROLES.ADMIN] },
       { path: '/entra-sync', labelKey: 'nav.entraSync', roles: [ROLES.ADMIN] },
+      { path: '/importeren', labelKey: 'nav.importeren', roles: [ROLES.ADMIN] },
       { path: '/theme', labelKey: 'nav.theme', roles: [ROLES.ADMIN] },
       { path: '/changelog', labelKey: 'nav.changelog', roles: [ROLES.ADMIN] },
       { path: '/audit-logs', labelKey: 'nav.auditLogs', roles: [ROLES.ADMIN] },

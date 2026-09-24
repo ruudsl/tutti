@@ -59,6 +59,7 @@ vi.mock('../pages/Dashboard', maakPagina('Dashboard'));
 vi.mock('../pages/DataExport', maakPagina('DataExport'));
 vi.mock('../pages/EmailCampaigns', maakPagina('EmailCampaigns'));
 vi.mock('../pages/EntraSync', maakPagina('EntraSync'));
+vi.mock('../pages/Importeren', maakPagina('Importeren'));
 vi.mock('../pages/Equipment', maakPagina('Equipment'));
 vi.mock('../pages/Events', maakPagina('Events'));
 vi.mock('../pages/ExternalMusicians', maakPagina('ExternalMusicians'));
@@ -326,6 +327,7 @@ const VERWACHTE_ROLLEN: [pad: string, pagina: string, rollen: string[] | null][]
   ['/payment-settings', 'PaymentSettings', [ROLES.ADMIN]],
 
   // Beheerder en muziekcommissie
+  ['/importeren', 'Importeren', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.EQUIPMENT_COMMITTEE]],
   ['/music-pieces', 'MusicPieces', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/titles', 'MusicTitles', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/upload', 'Upload', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],

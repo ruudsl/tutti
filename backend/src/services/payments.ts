@@ -133,12 +133,13 @@ async function createMolliePayment(request: PaymentRequest): Promise<PaymentResp
 /**
  * Een betaalkenmerk van Mollie of Stripe bestaat uit letters, cijfers en
  * onderstrepingstekens (tr_..., cs_test_...). Alles daarbuiten hoort niet in
- * een pad thuis. Let op de bovengrens van 64 tekens: die is korter dan wat
- * Stripe in de praktijk aan sessiekenmerken uitdeelt, en een kenmerk dat hier
- * afvalt levert stilzwijgend 'geen gegevens' op.
+ * een pad thuis. De bovengrens is die van Stripe: een kenmerk is hooguit 255
+ * tekens. Tot september 2026 stond hier 64, korter dan de sessiekenmerken die
+ * Stripe in de praktijk uitdeelt (cs_test_ plus 58 tekens); zo'n betaling
+ * leverde dan stilzwijgend 'geen gegevens' op.
  */
 function controleerBetaalId(paymentId: string): string {
-  if (!/^[A-Za-z0-9_]{1,64}$/.test(paymentId)) {
+  if (!/^[A-Za-z0-9_]{1,255}$/.test(paymentId)) {
     throw new Error('Invalid payment id');
   }
   return paymentId;
