@@ -231,10 +231,12 @@ describe('Categorieen beheren', () => {
     expect(rij.name).toBe('Zalen');
   });
 
-  it('laat een gewoon lid de categorieen wel zien maar niet aanmaken of wijzigen', async () => {
+  it('laat een gewoon lid de categorieen niet zien, aanmaken of wijzigen', async () => {
+    // Sinds 1.18.0 zien leden de contacten helemaal niet meer
+    // (contacten-toegang-per-rol.test.ts); de categorieën horen daarbij.
     const id = await maakCategorie('Zalen');
 
-    expect((await alsLid('get', '/categories')).status).toBe(200);
+    expect((await alsLid('get', '/categories')).status).toBe(403);
     expect((await alsLid('post', '/categories').send({ name: 'Stiekem' })).status).toBe(403);
     expect((await alsLid('put', `/categories/${id}`).send({ name: 'Stiekem' })).status).toBe(403);
     expect((await alsLid('delete', `/categories/${id}`)).status).toBe(403);

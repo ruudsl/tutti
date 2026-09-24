@@ -5,6 +5,8 @@ import { createContact, updateContact } from '../../api/contacts';
 import type { Contact, ContactCategory, ContactType, CreateContactData } from '../../api/contacts';
 import { Modal } from '../../components/Modal';
 import { showSuccess, showError } from '../../utils/toast';
+import { useAuth } from '../../context/AuthContext';
+import { ROLES } from '../../utils/constants';
 
 export function ContactFormModal({
   contact,
@@ -17,6 +19,10 @@ export function ContactFormModal({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  // Rekeninggegevens, KvK, btw en notities zijn voor beheerder en bestuur;
+  // de server geeft ze de commissies niet en neemt ze van hen ook niet over.
+  const volledig = user?.role === ROLES.ADMIN || user?.role === ROLES.BOARD;
   const [formData, setFormData] = useState<CreateContactData>({
     contactType: contact?.contactType || 'organization',
     name: contact?.name || '',
@@ -236,78 +242,82 @@ export function ContactFormModal({
           </div>
         </div>
 
-        <details className="mb-2">
-          <summary>{t('contacts.financialDetails')}</summary>
-          <div className="row mt-2">
-            <div className="col-md-6">
-              <div className="form-group">
-                <label>{t('contacts.iban')}</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.iban}
-                  onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
-                />
+        {volledig && (
+          <details className="mb-2">
+            <summary>{t('contacts.financialDetails')}</summary>
+            <div className="row mt-2">
+              <div className="col-md-6">
+                <div className="form-group">
+                  <label>{t('contacts.iban')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.iban}
+                    onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="form-group">
+                  <label>{t('contacts.ibanHolderName')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.ibanHolderName}
+                    onChange={(e) => setFormData({ ...formData, ibanHolderName: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
-            <div className="col-md-6">
-              <div className="form-group">
-                <label>{t('contacts.ibanHolderName')}</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.ibanHolderName}
-                  onChange={(e) => setFormData({ ...formData, ibanHolderName: e.target.value })}
-                />
+            <div className="row">
+              <div className="col-md-4">
+                <div className="form-group">
+                  <label>{t('contacts.bic')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.bic}
+                    onChange={(e) => setFormData({ ...formData, bic: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="form-group">
+                  <label>{t('contacts.vatNumber')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.vatNumber}
+                    onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="form-group">
+                  <label>{t('contacts.chamberOfCommerce')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.chamberOfCommerce}
+                    onChange={(e) => setFormData({ ...formData, chamberOfCommerce: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          <div className="row">
-            <div className="col-md-4">
-              <div className="form-group">
-                <label>{t('contacts.bic')}</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.bic}
-                  onChange={(e) => setFormData({ ...formData, bic: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="form-group">
-                <label>{t('contacts.vatNumber')}</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.vatNumber}
-                  onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="form-group">
-                <label>{t('contacts.chamberOfCommerce')}</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.chamberOfCommerce}
-                  onChange={(e) => setFormData({ ...formData, chamberOfCommerce: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-        </details>
+          </details>
+        )}
 
-        <div className="form-group">
-          <label>{t('contacts.notes')}</label>
-          <textarea
-            className="form-control"
-            rows={3}
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          />
-        </div>
+        {volledig && (
+          <div className="form-group">
+            <label>{t('contacts.notes')}</label>
+            <textarea
+              className="form-control"
+              rows={3}
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            />
+          </div>
+        )}
 
         <div className="modal-footer">
           <button type="button" className="btn btn-outline" onClick={onClose}>

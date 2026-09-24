@@ -12,6 +12,43 @@ import { z } from 'zod';
 
 const router = Router();
 
+// =====================================================
+// WIE WAT ZIET
+// =====================================================
+//
+// Contacten zijn leveranciers, zalen, sponsors en ook privépersonen: gegevens
+// van mensen die er zelf niet voor gekozen hebben. Wie er niet mee werkt,
+// hoeft ze niet te zien. Leden zien de contacten dus niet; de commissies en de
+// dirigent wel, want zij werken met leveranciers, zalen en reparateurs. Het
+// rekeningnummer, KvK- en btw-nummer en de notities (waar interne oordelen in
+// kunnen staan) zijn voor wie betaalt of beheert: beheerder en bestuur.
+// Schrijven blijft zoals het was.
+
+const LEZERS = ['admin', 'board', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'];
+const VOLLEDIG = ['admin', 'board'];
+const AFGESCHERMD = ['iban', 'ibanHolderName', 'bic', 'vatNumber', 'chamberOfCommerce', 'notes'];
+
+const magAllesZien = (req: AuthRequest) => VOLLEDIG.includes(req.user!.role);
+
+/** Een contact zoals een lezer zonder volledige inzage hem krijgt. */
+function beperkContact<T extends object>(contact: T): T {
+  const kopie = { ...contact } as Record<string, unknown>;
+  for (const veld of AFGESCHERMD) delete kopie[veld];
+  return kopie as T;
+}
+
+/**
+ * Laat de afgeschermde velden weg uit wat een commissielid instuurt: die vult
+ * alleen het bestuur in. Wat er al stond, blijft zo staan. Een formulier dat
+ * lege velden meestuurt, wist dus niets.
+ */
+function zonderAfgeschermdeVelden<T extends object>(req: AuthRequest, data: T): T {
+  if (magAllesZien(req)) return data;
+  const kopie = { ...data } as Record<string, unknown>;
+  for (const veld of AFGESCHERMD) delete kopie[veld];
+  return kopie as T;
+}
+
 const CACHE_PATH = '/api/contacts';
 const CATEGORIES_CACHE_PATH = '/api/contacts/categories';
 
@@ -98,6 +135,7 @@ function controleerCategorieen(categoryIds: string[] | undefined, associationId:
 router.get(
   '/categories',
   authenticateToken,
+  requireRole(...LEZERS),
   cacheMiddleware({ ttlSeconds: 300 }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
@@ -259,7 +297,9 @@ router.delete(
 router.get(
   '/',
   authenticateToken,
-  cacheMiddleware({ ttlSeconds: 60 }),
+  requireRole(...LEZERS),
+  // Per gebruiker: wat iemand ziet hangt van zijn rol af.
+  cacheMiddleware({ ttlSeconds: 60, varyByUser: true }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {
@@ -366,13 +406,14 @@ router.get(
       };
     });
 
-    res.json(result);
+    res.json(magAllesZien(req) ? result : result.map(beperkContact));
   }),
 );
 
 router.get(
   '/:id',
   authenticateToken,
+  requireRole(...LEZERS),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {
@@ -419,7 +460,8 @@ router.get(
       )
       .all(contact.id);
 
-    res.json({
+    const volledig = magAllesZien(req);
+    const antwoord = {
       id: contact.id,
       contactType: contact.contact_type,
       name: contact.name,
@@ -448,12 +490,14 @@ router.get(
         email: cp.email,
         phone: cp.phone,
         isPrimary: !!cp.is_primary,
-        notes: cp.notes,
+        ...(volledig && { notes: cp.notes }),
         createdAt: cp.created_at,
       })),
       createdAt: contact.created_at,
       updatedAt: contact.updated_at,
-    });
+    };
+
+    res.json(volledig ? antwoord : beperkContact(antwoord));
   }),
 );
 
@@ -463,7 +507,7 @@ router.post(
   requireRole('admin', 'music_committee'),
   cacheInvalidator(CACHE_PATH),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = createContactSchema.parse(req.body);
+    const data = zonderAfgeschermdeVelden(req, createContactSchema.parse(req.body));
     const associationId = req.user!.associationId;
     if (!associationId) {
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
@@ -541,7 +585,7 @@ router.patch(
   requireRole('admin', 'music_committee'),
   cacheInvalidator(CACHE_PATH),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = updateContactSchema.parse(req.body);
+    const data = zonderAfgeschermdeVelden(req, updateContactSchema.parse(req.body));
     const associationId = req.user!.associationId;
     if (!associationId) {
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
@@ -757,6 +801,7 @@ router.post(
 router.get(
   '/:id/persons',
   authenticateToken,
+  requireRole(...LEZERS),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {
@@ -790,7 +835,7 @@ router.get(
         email: p.email,
         phone: p.phone,
         isPrimary: !!p.is_primary,
-        notes: p.notes,
+        ...(magAllesZien(req) && { notes: p.notes }),
         createdAt: p.created_at,
       })),
     );
@@ -803,7 +848,7 @@ router.post(
   requireRole('admin', 'music_committee'),
   cacheInvalidator(CACHE_PATH),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = createContactPersonSchema.parse(req.body);
+    const data = zonderAfgeschermdeVelden(req, createContactPersonSchema.parse(req.body));
     const associationId = req.user!.associationId;
     if (!associationId) {
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
@@ -855,7 +900,7 @@ router.put(
   requireRole('admin', 'music_committee'),
   cacheInvalidator(CACHE_PATH),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = updateContactPersonSchema.parse(req.body);
+    const data = zonderAfgeschermdeVelden(req, updateContactPersonSchema.parse(req.body));
     const associationId = req.user!.associationId;
     if (!associationId) {
       throw new ApiError(400, 'Gebruiker heeft geen vereniging.');

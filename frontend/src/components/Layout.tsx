@@ -91,7 +91,19 @@ const navGroups: SidebarNavGroup[] = [
     basePaths: ['/members', '/issues', '/practice-schedules', '/practice', '/contacts'],
     items: [
       { path: '/members', labelKey: 'nav.memberDirectory' },
-      { path: '/contacts', labelKey: 'nav.contacts' },
+      {
+        path: '/contacts',
+        labelKey: 'nav.contacts',
+        // Leden zien de contacten niet (routes/contacts.ts).
+        roles: [
+          ROLES.ADMIN,
+          ROLES.BOARD,
+          ROLES.MUSIC_COMMITTEE,
+          ROLES.EQUIPMENT_COMMITTEE,
+          ROLES.UNIFORMS_COMMITTEE,
+          ROLES.CONDUCTOR,
+        ],
+      },
       { path: '/issues', labelKey: 'nav.issues' },
       { path: '/practice-schedules', labelKey: 'nav.practiceSchedules' },
       { path: '/practice', labelKey: 'nav.practice' },

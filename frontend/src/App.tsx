@@ -308,7 +308,23 @@ function AppRoutes() {
           <Route path="my-music" element={<MyMusic />} />
           <Route path="tools" element={<Tools />} />
           <Route path="issues" element={<Issues />} />
-          <Route path="contacts" element={<Contacts />} />
+          <Route
+            path="contacts"
+            element={
+              <PrivateRoute
+                roles={[
+                  ROLES.ADMIN,
+                  ROLES.BOARD,
+                  ROLES.MUSIC_COMMITTEE,
+                  ROLES.EQUIPMENT_COMMITTEE,
+                  ROLES.UNIFORMS_COMMITTEE,
+                  ROLES.CONDUCTOR,
+                ]}
+              >
+                <Contacts />
+              </PrivateRoute>
+            }
+          />
           <Route
             path="custom-fields"
             element={

@@ -41,6 +41,18 @@ Harmonie gebruikt een rollenstructuur om te bepalen welke acties gebruikers kunn
 | Interne notities zien    | Volledig | Volledig        | Volledig | -        |
 | PDF's downloaden         | Volledig | Volledig        | Volledig | Volledig |
 
+### Externe contacten
+
+Leveranciers, zalen, sponsors en privépersonen. Leden zien ze niet; rekeninggegevens, KvK, btw en notities zijn voor beheerder en bestuur (sinds 1.18.0).
+
+| Functie                             | Admin    | Bestuur  | Commissies en dirigent | Lid |
+| ----------------------------------- | -------- | -------- | ---------------------- | --- |
+| Contacten bekijken                  | Volledig | Volledig | Lezen                  | -   |
+| IBAN, KvK, btw en notities zien     | Volledig | Volledig | -                      | -   |
+| Contacten aanmaken en bewerken      | Volledig | -        | Alleen muziekcommissie | -   |
+| IBAN, KvK, btw en notities invullen | Volledig | -        | -                      | -   |
+| Contacten verwijderen               | Volledig | -        | -                      | -   |
+
 ### Repetities en aanwezigheid
 
 | Functie                | Admin    | Muziekcommissie | Dirigent | Lid   |

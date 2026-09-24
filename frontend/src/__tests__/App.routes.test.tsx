@@ -288,7 +288,6 @@ const VERWACHTE_ROLLEN: [pad: string, pagina: string, rollen: string[] | null][]
   ['/my-music', 'MyMusic', null],
   ['/tools', 'Tools', null],
   ['/issues', 'Issues', null],
-  ['/contacts', 'Contacts', null],
   ['/privacy-settings', 'PrivacySettings', null],
   ['/polls', 'Polls', null],
   ['/tasks', 'Tasks', null],
@@ -327,6 +326,19 @@ const VERWACHTE_ROLLEN: [pad: string, pagina: string, rollen: string[] | null][]
   ['/payment-settings', 'PaymentSettings', [ROLES.ADMIN]],
 
   // Beheerder en muziekcommissie
+  // Leden zien de contacten niet; de commissies en de dirigent wel.
+  [
+    '/contacts',
+    'Contacts',
+    [
+      ROLES.ADMIN,
+      ROLES.BOARD,
+      ROLES.MUSIC_COMMITTEE,
+      ROLES.EQUIPMENT_COMMITTEE,
+      ROLES.UNIFORMS_COMMITTEE,
+      ROLES.CONDUCTOR,
+    ],
+  ],
   [
     '/importeren',
     'Importeren',
