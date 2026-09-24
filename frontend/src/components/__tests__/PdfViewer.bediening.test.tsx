@@ -361,21 +361,36 @@ describe('pdf-lezer - bladeren', () => {
     await waitFor(() => expect(paginateller()).toBe('1 / 3'));
   });
 
+  /**
+   * Een veeg van `vanX` naar `naarX` die 100 ms duurt.
+   *
+   * useSwipeGesture meet de duur met Date.now() en telt een beweging van meer
+   * dan 300 ms niet als veeg. Zonder vaste klok hing deze test af van hoe snel
+   * de machine de drie gebeurtenissen en het tussenliggende renderen afhandelt;
+   * op een trage CI-runner duurde dat ruim 1 seconde en bleef het blad staan.
+   */
+  function veeg(blad: HTMLElement, vanX: number, naarX: number) {
+    const klok = vi.spyOn(Date, 'now');
+    try {
+      klok.mockReturnValue(1_000_000);
+      fireEvent.touchStart(blad, { touches: [{ clientX: vanX, clientY: 200 }] });
+      klok.mockReturnValue(1_000_100);
+      fireEvent.touchMove(blad, { touches: [{ clientX: naarX, clientY: 200 }] });
+      fireEvent.touchEnd(blad, { changedTouches: [{ clientX: naarX, clientY: 200 }] });
+    } finally {
+      klok.mockRestore();
+    }
+  }
+
   it('bladert met een veegbeweging over het blad', async () => {
     const { container } = await toonLezer();
     const blad = container.querySelector('.pdf-viewer') as HTMLElement;
 
     // Naar links vegen is doorbladeren, zoals bij een boek.
-    fireEvent.touchStart(blad, { touches: [{ clientX: 300, clientY: 200 }] });
-    fireEvent.touchMove(blad, { touches: [{ clientX: 200, clientY: 200 }] });
-    fireEvent.touchEnd(blad, { changedTouches: [{ clientX: 200, clientY: 200 }] });
-
+    veeg(blad, 300, 200);
     await waitFor(() => expect(paginateller()).toBe('2 / 3'));
 
-    fireEvent.touchStart(blad, { touches: [{ clientX: 200, clientY: 200 }] });
-    fireEvent.touchMove(blad, { touches: [{ clientX: 300, clientY: 200 }] });
-    fireEvent.touchEnd(blad, { changedTouches: [{ clientX: 300, clientY: 200 }] });
-
+    veeg(blad, 200, 300);
     await waitFor(() => expect(paginateller()).toBe('1 / 3'));
   });
 
@@ -383,9 +398,9 @@ describe('pdf-lezer - bladeren', () => {
     const { container } = await toonLezer({ enableSwipe: false });
     const blad = container.querySelector('.pdf-viewer') as HTMLElement;
 
-    fireEvent.touchStart(blad, { touches: [{ clientX: 300, clientY: 200 }] });
-    fireEvent.touchMove(blad, { touches: [{ clientX: 200, clientY: 200 }] });
-    fireEvent.touchEnd(blad, { changedTouches: [{ clientX: 200, clientY: 200 }] });
+    // Dezelfde snelle veeg als hierboven: dat hij hier niets doet, komt dan
+    // door de instelling en niet door de klok.
+    veeg(blad, 300, 200);
 
     expect(paginateller()).toBe('1 / 3');
   });
