@@ -35,13 +35,17 @@ CREATE TABLE IF NOT EXISTS orchestras (
 );
 
 -- Instrumenten met hoofdnaam
+-- Leeg association_id: de standaardlijst, die alleen de superbeheerder
+-- beheert. Gevuld: een eigen instrument van die vereniging. Uniek per
+-- vereniging (idx_instruments_naam_per_vereniging). Zie de migratie
+-- 20260924200000_genres_en_instrumenten_per_vereniging.
 CREATE TABLE IF NOT EXISTS instruments (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     tuning TEXT, -- Stemming bijv. Bb, Eb, C
     clef TEXT DEFAULT 'sol', -- Muzieksleutel: sol, fa, ut
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(name, tuning, clef)
+    association_id TEXT REFERENCES associations(id) ON DELETE CASCADE
 );
 
 -- Subnamen/aliassen voor instrumenten
@@ -257,10 +261,23 @@ CREATE TABLE IF NOT EXISTS music_titles (
 );
 
 -- Genres voor muziekstukken
+-- Net als instruments: leeg association_id is de standaardlijst, gevuld
+-- een eigen genre van die vereniging.
 CREATE TABLE IF NOT EXISTS genres (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    association_id TEXT REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- Standaardgenres en -instrumenten die een vereniging niet in haar
+-- keuzelijsten wil zien. Wat er al aan hangt, blijft staan.
+CREATE TABLE IF NOT EXISTS catalogus_verborgen (
+    association_id TEXT NOT NULL REFERENCES associations(id) ON DELETE CASCADE,
+    soort TEXT NOT NULL CHECK (soort IN ('genre', 'instrument')),
+    item_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (association_id, soort, item_id)
 );
 
 -- Koppeltabel: titel heeft genre(s)
@@ -373,6 +390,10 @@ CREATE INDEX IF NOT EXISTS idx_instrument_aliases_alias ON instrument_aliases(al
 CREATE INDEX IF NOT EXISTS idx_music_titles_title ON music_titles(title);
 CREATE INDEX IF NOT EXISTS idx_music_titles_association ON music_titles(association_id);
 CREATE INDEX IF NOT EXISTS idx_genres_name ON genres(name);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_genres_naam_per_vereniging ON genres(COALESCE(association_id, ''), name);
+CREATE INDEX IF NOT EXISTS idx_genres_vereniging ON genres(association_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_naam_per_vereniging ON instruments(COALESCE(association_id, ''), name, tuning, clef);
+CREATE INDEX IF NOT EXISTS idx_instruments_vereniging ON instruments(association_id);
 CREATE INDEX IF NOT EXISTS idx_piece_issues_piece ON piece_issues(music_piece_id);
 CREATE INDEX IF NOT EXISTS idx_piece_issues_status ON piece_issues(status);
 CREATE INDEX IF NOT EXISTS idx_loans_title ON loans(music_title_id);

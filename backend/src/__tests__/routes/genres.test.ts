@@ -1,17 +1,11 @@
 /**
  * Genres.
  *
- * Let op de opzet: de tabel `genres` heeft geen association_id (zie
- * database/schema.ts), en de naam is globaal uniek. Genres zijn dus met opzet
- * een gedeelde woordenlijst voor alle verenigingen samen, net als
- * `instruments`. Dat maakt de rolcontrole hier het belangrijkste onderwerp -
- * er valt namelijk geen verenigingsgrens te bewaken die er niet is.
- *
- * De keerzijde daarvan leggen de laatste twee tests vast: een beheerder van de
- * ene vereniging kan een genre hernoemen of weggooien dat een andere
- * vereniging gebruikt. Dat is de huidige, bewuste opzet en geen fout in deze
- * route; het staat hier zodat een toekomstige wijziging het niet ongemerkt
- * anders doet.
+ * Sinds september 2026 per vereniging (services/catalogus.ts): een
+ * standaardlijst voor iedereen, die alleen de superbeheerder beheert, plus
+ * eigen genres per vereniging. De rolcontrole staat hieronder per route; de
+ * grens tussen verenigingen en de standaardlijst staan in het blok
+ * "per vereniging" onderaan.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -43,6 +37,7 @@ describe('genres', () => {
   let lidToken: string;
   let commissieToken: string;
 
+  let vereniging: TestAssociation;
   let andereVereniging: TestAssociation;
   let andereBeheerderToken: string;
 
@@ -52,6 +47,7 @@ describe('genres', () => {
     invalidateAllCache();
 
     const omgeving = createTestEnvironment();
+    vereniging = omgeving.association;
     beheerderToken = omgeving.adminToken;
     lidToken = omgeving.memberToken;
     commissieToken = omgeving.musicCommitteeToken;
@@ -66,9 +62,10 @@ describe('genres', () => {
   const als = (token: string, methode: Methode, pad: string) =>
     request(app)[methode](`/api/genres${pad}`).set('Authorization', `Bearer ${token}`);
 
-  function maakGenre(naam: string): string {
+  /** Een eigen genre van de vereniging van de tests, of met `null` een standaardgenre. */
+  function maakGenre(naam: string, eigenaar: string | null = vereniging.id): string {
     const id = uuidv4();
-    db.prepare('INSERT INTO genres (id, name) VALUES (?, ?)').run(id, naam);
+    db.prepare('INSERT INTO genres (id, name, association_id) VALUES (?, ?, ?)').run(id, naam, eigenaar);
     return id;
   }
 
@@ -281,28 +278,71 @@ describe('genres', () => {
     });
   });
 
-  describe('gedeelde woordenlijst', () => {
-    it('toont een genre van de ene vereniging ook aan de andere', async () => {
+  describe('per vereniging', () => {
+    it('toont een eigen genre niet aan een andere vereniging', async () => {
       await als(beheerderToken, 'post', '/').send({ name: 'Marsen' });
 
       const antwoord = await als(andereBeheerderToken, 'get', '/');
 
-      expect(antwoord.body.map((g: any) => g.name)).toEqual(['Marsen']);
+      expect(antwoord.body).toEqual([]);
     });
 
-    it('laat de beheerder van de andere vereniging hetzelfde genre beheren', async () => {
-      // Vastgelegd gedrag, geen aanbeveling: zolang `genres` geen
-      // association_id heeft, is elk genre van iedereen. Wie dit wil
-      // begrenzen, moet eerst het schema aanpassen.
-      const antwoord = await als(beheerderToken, 'post', '/').send({ name: 'Marsen' });
-      const genreId = antwoord.body.id;
+    it('laat de beheerder van een andere vereniging een eigen genre niet wijzigen of verwijderen', async () => {
+      const genreId = (await als(beheerderToken, 'post', '/').send({ name: 'Marsen' })).body.id;
 
-      const hernoemen = await als(andereBeheerderToken, 'put', `/${genreId}`).send({ name: 'Van B' });
-      expect(hernoemen.status).toBe(200);
+      expect((await als(andereBeheerderToken, 'put', `/${genreId}`).send({ name: 'Van B' })).status).toBe(404);
+      expect((await als(andereBeheerderToken, 'delete', `/${genreId}`)).status).toBe(404);
+      expect(db.prepare('SELECT name FROM genres WHERE id = ?').get(genreId)).toEqual({ name: 'Marsen' });
+    });
 
-      const verwijderen = await als(andereBeheerderToken, 'delete', `/${genreId}`);
-      expect(verwijderen.status).toBe(200);
-      expect(db.prepare('SELECT id FROM genres WHERE id = ?').get(genreId)).toBeUndefined();
+    it('laat twee verenigingen elk een eigen genre met dezelfde naam maken', async () => {
+      expect((await als(beheerderToken, 'post', '/').send({ name: 'Pop-rock' })).status).toBe(201);
+      expect((await als(andereBeheerderToken, 'post', '/').send({ name: 'Pop-rock' })).status).toBe(201);
+    });
+
+    it('toont standaardgenres aan iedereen, maar laat alleen de superbeheerder ze wijzigen', async () => {
+      const standaard = maakGenre('Klassiek', null);
+
+      expect((await als(andereBeheerderToken, 'get', '/')).body).toEqual([
+        expect.objectContaining({ name: 'Klassiek', standaard: true, verborgen: false }),
+      ]);
+      expect((await als(beheerderToken, 'put', `/${standaard}`).send({ name: 'Anders' })).status).toBe(403);
+      expect((await als(beheerderToken, 'delete', `/${standaard}`)).status).toBe(403);
+      expect(db.prepare('SELECT name FROM genres WHERE id = ?').get(standaard)).toEqual({ name: 'Klassiek' });
+    });
+
+    it('weigert een eigen genre met de naam van een zichtbaar standaardgenre', async () => {
+      maakGenre('Klassiek', null);
+
+      expect((await als(beheerderToken, 'post', '/').send({ name: 'klassiek' })).status).toBe(409);
+    });
+
+    it('verbergt een standaardgenre alleen voor de eigen vereniging, en laat het weer tonen', async () => {
+      const standaard = maakGenre('Klassiek', null);
+
+      expect((await als(commissieToken, 'post', `/${standaard}/verbergen`)).status).toBe(200);
+      expect((await als(lidToken, 'get', '/')).body).toEqual([]);
+      expect((await als(beheerderToken, 'get', '/?alles=true')).body).toEqual([
+        expect.objectContaining({ id: standaard, verborgen: true }),
+      ]);
+      expect((await als(andereBeheerderToken, 'get', '/')).body).toHaveLength(1);
+      // Wie hem verborg, mag een eigen genre met die naam maken.
+      expect((await als(beheerderToken, 'post', '/').send({ name: 'Klassiek' })).status).toBe(201);
+
+      expect((await als(beheerderToken, 'delete', `/${standaard}/verbergen`)).status).toBe(200);
+      expect((await als(lidToken, 'get', '/')).body.map((g: any) => g.name)).toEqual(['Klassiek', 'Klassiek']);
+    });
+
+    it('verbergt alleen standaardgenres, geen eigen genre van een andere vereniging', async () => {
+      const vanB = maakGenre('Van B', andereVereniging.id);
+
+      expect((await als(beheerderToken, 'post', `/${vanB}/verbergen`)).status).toBe(404);
+    });
+
+    it('laat een lid niets verbergen', async () => {
+      const standaard = maakGenre('Klassiek', null);
+
+      expect((await als(lidToken, 'post', `/${standaard}/verbergen`)).status).toBe(403);
     });
   });
 });
