@@ -664,7 +664,11 @@ router.post(
   }),
 );
 
-// Clean up old temp files (called periodically or on startup)
+/**
+ * Ruim tijdelijke pdf-bestanden op die ouder zijn dan een uur. Draait elk uur
+ * als achtergrondtaak (src/taken/index.ts); stond hier eerst als setInterval
+ * die al bij het laden van deze module begon.
+ */
 export function cleanupTempFiles() {
   const maxAge = 60 * 60 * 1000; // 1 hour
   const now = Date.now();
@@ -682,9 +686,5 @@ export function cleanupTempFiles() {
     logger.error('Error cleaning up temp files:', error);
   }
 }
-
-// Clean up on startup and every hour
-cleanupTempFiles();
-setInterval(cleanupTempFiles, 60 * 60 * 1000);
 
 export default router;

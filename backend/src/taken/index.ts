@@ -19,6 +19,8 @@ import { runNotificationRound } from '../scheduler/seating-notifications';
 import { processPendingTasks } from '../scheduler/email-forwarding-retry';
 import { opschoonUur, runCleanup } from '../scheduler/gdpr-cleanup';
 import { getIntervalHours, isBackupEnabled, runBackup } from '../scheduler/backup';
+import { cleanupOldThumbnails } from '../routes/thumbnails';
+import { cleanupTempFiles } from '../routes/pdf-tools';
 
 const MINUUT = 60 * 1000;
 
@@ -64,6 +66,23 @@ export function registreerStandaardTaken(): void {
     // de datum in UTC.
     sleutelVoor: (nu) => (nu.getHours() === opschoonUur() ? `avg-opschonen:${nu.toISOString().slice(0, 10)}` : null),
   });
+
+  // Oude bestanden op schijf opruimen: miniaturen (ouder dan een week) en
+  // tussenresultaten van de pdf-gereedschappen (ouder dan een uur). Wat al
+  // weg is, is weg: herhaalbaar. Deze stonden als setInterval in hun
+  // routebestand en begonnen al bij het laden van dat bestand te lopen.
+  registreerTaak('miniaturen-opruimen', {
+    herhaalbaar: true,
+    maxPogingen: 3,
+    uitvoeren: () => cleanupOldThumbnails(),
+  });
+  registreerPeriodiek('miniaturen-opruimen', { sleutelVoor: tijdvak('miniaturen-opruimen', 24 * 60 * MINUUT) });
+  registreerTaak('pdf-tijdelijk-opruimen', {
+    herhaalbaar: true,
+    maxPogingen: 3,
+    uitvoeren: () => cleanupTempFiles(),
+  });
+  registreerPeriodiek('pdf-tijdelijk-opruimen', { sleutelVoor: tijdvak('pdf-tijdelijk-opruimen', 60 * MINUUT) });
 
   // Back-up van de database. Een tweede kopie maken kan geen kwaad.
   if (isBackupEnabled()) {

@@ -74,8 +74,27 @@ Geregistreerd in `backend/src/taken/index.ts`; het werk zelf staat nog onder
 | `mail-doorsturen-opnieuw` | Elke twee minuten                             | nee         |
 | `avg-opschonen`           | Eén keer per dag, in `GDPR_CLEANUP_HOUR`      | ja, 3×      |
 | `database-back-up`        | Elke `BACKUP_INTERVAL_HOURS` (standaard 24 u) | ja, 3×      |
+| `miniaturen-opruimen`     | Eén keer per dag                              | ja, 3×      |
+| `pdf-tijdelijk-opruimen`  | Elk uur                                       | ja, 3×      |
 
 De back-up wordt niet ingepland als `BACKUP_ENABLED=false`.
+
+De twee opruimtaken stonden eerst als `setInterval` in `routes/thumbnails.ts`
+en `routes/pdf-tools.ts`, en begonnen al te lopen zodra die bestanden werden
+geladen - ook in elke test die de route importeerde.
+
+## Wat niet in de wachtrij hoort
+
+Vier plekken houden met een `setInterval` iets in het geheugen van het proces
+bij: de CSRF-tokens (`middleware/csrf.ts`), de antwoordcache
+(`middleware/cache.ts`) en de inlogstatus van Google, Facebook en Microsoft
+(`routes/social-auth.ts`, `routes/microsoft-auth.ts`). Die lussen gooien
+verlopen items uit een `Map` weg.
+
+Dat is geen werk voor de wachtrij. Wat ze opruimen bestaat alleen in dit
+proces en is na een herstart toch al weg; een taak in de database erover zou
+een ander proces niets zeggen. Regel 21 in `CLAUDE.md` gaat over werk met een
+gevolg buiten het geheugen: berichten, bestanden, de database.
 
 ## De sluis
 
@@ -110,6 +129,5 @@ route die op `association_id` filtert.
 
 WP12 heeft meer onderdelen dan dit fundament. Nog open:
 
-- zwaar werk binnen een verzoek (pdf's, exports, rapporten) naar de wachtrij;
 - `scheduler/workflow-runner.ts` en `scheduler/email-digest.ts`, die nooit
   starten: aanzetten of weghalen.
