@@ -293,7 +293,25 @@ function eigenMuzieklijst(req: AuthRequest, listId: string): { id: string; orche
     .get(listId, req.user!.associationId) as { id: string; orchestra_id: string } | undefined;
 }
 
+/**
+ * Pak één bestand uit een zip zonder de event loop vast te houden: het
+ * uitpakken gebeurt door zlib buiten de JavaScript-thread. Een beschadigd item
+ * (verkeerde controlesom) wordt een afwijzing.
+ */
+function pakUit(entry: AdmZip.IZipEntry): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    // Bij een opgeslagen (niet gecomprimeerd) item met een foute controlesom
+    // roept adm-zip eerst de callback aan en gooit daarna alsnog; de executor
+    // van de Promise vangt dat af.
+    // De typen zeggen dat de fout een string is; adm-zip geeft een Error.
+    entry.getDataAsync((data, fout: unknown) =>
+      fout ? reject(fout instanceof Error ? fout : new Error(String(fout))) : resolve(data),
+    );
+  });
+}
+
 // Delete file safely (async)
+
 async function deleteFile(filePath: string): Promise<void> {
   try {
     if (fs.existsSync(filePath)) {
@@ -2238,7 +2256,6 @@ router.post(
     const { listId } = req.body;
     const results: any[] = [];
     const errors: any[] = [];
-    const tempDir = path.join(UPLOAD_DIR, `temp-${uuidv4()}`);
 
     try {
       // Zelfde grens als bij /upload: een lijst-id uit de body moet bij de
@@ -2248,8 +2265,12 @@ router.post(
         throw new ApiError(404, 'Muzieklijst niet gevonden.');
       }
 
-      // Extract ZIP file
-      const zip = new AdmZip(file.path);
+      // Asynchroon lezen, uitpakken en wegschrijven. Synchroon hield een zip van
+      // 200 MB het hele proces 1,3 tot 1,8 seconde vast: zolang kreeg geen
+      // enkele andere gebruiker antwoord. Asynchroon duurt het even lang, maar
+      // staat het proces hooguit enkele milliseconden stil (gemeten september
+      // 2026, zie WP12 in ROADMAP.md).
+      const zip = new AdmZip(await fs.promises.readFile(file.path));
       const zipEntries = zip.getEntries();
 
       // Filter for PDF files only
@@ -2269,81 +2290,93 @@ router.post(
         throw new ApiError(400, 'Maximaal 200 PDF bestanden per ZIP toegestaan.');
       }
 
-      // Create temp directory for extraction
-      fs.mkdirSync(tempDir, { recursive: true });
-
       // Load instruments + aliases once instead of querying per entry
       const instrumentMap = loadInstrumentMap();
 
-      withTransaction(() => {
-        for (const entry of pdfEntries) {
-          try {
-            const originalFilename = path.basename(entry.entryName);
-            const parsed = parseFilename(originalFilename);
-            const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument, instrumentMap) : null;
+      // Eerst alle bestanden op schijf, één voor één zodat er nooit meer dan
+      // één uitgepakt bestand tegelijk in het geheugen staat. De transactie
+      // hieronder blijft synchroon: daar mag niets tussen komen.
+      const weggeschreven: { originalFilename: string; newFilename: string }[] = [];
+      for (const entry of pdfEntries) {
+        const originalFilename = path.basename(entry.entryName);
+        try {
+          // De extensie .pdf in de zip zegt niets over de inhoud: kijk naar de
+          // eerste bytes.
+          const content = await pakUit(entry);
+          if (!isPdf(content)) {
+            errors.push({
+              filename: originalFilename,
+              error: 'Bestand is geen geldige PDF.',
+            });
+            continue;
+          }
 
-            // Extract entry and check magic bytes: the .pdf extension
-            // inside the ZIP says nothing about the actual content
-            const content = entry.getData();
-            if (!isPdf(content)) {
-              errors.push({
-                filename: originalFilename,
-                error: 'Bestand is geen geldige PDF.',
-              });
-              continue;
-            }
+          const newFilename = `${Date.now()}-${uuidv4()}.pdf`;
+          await fs.promises.writeFile(path.join(UPLOAD_DIR, newFilename), content);
+          weggeschreven.push({ originalFilename, newFilename });
+        } catch (err) {
+          errors.push({ filename: originalFilename, error: (err as Error).message });
+        }
+      }
 
-            // Generate unique filename and write to destination
-            const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
-            const newFilename = `${uniqueSuffix}.pdf`;
-            const destPath = path.join(UPLOAD_DIR, newFilename);
-            fs.writeFileSync(destPath, content);
+      // Dan de rijen. Een bestand zonder rij is voor niemand vindbaar en wordt
+      // nooit meer opgeruimd, dus wat niet in de database komt gaat weer van
+      // schijf - per stuk, en allemaal als de transactie als geheel mislukt.
+      const zonderRij: string[] = [];
+      try {
+        withTransaction(() => {
+          for (const { originalFilename, newFilename } of weggeschreven) {
+            try {
+              const parsed = parseFilename(originalFilename);
+              const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument, instrumentMap) : null;
+              const pieceId = uuidv4();
 
-            const pieceId = uuidv4();
-
-            db.prepare(
-              `
+              db.prepare(
+                `
                         INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
                                                  file_path, original_filename, association_id, uploaded_by)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `,
-            ).run(
-              pieceId,
-              parsed.title,
-              parsed.arranger,
-              instrumentId,
-              parsed.tuning,
-              parsed.groupNumber,
-              parsed.clef,
-              newFilename,
-              originalFilename,
-              req.user!.associationId,
-              req.user!.id,
-            );
-
-            // Add to list if specified
-            if (listId) {
-              db.prepare('INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)').run(
-                listId,
+              ).run(
                 pieceId,
+                parsed.title,
+                parsed.arranger,
+                instrumentId,
+                parsed.tuning,
+                parsed.groupNumber,
+                parsed.clef,
+                newFilename,
+                originalFilename,
+                req.user!.associationId,
+                req.user!.id,
               );
-            }
 
-            results.push({
-              id: pieceId,
-              filename: originalFilename,
-              title: parsed.title,
-              instrumentId,
-              instrumentFound: !!instrumentId,
-            });
-          } catch (err) {
-            errors.push({
-              filename: path.basename(entry.entryName),
-              error: (err as Error).message,
-            });
+              // Add to list if specified
+              if (listId) {
+                db.prepare('INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)').run(
+                  listId,
+                  pieceId,
+                );
+              }
+
+              results.push({
+                id: pieceId,
+                filename: originalFilename,
+                title: parsed.title,
+                instrumentId,
+                instrumentFound: !!instrumentId,
+              });
+            } catch (err) {
+              zonderRij.push(newFilename);
+              errors.push({ filename: originalFilename, error: (err as Error).message });
+            }
           }
-        }
-      });
+        });
+      } catch (err) {
+        await Promise.all(weggeschreven.map(({ newFilename }) => deleteFile(path.join(UPLOAD_DIR, newFilename))));
+        throw err;
+      }
+      await Promise.all(zonderRij.map((naam) => deleteFile(path.join(UPLOAD_DIR, naam))));
 
       logger.info(`ZIP upload: ${results.length} success, ${errors.length} errors`, {
         uploadedBy: req.user!.id,
@@ -2376,11 +2409,7 @@ router.post(
       });
     } finally {
       // Cleanup: delete the uploaded ZIP file
-      deleteFile(file.path);
-      // Cleanup: remove temp directory if it exists
-      if (fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      }
+      await deleteFile(file.path);
     }
   }),
 );

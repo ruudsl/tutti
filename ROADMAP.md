@@ -590,7 +590,7 @@ status = 'wachtend'`; wordt het er meer, dan hoort dit werk na de
   - **Gemeten:** 30 ingescande partituren samenvoegen (32 MB, 120 pagina's, via `pdf-lib` zoals `routes/pdf-tools.ts`) kost 125-150 ms. Het zwaarste toegestane zip-bestand uitpakken en wegschrijven (200 pdf's, 200 MB, de grens van `/music-pieces/upload-zip`) kost 1,8 s
   - **Waarom niet:** de upload zelf duurt vele malen langer dan die 1,8 s, en daar helpt een wachtrij niet bij. Een taak die hetzelfde werk doet in hetzelfde proces blokkeert de event loop net zo lang. Wat een wachtrij wel toevoegt: de gebruiker krijgt geen resultaat meer terug, maar moet wachten en navragen of het klaar is - meer code aan beide kanten zonder dat iemand iets sneller heeft
   - **De streamende downloads** (zip van een muzieklijst, AVG-export, back-up) sturen hun antwoord terwijl het gemaakt wordt en lopen niet tegen een tijdslimiet aan
-  - **Wat wel beter kan, los van de wachtrij:** de zip-import schrijft met `fs.writeFileSync` en houdt het proces daardoor zo'n twee seconden vast. Asynchroon schrijven haalt dat weg zonder dat de gebruiker iets anders merkt
+  - **Wat wel beter kon, los van de wachtrij:** de zip-import pakte synchroon uit en schreef met `fs.writeFileSync`, en hield het proces daardoor 1,3 tot 1,8 seconde helemaal vast. _Gedaan, 24-09-2026:_ asynchroon uitpakken en schrijven kost even lang, maar het proces staat nu hooguit 9 ms stil. Onderweg bleek dat een rij die niet in de database kwam zijn bestand op schijf achterliet; dat gaat nu weer weg (`muziek-zip-import.test.ts`)
 - [x] Documentatie in `docs/` en een regel in `CLAUDE.md` — _`docs/ACHTERGRONDTAKEN.md`, regel 21_
 
 ---
