@@ -52,12 +52,26 @@ pull request achterblijven.
    dat over. Rechtstreeks op 3001 sla je de proxy over en kies je alsnog je
    eigen adres. Die poort luistert nu alleen op `127.0.0.1`
 
-2. **`payment_settings` heeft Mollie-sleutels per vereniging die nergens
-   gebruikt worden.** Alle betalingen lopen over één sleutel uit de omgeving.
-   Ofwel de tabel gaat weg, ofwel de code gaat hem gebruiken — nu wekt hij de
-   indruk dat verenigingen hun eigen betaalaccount kunnen instellen
-3. **`notificationChannels` geeft geen `associationId` door.** Of dat erbij moet
-   hangt ervan af of een kanaal per vereniging verschilt
+2. ~~`payment_settings` heeft Mollie-sleutels per vereniging die nergens
+   gebruikt worden.~~ **Opgelost op 24-09-2026: de code gebruikt ze.** Het
+   kaartgeld gaat naar het eigen Mollie-account van de vereniging van het
+   concert (live of test, zoals ingesteld), met `MOLLIE_API_KEY` als terugval
+   voor wie niets koppelt. De webhook vraagt de betaling terug met de sleutel
+   van de vereniging van de bestelling, en herkent de dienst aan het verzoek
+   zelf in plaats van aan de instelling van de installatie. Een onleesbare
+   eigen sleutel valt níét terug op die van de installatie. Nog niet: Stripe
+   per vereniging, en `pass_fees_to_customer` en de toeslagen per betaalmethode
+   (`payment_method_fees`), die het scherm opslaat maar de bestelling nog niet
+   meerekent
+3. ~~`notificationChannels` geeft geen `associationId` door.~~ **Opgelost op
+   24-09-2026.** Een kanaal verschilt per vereniging: elke vereniging stelt
+   haar eigen Telegram-bot en WhatsApp-nummer in (Instellingen), met de
+   omgeving als terugval. De route en `sendNotification` geven de vereniging nu
+   overal mee. Voorheen zag een lid Telegram als beschikbaar zodra _een_
+   vereniging een bot had, en mislukte het koppelen daarna. Nog open: de
+   Telegram-webhook is één adres met één geheim, dus een eigen bot per
+   vereniging krijgt de antwoorden van leden (`/start`) nog niet binnen; en de
+   tokens staan onversleuteld in `associations` (zie de securityreview)
 4. ~~`controleerBetaalId` kapt af op 64 tekens.~~ **Opgelost op 24-09-2026.**
    De grens is nu die van Stripe, 255 tekens. Een echt sessiekenmerk
    (`cs_test_` plus 58 tekens) leverde eerder stilzwijgend 'geen gegevens' op,
@@ -70,23 +84,22 @@ pull request achterblijven.
    `schema-migraties.test.ts`. Weghalen zou installaties breken die er nog niet
    langs zijn gekomen. Het blijft staan; opruimen kan pas als die migraties in
    de nieuwe loper zijn opgenomen
-6. **De captcha valt open bij een fout.** Gaat de controledienst plat, dan komt
-   iedereen erdoor. Dat is bewust zo gelaten (een captcha die dichtvalt sluit
-   bij een storing álle echte gebruikers buiten); vastgelegd in een test zodat
-   het een keuze blijft en geen ongeluk
+6. ~~De captcha valt open bij een fout.~~ **Onjuist, 24-09-2026.** Gaat
+   hCaptcha plat, dan weigert `services/captcha.ts` de bestelling (vastgelegd
+   in `captcha.test.ts`), en de bestelknop blijft uit zonder token. De captcha
+   valt dus dicht. Alleen een installatie zonder hCaptcha-sleutel of met
+   `CAPTCHA_ENABLED=false` slaat hem over; dat is een instelling. Het
+   testcommentaar in de frontend dat "valt open" zei, is rechtgezet
 
-7. **`POST /tasks/templates/:id/apply` bestaat niet aan de serverkant.** De
-   frontend heeft er een functie voor; de backend heeft alleen
-   `/templates/:id/create-task`, en het woord "apply" komt in `tasks.ts`
-   nergens voor. Wat "apply" zou moeten doen dat "create-task" niet doet —
-   vermoedelijk meerdere taken tegelijk aanmaken — staat nergens vastgelegd.
-   De functie wordt op dit moment niet vanuit de interface aangeroepen, dus er
-   is niets stuk; bouwen zou gokken naar een bedoeling zijn
-8. **`CampaignRecipient` noemt `deliveredAt` en `bouncedAt`**, en
-   `EmailCampaigns.tsx` rendert een tak op `deliveredAt`. Die kolommen bestaan
-   niet in `email_campaign_recipients` en de namen komen nergens in de backend
-   voor. Een kolom erbij vraagt eerst een antwoord op wie hem vult — de mailer
-   zet nu nergens 'delivered'. Tot die keuze gemaakt is, is die tak dode code
+7. ~~`POST /tasks/templates/:id/apply` bestaat niet aan de serverkant.~~
+   **Opgelost op 24-09-2026:** de frontendfunctie `applyTaskTemplate` is
+   weggehaald. Niets riep hem aan, en bouwen zou gokken naar een bedoeling
+   zijn; het scherm gebruikt `create-task`
+8. ~~`CampaignRecipient` noemt `deliveredAt` en `bouncedAt`.~~ **Opgelost op
+   24-09-2026:** beide velden en de tak op `deliveredAt` zijn weg. De mailer
+   zet alleen `pending`, `sent` en `failed`; afleverbevestiging, openen en
+   bounces zou een koppeling met de mailprovider vragen. Let op: de teller
+   `delivered_count` van een campagne telt verstuurde mails, niet afgeleverde
 9. ~~Negen vertaalsleutels die `createI18nErrorMap` opvraagt bestaan in geen van
    de drie talen.~~ **Opgelost op 22-08-2026**, en het bleek de top van een
    ijsberg: er ontbraken er nog 75 andere. De bestaande waaktest kon dit soort

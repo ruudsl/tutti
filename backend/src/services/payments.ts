@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import db from '../database/connection';
 import logger from '../utils/logger';
 import { beschermdeFetch } from '../utils/veerkracht';
+import { decrypt, isEncrypted } from '../utils/encryption';
 
 // Payment provider configuration
 const MOLLIE_API_KEY = process.env.MOLLIE_API_KEY || '';
@@ -33,6 +34,8 @@ export type PaymentMethod = 'ideal' | 'creditcard' | 'bancontact' | 'paypal' | '
 
 export interface PaymentRequest {
   orderId: string;
+  /** De vereniging die het geld ontvangt: haar eigen Mollie-sleutel wordt gebruikt. */
+  associationId?: string | null;
   amount: number; // in euros
   description: string;
   redirectUrl: string;
@@ -63,8 +66,74 @@ export interface PaymentStatus {
 // Mollie Payment Provider
 // ========================================
 
+/**
+ * De Mollie-sleutel waarmee voor deze vereniging betaald wordt.
+ *
+ * Een vereniging koppelt haar eigen Mollie-account op Betaalinstellingen; de
+ * sleutel staat versleuteld in payment_settings, live en test apart, met de
+ * gekozen modus erbij. Heeft ze dat niet gedaan, dan geldt MOLLIE_API_KEY uit
+ * de omgeving: een installatie voor één vereniging hoeft niets te koppelen.
+ *
+ * Tot september 2026 gebruikte deze dienst alleen de omgeving. Het scherm liet
+ * een vereniging wel een sleutel invoeren en zei "klaar om betalingen te
+ * ontvangen", maar met meerdere verenigingen op één installatie kwam al het
+ * kaartgeld op één rekening.
+ */
+export function mollieSleutel(associationId?: string | null): string {
+  if (associationId) {
+    const instellingen = db
+      .prepare(
+        `SELECT mollie_mode, mollie_api_key_encrypted, mollie_test_api_key_encrypted, is_connected
+         FROM payment_settings WHERE association_id = ?`,
+      )
+      .get(associationId) as
+      | {
+          mollie_mode: string | null;
+          mollie_api_key_encrypted: string | null;
+          mollie_test_api_key_encrypted: string | null;
+          is_connected: number;
+        }
+      | undefined;
+
+    const versleuteld =
+      instellingen?.mollie_mode === 'test'
+        ? instellingen.mollie_test_api_key_encrypted
+        : instellingen?.mollie_api_key_encrypted;
+    if (instellingen?.is_connected && versleuteld) {
+      try {
+        // Een sleutel van voor de versleuteling staat er nog als base64; die
+        // zet Betaalinstellingen om zodra de verbinding getest wordt.
+        return isEncrypted(versleuteld) ? decrypt(versleuteld) : Buffer.from(versleuteld, 'base64').toString('utf-8');
+      } catch (error) {
+        // Niet terugvallen op de omgeving: dan ging het geld van deze
+        // vereniging naar de rekening van de installatie.
+        logger.error('Mollie-sleutel van de vereniging is niet te ontsleutelen', { associationId, error });
+        return '';
+      }
+    }
+  }
+  return MOLLIE_API_KEY;
+}
+
+/**
+ * De vereniging van een betaling, via de bestelling waar hij bij hoort. Voor
+ * de webhook: Mollie stuurt alleen het betaalkenmerk, en het terugvragen van
+ * de betaling moet al met de sleutel van de juiste vereniging.
+ */
+function verenigingVanBetaling(paymentId: string): string | null {
+  const rij = db
+    .prepare(
+      `SELECT c.association_id FROM ticket_orders o
+       JOIN concerts c ON c.id = o.concert_id
+       WHERE o.payment_id = ?`,
+    )
+    .get(paymentId) as { association_id: string } | undefined;
+  return rij?.association_id ?? null;
+}
+
 async function createMolliePayment(request: PaymentRequest): Promise<PaymentResponse> {
-  if (!MOLLIE_API_KEY) {
+  const sleutel = mollieSleutel(request.associationId);
+  if (!sleutel) {
     logger.error('Mollie API key not configured');
     return { success: false, error: 'Payment provider not configured' };
   }
@@ -100,7 +169,7 @@ async function createMolliePayment(request: PaymentRequest): Promise<PaymentResp
     const response = await betaaldienst('mollie', `${MOLLIE_API_URL}/payments`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${MOLLIE_API_KEY}`,
+        Authorization: `Bearer ${sleutel}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -145,8 +214,8 @@ function controleerBetaalId(paymentId: string): string {
   return paymentId;
 }
 
-async function getMolliePaymentStatus(paymentId: string): Promise<PaymentStatus | null> {
-  if (!MOLLIE_API_KEY) {
+async function getMolliePaymentStatus(paymentId: string, sleutel: string): Promise<PaymentStatus | null> {
+  if (!sleutel) {
     return null;
   }
 
@@ -159,7 +228,7 @@ async function getMolliePaymentStatus(paymentId: string): Promise<PaymentStatus 
       `${MOLLIE_API_URL}/payments/${encodeURIComponent(controleerBetaalId(paymentId))}`,
       {
         headers: {
-          Authorization: `Bearer ${MOLLIE_API_KEY}`,
+          Authorization: `Bearer ${sleutel}`,
         },
       },
     );
@@ -341,10 +410,11 @@ function nepbetalingenToegestaan(): boolean {
 }
 
 /**
- * Get the configured payment provider
+ * De betaaldienst voor deze vereniging: Mollie als zij of de installatie een
+ * Mollie-sleutel heeft, anders Stripe uit de omgeving, anders geen.
  */
-export function getPaymentProvider(): PaymentProvider | null {
-  if (MOLLIE_API_KEY) return 'mollie';
+export function getPaymentProvider(associationId?: string | null): PaymentProvider | null {
+  if (mollieSleutel(associationId)) return 'mollie';
   if (STRIPE_SECRET_KEY) return 'stripe';
   return null;
 }
@@ -352,8 +422,8 @@ export function getPaymentProvider(): PaymentProvider | null {
 /**
  * Get available payment methods for the configured provider
  */
-export function getAvailablePaymentMethods(): PaymentMethod[] {
-  const provider = getPaymentProvider();
+export function getAvailablePaymentMethods(associationId?: string | null): PaymentMethod[] {
+  const provider = getPaymentProvider(associationId);
 
   if (provider === 'mollie') {
     return ['ideal', 'creditcard', 'bancontact', 'paypal'];
@@ -370,7 +440,7 @@ export function getAvailablePaymentMethods(): PaymentMethod[] {
  * Create a payment with the configured provider
  */
 export async function createPayment(request: PaymentRequest): Promise<PaymentResponse> {
-  const provider = getPaymentProvider();
+  const provider = getPaymentProvider(request.associationId);
 
   if (!provider) {
     if (!nepbetalingenToegestaan()) {
@@ -397,8 +467,11 @@ export async function createPayment(request: PaymentRequest): Promise<PaymentRes
 /**
  * Get payment status from the configured provider
  */
-export async function getPaymentStatus(paymentId: string): Promise<PaymentStatus | null> {
-  const provider = getPaymentProvider();
+export async function getPaymentStatus(
+  paymentId: string,
+  associationId?: string | null,
+): Promise<PaymentStatus | null> {
+  const provider = getPaymentProvider(associationId);
 
   if (!provider) {
     if (!nepbetalingenToegestaan()) {
@@ -417,7 +490,7 @@ export async function getPaymentStatus(paymentId: string): Promise<PaymentStatus
   }
 
   if (provider === 'mollie') {
-    return getMolliePaymentStatus(paymentId);
+    return getMolliePaymentStatus(paymentId, mollieSleutel(associationId));
   }
 
   return getStripePaymentStatus(paymentId);
@@ -438,7 +511,10 @@ export interface WebhookResult {
  * Verify and parse Mollie webhook
  */
 export async function handleMollieWebhook(paymentId: string): Promise<WebhookResult> {
-  const paymentStatus = await getMolliePaymentStatus(paymentId);
+  // Terugvragen met de sleutel van de vereniging waar de betaling bij hoort.
+  // Een betaling op haar eigen Mollie-account kent de sleutel van de
+  // installatie niet, en andersom.
+  const paymentStatus = await getMolliePaymentStatus(paymentId, mollieSleutel(verenigingVanBetaling(paymentId)));
 
   if (!paymentStatus) {
     return { success: false, error: 'Payment not found' };
@@ -583,6 +659,8 @@ export async function handleStripeWebhook(event: Record<string, unknown>): Promi
 
 export interface RefundRequest {
   paymentId: string;
+  /** De vereniging van de betaling: terugbetalen gaat via haar eigen Mollie-account. */
+  associationId?: string | null;
   amount?: number; // Optional: partial refund amount
   reason?: string;
 }
@@ -597,7 +675,7 @@ export interface RefundResponse {
  * Create a refund for a payment
  */
 export async function createRefund(request: RefundRequest): Promise<RefundResponse> {
-  const provider = getPaymentProvider();
+  const provider = getPaymentProvider(request.associationId);
 
   if (!provider) {
     if (!nepbetalingenToegestaan()) {
@@ -620,6 +698,7 @@ export async function createRefund(request: RefundRequest): Promise<RefundRespon
 }
 
 async function createMollieRefund(request: RefundRequest): Promise<RefundResponse> {
+  const sleutel = mollieSleutel(request.associationId);
   try {
     const payload: Record<string, unknown> = {};
 
@@ -640,7 +719,7 @@ async function createMollieRefund(request: RefundRequest): Promise<RefundRespons
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${MOLLIE_API_KEY}`,
+          Authorization: `Bearer ${sleutel}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
