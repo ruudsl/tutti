@@ -280,7 +280,8 @@
     "replacementRequests": "Vertretungsanfragen",
     "stageDesigner": "Bühnenaufstellung",
     "musicSharing": "Musik teilen",
-    "mobileMenu": "Menü"
+    "mobileMenu": "Menü",
+    "importeren": "Importieren"
   },
   "roles": {
     "admin": "Administrator",
@@ -2222,7 +2223,8 @@
     "users": "$t(users.title)",
     "voiceParts": "$t(nav.voiceParts)",
     "wiki": "$t(nav.wiki)",
-    "workflows": "$t(nav.workflows)"
+    "workflows": "$t(nav.workflows)",
+    "importeren": "$t(nav.importeren)"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -5990,6 +5992,63 @@
       "database-back-up": "Datenbanksicherung",
       "miniaturen-opruimen": "Alte Vorschaubilder bereinigen",
       "pdf-tijdelijk-opruimen": "Temporäre PDF-Dateien bereinigen"
+    }
+  },
+  "importeren": {
+    "titel": "Aus einer Tabelle importieren",
+    "soort": "Was importieren Sie?",
+    "soorten": {
+      "leden": "Mitglieder",
+      "muziektitels": "Notenbibliothek"
+    },
+    "uitleg": {
+      "leden": "Mitglieder aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Bereits vorhandene Mitglieder werden übersprungen.",
+      "muziektitels": "Titel für die Notenbibliothek aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Bereits vorhandene Titel mit demselben Bearbeiter werden übersprungen."
+    },
+    "kiesBestand": "CSV-Datei auswählen",
+    "sjabloon": "Beispieldatei herunterladen",
+    "alleenCsv": "Arbeiten Sie mit Excel? Wählen Sie Speichern unter und dann CSV. Spaltennamen auf Niederländisch, Englisch und Deutsch werden erkannt.",
+    "bezigMetLezen": "Datei wird gelesen…",
+    "voorbeeldVan": "Vorschau von {{bestand}}",
+    "tellingen": "Anzahl je Ergebnis",
+    "telling": {
+      "nieuw_one": "{{count}} neu",
+      "nieuw_other": "{{count}} neu",
+      "bestaat_one": "{{count}} bereits vorhanden",
+      "bestaat_other": "{{count}} bereits vorhanden",
+      "fout_one": "{{count}} mit Fehler",
+      "fout_other": "{{count}} mit Fehler"
+    },
+    "herkend": "Gelesene Spalten: {{kolommen}}.",
+    "genegeerd": "Nicht gelesen: {{kolommen}}.",
+    "importeer_one": "{{count}} Zeile importieren",
+    "importeer_other": "{{count}} Zeilen importieren",
+    "gelukt_one": "{{count}} Zeile importiert.",
+    "gelukt_other": "{{count}} Zeilen importiert.",
+    "overgeslagen_one": "{{count}} war bereits vorhanden und wurde übersprungen.",
+    "overgeslagen_other": "{{count}} waren bereits vorhanden und wurden übersprungen.",
+    "nietGelukt_one": "{{count}} Zeile hatte einen Fehler.",
+    "nietGelukt_other": "{{count}} Zeilen hatten einen Fehler.",
+    "wachtwoord": "Importierte Mitglieder erhalten keine E-Mail und noch kein Passwort. Sie legen es über „Passwort vergessen“ auf der Anmeldeseite fest.",
+    "status": {
+      "nieuw": "Neu",
+      "bestaat": "Bereits vorhanden",
+      "fout": "Fehler"
+    },
+    "kolom": {
+      "rij": "Zeile",
+      "status": "Ergebnis",
+      "naam": "Name",
+      "email": "E-Mail",
+      "rol": "Rolle",
+      "instrumenten": "Instrumente",
+      "orkesten": "Orchester",
+      "titel": "Titel",
+      "componist": "Komponist",
+      "arrangeur": "Bearbeiter",
+      "duur": "Dauer",
+      "graad": "Grad",
+      "meldingen": "Meldungen"
     }
   }
 }

@@ -280,7 +280,8 @@
     "externalMusicians": "External Musicians",
     "replacementRequests": "Replacement Requests",
     "musicSharing": "Share music",
-    "mobileMenu": "Menu"
+    "mobileMenu": "Menu",
+    "importeren": "Import"
   },
   "roles": {
     "admin": "Administrator",
@@ -2248,7 +2249,8 @@
     "users": "$t(users.title)",
     "voiceParts": "$t(nav.voiceParts)",
     "wiki": "$t(nav.wiki)",
-    "workflows": "$t(nav.workflows)"
+    "workflows": "$t(nav.workflows)",
+    "importeren": "$t(nav.importeren)"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -5990,6 +5992,63 @@
       "database-back-up": "Database backup",
       "miniaturen-opruimen": "Clean up old thumbnails",
       "pdf-tijdelijk-opruimen": "Clean up temporary PDF files"
+    }
+  },
+  "importeren": {
+    "titel": "Import from a spreadsheet",
+    "soort": "What are you importing?",
+    "soorten": {
+      "leden": "Members",
+      "muziektitels": "Music library"
+    },
+    "uitleg": {
+      "leden": "Read members from a CSV file. You first see what happens to each row; nothing changes until you click import. Members who already exist are skipped.",
+      "muziektitels": "Read titles for the music library from a CSV file. You first see what happens to each row; nothing changes until you click import. Titles that already exist, with the same arranger, are skipped."
+    },
+    "kiesBestand": "Choose a CSV file",
+    "sjabloon": "Download example file",
+    "alleenCsv": "Working in Excel? Choose Save As, then CSV. Column names in Dutch, English and German are recognised.",
+    "bezigMetLezen": "Reading file…",
+    "voorbeeldVan": "Preview of {{bestand}}",
+    "tellingen": "Counts per outcome",
+    "telling": {
+      "nieuw_one": "{{count}} new",
+      "nieuw_other": "{{count}} new",
+      "bestaat_one": "{{count}} already exists",
+      "bestaat_other": "{{count}} already exist",
+      "fout_one": "{{count}} with an error",
+      "fout_other": "{{count}} with an error"
+    },
+    "herkend": "Columns read: {{kolommen}}.",
+    "genegeerd": "Not read: {{kolommen}}.",
+    "importeer_one": "Import {{count}} row",
+    "importeer_other": "Import {{count}} rows",
+    "gelukt_one": "{{count}} row imported.",
+    "gelukt_other": "{{count}} rows imported.",
+    "overgeslagen_one": "{{count}} already existed and was skipped.",
+    "overgeslagen_other": "{{count}} already existed and were skipped.",
+    "nietGelukt_one": "{{count}} row had an error.",
+    "nietGelukt_other": "{{count}} rows had an error.",
+    "wachtwoord": "Imported members receive no email and no password yet. They set one using \"Forgot password\" on the login screen.",
+    "status": {
+      "nieuw": "New",
+      "bestaat": "Already exists",
+      "fout": "Error"
+    },
+    "kolom": {
+      "rij": "Row",
+      "status": "Outcome",
+      "naam": "Name",
+      "email": "Email",
+      "rol": "Role",
+      "instrumenten": "Instruments",
+      "orkesten": "Orchestras",
+      "titel": "Title",
+      "componist": "Composer",
+      "arrangeur": "Arranger",
+      "duur": "Duration",
+      "graad": "Grade",
+      "meldingen": "Messages"
     }
   }
 }

@@ -1385,6 +1385,47 @@ Zet de taak terug op `wachtend` met een verse teller. Alleen voor een taak met s
 
 ---
 
+## Import API
+
+Leden en de muziekbibliotheek inlezen uit een spreadsheet. De kolommen en wat er per regel gebeurt staan in [IMPORTEREN.md](./IMPORTEREN.md).
+
+| Route                                     | Wie                        | Wat                                     |
+| ----------------------------------------- | -------------------------- | --------------------------------------- |
+| `POST /api/import/leden/voorbeeld`        | beheerder                  | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/leden`                  | beheerder                  | Importeert de regels met status `nieuw` |
+| `POST /api/import/muziektitels/voorbeeld` | beheerder, muziekcommissie | Beoordeelt het bestand, verandert niets |
+| `POST /api/import/muziektitels`           | beheerder, muziekcommissie | Importeert de regels met status `nieuw` |
+
+De body is het bestand als tekst, hooguit 5 MB en 2000 regels:
+
+```json
+{ "csv": "Voornaam;Achternaam;E-mail\nAnna;Jansen;anna@voorbeeld.nl\n" }
+```
+
+Het antwoord geeft per regel de uitkomst. De import beoordeelt het bestand opnieuw en voegt `geimporteerd` toe; hij antwoordt `201` als er iets is geïmporteerd, anders `200`.
+
+```json
+{
+  "kolommen": { "voornaam": "Voornaam", "achternaam": "Achternaam", "email": "E-mail" },
+  "genegeerd": [],
+  "regels": [
+    {
+      "rij": 2,
+      "status": "nieuw",
+      "gegevens": { "voornaam": "Anna", "achternaam": "Jansen", "email": "anna@voorbeeld.nl", "rol": "member" },
+      "fouten": [],
+      "waarschuwingen": []
+    }
+  ],
+  "tellingen": { "nieuw": 1, "bestaat": 0, "fout": 0 },
+  "geimporteerd": 1
+}
+```
+
+Ontbreekt een verplichte kolom, dan `400` met de namen die herkend worden.
+
+---
+
 ## Swagger Documentation
 
 In development mode, Swagger UI is available at:

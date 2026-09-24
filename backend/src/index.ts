@@ -90,6 +90,7 @@ import analyticsRoutes from './routes/analytics';
 import maintenanceRoutes from './routes/maintenance';
 import vocabulariesRoutes from './routes/vocabularies';
 import interopRoutes from './routes/interop';
+import importerenRoutes from './routes/importeren';
 import availabilityRoutes from './routes/availability';
 import instrumentAssetsRoutes from './routes/instrument-assets';
 import instrumentInsuranceRoutes from './routes/instrument-insurance';
@@ -384,6 +385,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/maintenance', optionalAuth, requireModule('inventory'), maintenanceRoutes);
 app.use('/api/vocabularies', vocabulariesRoutes);
 app.use('/api/interop', interopRoutes);
+app.use('/api/import', importerenRoutes);
 
 // CSRF token endpoint (for SPAs to get/refresh their token)
 app.get('/api/csrf-token', getCsrfToken);
