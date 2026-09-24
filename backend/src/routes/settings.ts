@@ -13,6 +13,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import logger from '../utils/logger';
 import { readFileHeader } from '../utils/fileValidation';
+import { bestandInMap } from '../utils/bestandInMap';
 import { controleerUitgaandAdres, OnveiligAdresFout } from '../utils/uitgaandAdres';
 import { logAuditEvent } from './audit-logs';
 
@@ -211,7 +212,7 @@ router.post(
       throw new ApiError(400, 'Geen bestand geüpload.');
     }
 
-    const voorlopig = req.file.path;
+    const voorlopig = bestandInMap(logoDir, req.file.path);
     const soort = herkenLogo(await readFileHeader(voorlopig, LOGO_KOP_LENGTE).catch(() => Buffer.alloc(0)));
     if (!soort) {
       await fs.promises.unlink(voorlopig).catch(() => {});
@@ -220,7 +221,7 @@ router.post(
 
     // De naam komt helemaal van de server: de voorlopige naam van multer met
     // de extensie die bij de herkende inhoud hoort.
-    const logoPath = path.join(logoDir, `${path.basename(voorlopig, '.upload')}${soort.extensie}`);
+    const logoPath = bestandInMap(logoDir, `${path.basename(voorlopig, '.upload')}${soort.extensie}`);
     await fs.promises.rename(voorlopig, logoPath);
 
     try {

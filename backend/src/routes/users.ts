@@ -20,6 +20,7 @@ import {
 import { createUserSchema, updateUserSchema } from '../validation/schemas';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
 import { readFileHeader } from '../utils/fileValidation';
+import { bestandInMap } from '../utils/bestandInMap';
 import { FileValidationError } from '../utils/errors';
 import { hashToken, revokeUserSessions } from '../utils/sessionStore';
 import { sendEmail } from '../utils/email';
@@ -303,7 +304,7 @@ router.get(
     // afbeelding is, helemaal niet.
     const soort = await herkenFotosoort(photoPath);
     if (!soort) {
-      logger.warn(`Profielfoto van ${req.params.id} is geen herkende afbeelding; niet geserveerd.`);
+      logger.warn('Een profielfoto is geen herkende afbeelding en wordt niet geserveerd.', { photoPath });
       throw new ApiError(404, 'Profielfoto niet gevonden.');
     }
 
@@ -1211,9 +1212,10 @@ router.post(
 
     // De inhoud bepaalt wat dit is (mimetype en naam komen van de client).
     // Geen herkende afbeelding: weg ermee.
-    const soort = await herkenFotosoort(req.file.path);
+    const voorlopig = bestandInMap(profilePhotoDir, req.file.path);
+    const soort = await herkenFotosoort(voorlopig);
     if (!soort) {
-      await fs.promises.unlink(req.file.path).catch(() => {});
+      await fs.promises.unlink(voorlopig).catch(() => {});
       throw new FileValidationError(FOTO_FOUTMELDING);
     }
 
@@ -1224,16 +1226,16 @@ router.post(
 
     if (!user) {
       // Clean up uploaded file
-      fs.unlinkSync(req.file.path);
+      fs.unlinkSync(voorlopig);
       throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
     // Opslaan onder de extensie die bij de inhoud hoort.
-    const fotoPad = path.join(
-      path.dirname(req.file.path),
-      `${path.basename(req.file.path, path.extname(req.file.path))}${soort.extensie}`,
+    const fotoPad = bestandInMap(
+      profilePhotoDir,
+      `${path.basename(voorlopig, path.extname(voorlopig))}${soort.extensie}`,
     );
-    await fs.promises.rename(req.file.path, fotoPad);
+    await fs.promises.rename(voorlopig, fotoPad);
 
     // Remove old photo if exists
     if (user.profile_photo_path) {
