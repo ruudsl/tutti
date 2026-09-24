@@ -202,6 +202,26 @@ daarna het lid wissen geeft `FOREIGN KEY constraint failed`. **Een lid dat ooit
 een chatbericht heeft gestuurd, is niet definitief te verwijderen.** De zachte
 verwijdering slaagt, de opruimtaak die later de rij moet weghalen loopt stuk.
 
+**Nagemeten op 24-09-2026:** dat geldt nog steeds, en het is breder. Niet
+alleen `user_id`-kolommen houden het wissen tegen. Twee kolommen `created_by`
+staan ook op `NO ACTION`: `external_musicians` en `replacement_requests`. Tien
+andere staan op `RESTRICT`, wat hetzelfde doet:
+
+- `invoices`, `transactions`, `budgets`, `donations`, `sepa_batches`;
+- `music_performance_reports`, `projects`, `tours`;
+- `equipment_item_loans`, `equipment_maintenance`.
+
+Een penningmeester die ooit een factuur of boeking aanmaakte, is daardoor ook
+niet definitief te verwijderen.
+
+Tot dezelfde datum was het gevolg groter dan één lid. De opruimtaak wiste alle
+te wissen leden met één `DELETE`; hield één lid die tegen, dan werd **niemand**
+op de installatie gewist, en dat stond alleen in het logboek. Dat is
+gerepareerd: leden worden nu één voor één gewist (`wisLeden` in
+`backend/src/scheduler/gdpr-cleanup.ts`). Wie niet te wissen is, blijft staan
+met een regel in het logboek. De vraag wat er met zijn chatberichten en
+boekingen moet gebeuren, blijft een keuze voor §9.
+
 ### Bevinding 2 — het instrumentenlogboek bewaart naam en ip-adres
 
 `instrument_history` heeft géén foreign key naar `users`, en bewaart naast
@@ -253,7 +273,9 @@ Twee dingen die het bestuur moet weten omdat ze een keuze vragen:
    kaartaankopen, stemmen, berichten en beschikbaarheid ontbreken.
 2. **GDPR.md beschrijft een andere export dan er bestaat** (§5): een ZIP met acht
    bestanden tegenover één JSON.
-3. **Een lid met een chatbericht is niet definitief te wissen** (§6, bevinding 1).
+3. **Een lid met een chatbericht, of dat ooit een factuur, boeking of project
+   aanmaakte, is niet definitief te wissen** (§6, bevinding 1). Dat één zo'n lid
+   ook het wissen van alle anderen tegenhield, is op 24-09-2026 gerepareerd.
 4. **`instrument_history` bewaart naam en ip-adres na verwijdering** (§6,
    bevinding 2).
 5. **62 van de 70 tabellen kennen geen bewaartermijn** (§4).

@@ -33,6 +33,34 @@ interface CleanupResult {
 }
 
 /**
+ * Wis leden definitief, één voor één.
+ *
+ * Een lid dat ergens nog naar verwezen wordt zonder ON DELETE (een
+ * chatbericht, een factuur die hij aanmaakte; zie docs/PIA.md §6) laat zich
+ * niet wissen. Met één DELETE voor alle leden tegelijk hield zo'n lid ook het
+ * wissen van alle anderen tegen, op de hele installatie, en stond dat alleen
+ * in het logboek. Nu blijft alleen dat ene lid staan, en zegt het logboek
+ * welk lid.
+ */
+export function wisLeden(ids: string[]): { gewist: string[]; geblokkeerd: string[] } {
+  const gewist: string[] = [];
+  const geblokkeerd: string[] = [];
+  const wis = db.prepare('DELETE FROM users WHERE id = ?');
+  for (const id of ids) {
+    try {
+      if (wis.run(id).changes > 0) gewist.push(id);
+    } catch (error) {
+      geblokkeerd.push(id);
+      logger.warn('Lid kan niet definitief gewist worden: er wordt nog naar verwezen', {
+        userId: id,
+        error: (error as Error).message,
+      });
+    }
+  }
+  return { gewist, geblokkeerd };
+}
+
+/**
  * Perform cleanup for a specific data type and association
  */
 function cleanupDataType(associationId: string, dataType: string, retentionDays: number): number {
@@ -115,17 +143,12 @@ function cleanupDataType(associationId: string, dataType: string, retentionDays:
       }
 
       case 'deleted_users': {
-        const result = db
-          .prepare(
-            `
-          DELETE FROM users
-          WHERE status = 'deleted'
-          AND deleted_at < ?
-          AND association_id = ?
-        `,
-          )
-          .run(cutoff, associationId);
-        deletedCount = result.changes;
+        const ids = (
+          db
+            .prepare("SELECT id FROM users WHERE status = 'deleted' AND deleted_at < ? AND association_id = ?")
+            .all(cutoff, associationId) as { id: string }[]
+        ).map(({ id }) => id);
+        deletedCount = wisLeden(ids).gewist.length;
         break;
       }
 
@@ -225,13 +248,15 @@ export function purgeSoftDeleted(): CleanupResult[] {
       .all(cutoff) as { id: string; profile_photo_path: string | null }[];
 
     if (users.length > 0) {
-      db.prepare('DELETE FROM users WHERE deleted_at IS NOT NULL AND deleted_at < ?').run(cutoff);
+      const gewist = new Set(wisLeden(users.map(({ id }) => id)).gewist);
       for (const user of users) {
-        if (user.profile_photo_path) {
+        if (gewist.has(user.id) && user.profile_photo_path) {
           removeFileSafely(path.resolve(user.profile_photo_path));
         }
       }
-      results.push({ association_id: 'global', data_type: 'purged_users', deleted_count: users.length });
+      if (gewist.size > 0) {
+        results.push({ association_id: 'global', data_type: 'purged_users', deleted_count: gewist.size });
+      }
     }
   } catch (error) {
     logger.error('Soft-delete purge failed for users', { error });
