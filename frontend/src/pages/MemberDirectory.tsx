@@ -40,7 +40,7 @@ export default function MemberDirectory() {
 
   const { data: instruments = [] } = useQuery({
     queryKey: ['instruments'],
-    queryFn: getInstruments,
+    queryFn: () => getInstruments(),
   });
 
   return (

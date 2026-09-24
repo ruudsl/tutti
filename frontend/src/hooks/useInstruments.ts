@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
 import {
   getInstruments,
+  zetInstrumentVerborgen,
   createInstrument,
   updateInstrument,
   deleteInstrument,
@@ -14,10 +15,12 @@ import { getErrorMessage } from '../utils/errors';
 /**
  * Hook to fetch all instruments
  */
-export function useInstruments() {
+export function useInstruments(alles = false) {
   return useQuery({
-    queryKey: queryKeys.instruments,
-    queryFn: getInstruments,
+    // Het beheerscherm vraagt ook de verborgen standaarditems; een eigen
+    // sleutel onder dezelfde voorvoegsel, zodat invalideren beide raakt.
+    queryKey: alles ? ([...queryKeys.instruments, 'beheer'] as const) : queryKeys.instruments,
+    queryFn: () => getInstruments(alles),
   });
 }
 
@@ -114,6 +117,24 @@ export function useDeleteInstrumentAlias() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.instruments });
       showSuccess('Alias verwijderd');
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+}
+
+/**
+ * Een standaardinstrument verbergen of weer tonen voor de eigen vereniging.
+ * De melding geeft het scherm zelf, in de taal van de gebruiker.
+ */
+export function useZetInstrumentVerborgen() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, verborgen }: { id: string; verborgen: boolean }) => zetInstrumentVerborgen(id, verborgen),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.instruments });
     },
     onError: (error) => {
       showError(getErrorMessage(error));

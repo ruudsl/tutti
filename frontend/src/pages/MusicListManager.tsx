@@ -52,7 +52,7 @@ export default function MusicListManager() {
   // React Query for genres
   const { data: genres = [] } = useQuery({
     queryKey: ['genres'],
-    queryFn: getGenres,
+    queryFn: () => getGenres(),
     staleTime: 5 * 60 * 1000,
   });
 

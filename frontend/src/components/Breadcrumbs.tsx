@@ -43,6 +43,7 @@ const routeConfig: Record<string, { labelKey: string; parent?: string }> = {
   '/upload': { labelKey: 'nav.upload', parent: '/' },
   '/concerts': { labelKey: 'nav.concerts', parent: '/' },
   '/genres': { labelKey: 'nav.genres', parent: '/' },
+  '/instrumenten': { labelKey: 'nav.instruments', parent: '/' },
   '/pdf-tools': { labelKey: 'nav.pdfTools', parent: '/' },
   '/loans': { labelKey: 'nav.loans', parent: '/' },
   '/statistics': { labelKey: 'nav.statistics', parent: '/' },

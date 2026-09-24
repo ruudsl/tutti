@@ -1311,7 +1311,8 @@
       "arranger": "Arrangeur",
       "duration": "Duur",
       "parts": "Partijen"
-    }
+    },
+    "uitleg": "Standaardgenres gelden voor alle verenigingen. Past er een niet, verberg het dan en maak een eigen genre."
   },
   "pdfTools": {
     "title": "PDF Tools",
@@ -3292,7 +3293,8 @@
     "voiceParts": "$t(nav.voiceParts)",
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
-    "importeren": "$t(nav.importeren)"
+    "importeren": "$t(nav.importeren)",
+    "instrumenten": "$t(nav.instruments)"
   },
   "seating": {
     "title": "Orkestopstelling",
@@ -6202,5 +6204,34 @@
       "kvk": "KvK-nummer",
       "btw": "Btw-nummer"
     }
+  },
+  "catalogus": {
+    "standaard": "Standaard",
+    "eigen": "Eigen",
+    "verborgen": "Verborgen",
+    "verbergen": "Verbergen",
+    "tonen": "Weer tonen",
+    "verborgenMelding": "\"{{name}}\" staat niet meer in de keuzelijsten van je vereniging.",
+    "getoondMelding": "\"{{name}}\" staat weer in de keuzelijsten."
+  },
+  "instrumenten": {
+    "titel": "Instrumenten",
+    "nieuw": "Nieuw instrument",
+    "bewerken": "Instrument bewerken",
+    "verwijderen": "Instrument verwijderen",
+    "verwijderenVraag": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Leden en partijen die dit instrument hebben, raken het kwijt.",
+    "naam": "Naam",
+    "naamVoorbeeld": "Bijv. Alpenhoorn",
+    "stemming": "Stemming",
+    "stemmingVoorbeeld": "Bijv. Bb, Eb, F",
+    "sleutel": "Sleutel",
+    "sleutels": {
+      "sol": "G-sleutel",
+      "fa": "F-sleutel",
+      "ut": "C-sleutel"
+    },
+    "andereNamen": "Andere namen",
+    "geen": "Geen instrumenten gevonden.",
+    "uitleg": "Standaardinstrumenten gelden voor alle verenigingen. Past er een niet, verberg het dan en maak een eigen instrument."
   }
 }

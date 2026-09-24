@@ -109,6 +109,7 @@ const ImslpBrowser = lui(() => import('./pages/ImslpBrowser'));
 
 // Reference data management
 const Genres = lui(() => import('./pages/Genres'));
+const Instrumenten = lui(() => import('./pages/Instrumenten'));
 const Loans = lui(() => import('./pages/Loans'));
 
 // Statistics and reporting
@@ -459,6 +460,14 @@ function AppRoutes() {
             element={
               <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
                 <Genres />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="instrumenten"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+                <Instrumenten />
               </PrivateRoute>
             }
           />

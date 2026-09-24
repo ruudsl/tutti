@@ -96,6 +96,11 @@ vi.mock('../../hooks/useGenres', () => ({
   useCreateGenre: muteerder,
   useUpdateGenre: muteerder,
   useDeleteGenre: muteerder,
+  useZetGenreVerborgen: muteerder,
+}));
+
+vi.mock('../../hooks/useMultiAssociation', () => ({
+  useIsSuperAdmin: () => ({ data: false }),
 }));
 
 vi.mock('../../hooks/useOrchestras', () => ({

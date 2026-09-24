@@ -93,6 +93,10 @@ export interface Instrument {
   tuning: string | null;
   clef?: string | null;
   aliases?: { id: string; name: string }[];
+  /** Uit de standaardlijst voor alle verenigingen (anders een eigen instrument). */
+  standaard?: boolean;
+  /** Een standaardinstrument dat deze vereniging heeft verborgen. */
+  verborgen?: boolean;
 }
 
 /**
@@ -151,6 +155,10 @@ export interface MusicList {
 export interface Genre {
   id: string;
   name: string;
+  /** Uit de standaardlijst voor alle verenigingen (anders een eigen genre). */
+  standaard?: boolean;
+  /** Een standaardgenre dat deze vereniging heeft verborgen. */
+  verborgen?: boolean;
 }
 
 /**

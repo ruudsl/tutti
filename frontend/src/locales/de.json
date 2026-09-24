@@ -1357,7 +1357,8 @@
       "arranger": "Arrangeur",
       "duration": "Dauer",
       "parts": "Stimmen"
-    }
+    },
+    "uitleg": "Standardgenres gelten für alle Vereine. Passt eines nicht, blenden Sie es aus und legen Sie ein eigenes Genre an."
   },
   "pdfTools": {
     "title": "PDF-Tools",
@@ -2223,7 +2224,8 @@
     "voiceParts": "$t(nav.voiceParts)",
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
-    "importeren": "$t(nav.importeren)"
+    "importeren": "$t(nav.importeren)",
+    "instrumenten": "$t(nav.instruments)"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -6202,5 +6204,34 @@
       "kvk": "Handelsregisternummer",
       "btw": "USt-IdNr."
     }
+  },
+  "catalogus": {
+    "standaard": "Standard",
+    "eigen": "Eigene",
+    "verborgen": "Ausgeblendet",
+    "verbergen": "Ausblenden",
+    "tonen": "Wieder anzeigen",
+    "verborgenMelding": "„{{name}}“ erscheint nicht mehr in den Auswahllisten Ihres Vereins.",
+    "getoondMelding": "„{{name}}“ erscheint wieder in den Auswahllisten."
+  },
+  "instrumenten": {
+    "titel": "Instrumente",
+    "nieuw": "Neues Instrument",
+    "bewerken": "Instrument bearbeiten",
+    "verwijderen": "Instrument löschen",
+    "verwijderenVraag": "Möchten Sie „{{name}}“ wirklich löschen? Mitglieder und Stimmen mit diesem Instrument verlieren es.",
+    "naam": "Name",
+    "naamVoorbeeld": "z. B. Alphorn",
+    "stemming": "Stimmung",
+    "stemmingVoorbeeld": "z. B. B, Es, F",
+    "sleutel": "Schlüssel",
+    "sleutels": {
+      "sol": "Violinschlüssel",
+      "fa": "Bassschlüssel",
+      "ut": "C-Schlüssel"
+    },
+    "andereNamen": "Andere Namen",
+    "geen": "Keine Instrumente gefunden.",
+    "uitleg": "Standardinstrumente gelten für alle Vereine. Passt eines nicht, blenden Sie es aus und legen Sie ein eigenes Instrument an."
   }
 }

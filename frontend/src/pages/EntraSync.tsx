@@ -39,7 +39,7 @@ export default function EntraSync() {
   // React Query for instruments
   const { data: instruments = [] } = useQuery({
     queryKey: ['instruments'],
-    queryFn: getInstruments,
+    queryFn: () => getInstruments(),
     staleTime: 5 * 60 * 1000,
   });
 
