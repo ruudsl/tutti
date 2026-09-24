@@ -19,8 +19,9 @@ import {
 } from '../services/zichtbaarheid';
 import { createUserSchema, updateUserSchema } from '../validation/schemas';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
-import { isImage, validateUploadedFile } from '../utils/fileValidation';
-import { revokeUserSessions } from '../utils/sessionStore';
+import { readFileHeader } from '../utils/fileValidation';
+import { FileValidationError } from '../utils/errors';
+import { hashToken, revokeUserSessions } from '../utils/sessionStore';
 import { sendEmail } from '../utils/email';
 import { getWelcomeEmail } from '../templates/emails';
 import logger from '../utils/logger';
@@ -51,17 +52,71 @@ function bewaakOrkesten(orchestraIds: string[] | undefined, associationId: strin
   }
 }
 
+/** De hash van het token waarmee dit verzoek binnenkwam, als het in de kopregel staat. */
+function huidigeTokenHash(req: AuthRequest): string | undefined {
+  const token = req.headers['authorization']?.split(' ')[1];
+  return token ? hashToken(token) : undefined;
+}
+
 // Profile photo upload configuration
 const profilePhotoDir = path.resolve(config.uploadDir, 'profile-photos');
 if (!fs.existsSync(profilePhotoDir)) {
   fs.mkdirSync(profilePhotoDir, { recursive: true });
 }
 
+/**
+ * Welke afbeelding dit is, afgeleid uit de eerste bytes - niet uit de naam of
+ * het mimetype dat de browser opgeeft.
+ *
+ * De foto werd opgeslagen met de extensie die de client meestuurde en later
+ * met res.sendFile geserveerd, dat het Content-Type uit die extensie afleidt.
+ * De controle op de eerste bytes liet een GIF-polyglot door
+ * (`GIF89a/*…*\/=1;alert(…)`): geldig GIF-begin, geldig JavaScript. Met
+ * `.js` of `.html` als extensie kwam dat terug als script of pagina op ons
+ * eigen domein. Nu bepaalt de inhoud de extensie én het Content-Type, en
+ * alleen uit deze lijst. Geen SVG: dat is een document met scripts.
+ */
+const FOTOSOORTEN = [
+  { extensie: '.jpg', type: 'image/jpeg', past: (b: Buffer) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  {
+    extensie: '.png',
+    type: 'image/png',
+    past: (b: Buffer) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  },
+  {
+    extensie: '.gif',
+    type: 'image/gif',
+    past: (b: Buffer) => ['GIF87a', 'GIF89a'].includes(b.subarray(0, 6).toString('latin1')),
+  },
+  {
+    extensie: '.webp',
+    type: 'image/webp',
+    past: (b: Buffer) =>
+      b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP',
+  },
+] as const;
+
+type Fotosoort = (typeof FOTOSOORTEN)[number];
+
+async function herkenFotosoort(bestand: string): Promise<Fotosoort | null> {
+  let kop: Buffer;
+  try {
+    kop = await readFileHeader(bestand);
+  } catch {
+    return null;
+  }
+  if (kop.length < 12) return null;
+  return FOTOSOORTEN.find((soort) => soort.past(kop)) ?? null;
+}
+
+const FOTO_FOUTMELDING = 'Alleen PNG, JPG, GIF of WebP bestanden zijn toegestaan.';
+
+// De naam die multer geeft is voorlopig en zonder extensie; na de controle
+// op de inhoud krijgt het bestand de extensie die bij die inhoud hoort.
 const profilePhotoStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, profilePhotoDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `profile-${Date.now()}-${uuidv4().slice(0, 8)}${ext}`);
+  filename: (_req, _file, cb) => {
+    cb(null, `profile-${Date.now()}-${uuidv4().slice(0, 8)}.upload`);
   },
 });
 
@@ -69,11 +124,13 @@ const profilePhotoUpload = multer({
   storage: profilePhotoStorage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
   fileFilter: (_req, file, cb) => {
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+    // Alleen een eerste zeef: het mimetype komt van de client. De inhoud
+    // wordt na het opslaan gecontroleerd (herkenFotosoort).
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Alleen PNG, JPG of WebP bestanden zijn toegestaan.'));
+      cb(new Error(FOTO_FOUTMELDING));
     }
   },
 });
@@ -240,8 +297,25 @@ router.get(
       throw new ApiError(404, 'Profielfoto niet gevonden.');
     }
 
-    res.set('Cache-Control', 'public, max-age=3600');
-    res.sendFile(photoPath);
+    // Het Content-Type volgt uit de inhoud, niet uit de extensie. Zo komt ook
+    // een foto die vóór deze controle met een vreemde extensie is opgeslagen
+    // (.js, .html, .svg) als afbeelding terug - of, als het geen herkende
+    // afbeelding is, helemaal niet.
+    const soort = await herkenFotosoort(photoPath);
+    if (!soort) {
+      logger.warn(`Profielfoto van ${req.params.id} is geen herkende afbeelding; niet geserveerd.`);
+      throw new ApiError(404, 'Profielfoto niet gevonden.');
+    }
+
+    // private: de foto hoort bij een ingelogd lid van deze vereniging en hoort
+    // niet in een gedeelde cache. nosniff: de browser houdt zich aan het type.
+    res.set({
+      'Content-Type': soort.type,
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "default-src 'none'; sandbox",
+      'Cache-Control': 'private, max-age=3600',
+    });
+    res.send(await fs.promises.readFile(photoPath));
   }),
 );
 
@@ -853,8 +927,8 @@ router.put(
 
     // Check if user exists and belongs to same association
     const user = db
-      .prepare('SELECT * FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
-      .get(req.params.id, req.user!.associationId);
+      .prepare('SELECT id, role FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(req.params.id, req.user!.associationId) as { id: string; role: string } | undefined;
 
     if (!user) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
@@ -868,6 +942,15 @@ router.put(
       }
     }
 
+    // Een nieuwe rol of een nieuw wachtwoord moet ook gelden voor wie al
+    // ingelogd is. Zonder intrekken hield een teruggezette beheerder met zijn
+    // bestaande token tot zeven dagen beheerrechten, en bleef wie een gelekt
+    // wachtwoord had gebruikt gewoon binnen nadat de beheerder het had
+    // vervangen. password_changed_at sluit daarnaast tokens uit die nog geen
+    // sessierij hebben (zie validateSession).
+    const rolGewijzigd = data.role !== undefined && data.role !== user.role;
+    const sessiesIntrekken = rolGewijzigd || !!data.password;
+
     // Use transaction to ensure atomicity
     withTransaction(() => {
       // Update basic info
@@ -876,10 +959,19 @@ router.put(
         db.prepare(
           `
                 UPDATE users SET email = COALESCE(?, email), first_name = COALESCE(?, first_name),
-                       last_name = COALESCE(?, last_name), role = COALESCE(?, role), password_hash = ?
+                       last_name = COALESCE(?, last_name), role = COALESCE(?, role), password_hash = ?,
+                       password_changed_at = ?
                 WHERE id = ?
             `,
-        ).run(data.email, data.firstName, data.lastName, data.role, passwordHash, req.params.id);
+        ).run(
+          data.email,
+          data.firstName,
+          data.lastName,
+          data.role,
+          passwordHash,
+          new Date().toISOString(),
+          req.params.id,
+        );
       } else {
         db.prepare(
           `
@@ -911,6 +1003,12 @@ router.put(
             insertOrchestra.run(req.params.id, orchestraId);
           }
         }
+      }
+
+      if (sessiesIntrekken) {
+        // Past een beheerder zichzelf aan, dan blijft het verzoek waarmee hij
+        // dat doet ingelogd - net als bij POST /auth/change-password.
+        revokeUserSessions(req.params.id, req.params.id === req.user!.id ? huidigeTokenHash(req) : undefined);
       }
     });
 
@@ -1111,9 +1209,13 @@ router.post(
       throw new ApiError(400, 'Geen bestand geüpload.');
     }
 
-    // Magic-byte check after multer stored the file (mimetype is spoofable);
-    // deletes the file and throws FileValidationError on mismatch
-    await validateUploadedFile(req.file.path, isImage, 'Alleen PNG, JPG of WebP bestanden zijn toegestaan.');
+    // De inhoud bepaalt wat dit is (mimetype en naam komen van de client).
+    // Geen herkende afbeelding: weg ermee.
+    const soort = await herkenFotosoort(req.file.path);
+    if (!soort) {
+      await fs.promises.unlink(req.file.path).catch(() => {});
+      throw new FileValidationError(FOTO_FOUTMELDING);
+    }
 
     // Verify user exists and belongs to same association
     const user = db
@@ -1126,6 +1228,13 @@ router.post(
       throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
+    // Opslaan onder de extensie die bij de inhoud hoort.
+    const fotoPad = path.join(
+      path.dirname(req.file.path),
+      `${path.basename(req.file.path, path.extname(req.file.path))}${soort.extensie}`,
+    );
+    await fs.promises.rename(req.file.path, fotoPad);
+
     // Remove old photo if exists
     if (user.profile_photo_path) {
       const oldPath = path.resolve(user.profile_photo_path);
@@ -1135,7 +1244,7 @@ router.post(
     }
 
     // Update database with new photo path
-    db.prepare('UPDATE users SET profile_photo_path = ? WHERE id = ?').run(req.file.path, req.params.id);
+    db.prepare('UPDATE users SET profile_photo_path = ? WHERE id = ?').run(fotoPad, req.params.id);
 
     logger.info(`Profile photo uploaded for user ${req.params.id}`, { uploadedBy: req.user!.id });
 

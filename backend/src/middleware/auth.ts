@@ -20,20 +20,25 @@ export interface AuthRequest extends Request {
 }
 
 /**
- * Validate the token against the user_sessions table and the user's
- * password_changed_at timestamp.
+ * Controleer een token tegen user_sessions én tegen de gebruiker zelf.
  *
- * Rules:
- * - A session that was explicitly revoked -> invalid (401).
- * - A known, non-revoked session -> valid (its last_active is updated, throttled).
- * - No session record at all (token issued before session tracking existed):
- *   the token is only accepted if it was issued after the user's last password
- *   change, and is then lazily registered (upsert) so it becomes revocable.
+ * Regels:
+ * - Een sessie die expliciet is ingetrokken -> ongeldig (401).
+ * - Een verwijderd lid (`deleted_at`) of een lid uit dienst (`status =
+ *   'inactive'`) -> ongeldig, ook met een bekende, niet-ingetrokken sessie.
+ *   Die controle zat alleen op het pad zonder sessierij; een lid dat buiten
+ *   de routes om uit dienst ging (of waarbij het intrekken mislukte) hield
+ *   daardoor zijn token tot het verliep. 'pending' blijft toegestaan, net als
+ *   bij het inloggen (routes/auth.ts).
+ * - Een bekende sessie -> geldig (last_active wordt bijgewerkt, gedoseerd).
+ * - Geen sessierij (token van voor de sessieregistratie): alleen geldig als
+ *   het token na de laatste wachtwoordwijziging is uitgegeven; dan wordt het
+ *   alsnog geregistreerd, zodat het in te trekken is.
  *
- * Note: password_changed_at is only checked on the lazy path. Sessions kept
- * intentionally across a password change (the current session during
- * change-password) remain valid via their session record; all other sessions
- * are revoked explicitly at password change/reset time.
+ * password_changed_at telt alleen op dat laatste pad. De sessie die bij een
+ * wachtwoordwijziging bewust blijft staan (de huidige, bij change-password)
+ * blijft geldig via haar sessierij; alle andere worden op dat moment
+ * expliciet ingetrokken - net als bij een rolwijziging door een beheerder.
  *
  * Ook de websocket gebruikt deze regels (websocket/index.ts): een sessie die
  * hier is beëindigd, mag daar ook geen chat of meldingen meer ontvangen.
@@ -57,19 +62,27 @@ export function validateSession(
     if (session.user_id !== decoded.id) {
       return 'Token verlopen of ongeldig.';
     }
+  }
+
+  const user = db
+    .prepare('SELECT id, status, deleted_at, password_changed_at FROM users WHERE id = ?')
+    .get(decoded.id) as
+    { id: string; status: string | null; deleted_at: string | null; password_changed_at: string | null } | undefined;
+
+  if (!user || user.deleted_at) {
+    return 'Token verlopen of ongeldig.';
+  }
+
+  if (user.status === 'inactive') {
+    return 'Dit account is niet meer actief. Neem contact op met je vereniging.';
+  }
+
+  if (session) {
     updateSessionActivityByHash(tokenHash);
     return null;
   }
 
   // Legacy/unknown token: no session record exists
-  const user = db
-    .prepare('SELECT id, password_changed_at FROM users WHERE id = ? AND deleted_at IS NULL')
-    .get(decoded.id) as { id: string; password_changed_at: string | null } | undefined;
-
-  if (!user) {
-    return 'Token verlopen of ongeldig.';
-  }
-
   if (user.password_changed_at && decoded.iat !== undefined) {
     const passwordChangedAt = new Date(user.password_changed_at).getTime();
     if (!isNaN(passwordChangedAt) && decoded.iat * 1000 < passwordChangedAt) {
@@ -89,6 +102,11 @@ export function validateSession(
   );
 
   return null;
+}
+
+/** Een volledig token in de URL mag alleen bij lezen: zie authenticateToken. */
+function isLezendVerzoek(req: Request): boolean {
+  return req.method === 'GET' || req.method === 'HEAD';
 }
 
 /**
@@ -142,9 +160,15 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 
   if (queryToken) {
-    // Legacy: a full JWT passed via query parameter. Still accepted during
-    // the transition period, but log it so remaining call sites can be
-    // migrated to short-lived download tokens (POST /api/download-token).
+    // Legacy: een volledig JWT in de querystring. De frontend doet dat nog
+    // voor <audio src> (getMp3Url in api/music.ts), dus helemaal schrappen
+    // kan niet. Maar een URL belandt in logboeken, geschiedenis en
+    // Referer-kopregels, en een verzoek dat iets wijzigt hoort zijn token in
+    // de Authorization-kopregel te hebben. Dus alleen bij lezen, net als het
+    // kortlevende download-token.
+    if (!isLezendVerzoek(req)) {
+      return res.status(401).json({ error: 'Een token in de URL is alleen geldig voor downloads.' });
+    }
     logger.warn(
       `Legacy full JWT accepted via query parameter (path: ${req.path}). Migrate to short-lived download tokens.`,
     );
@@ -171,6 +195,9 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     logger.warn('Session validation skipped due to error:', error);
   }
 
+  // Rol en vereniging komen uit het token. Wie een rol, wachtwoord of
+  // lidmaatschap van iemand wijzigt, trekt daarom diens sessies in
+  // (routes/users.ts, routes/multi-association.ts); zie validateSession.
   req.user = {
     id: decoded.id,
     email: decoded.email,
@@ -306,7 +333,10 @@ export function requireSectionLeader(getInstrumentId: (req: AuthRequest) => stri
  */
 export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
-  const token = (authHeader && authHeader.split(' ')[1]) || (req.query.token as string);
+  const headerToken = authHeader && authHeader.split(' ')[1];
+  // Een token in de URL alleen bij lezen; zie authenticateToken.
+  const queryToken = !headerToken && isLezendVerzoek(req) ? (req.query.token as string | undefined) : undefined;
+  const token = headerToken || queryToken;
 
   if (!token) {
     return next();
@@ -330,10 +360,16 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as DecodedToken;
 
-    // Don't attach a user for an explicitly revoked session
+    // Don't attach a user for an explicitly revoked session, or for a user
+    // who is deleted or inactive (zelfde regel als validateSession).
     try {
       const session = findSessionByTokenHash(hashToken(token));
       if (session?.revoked_at) {
+        return next();
+      }
+      const gebruiker = db.prepare('SELECT status, deleted_at FROM users WHERE id = ?').get(decoded.id) as
+        { status: string | null; deleted_at: string | null } | undefined;
+      if (!gebruiker || gebruiker.deleted_at || gebruiker.status === 'inactive') {
         return next();
       }
     } catch (error) {

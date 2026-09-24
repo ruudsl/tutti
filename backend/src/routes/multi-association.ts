@@ -39,10 +39,52 @@ const createAssociationSchema = z.object({
   parentId: z.string().uuid().optional().nullable(),
 });
 
+const VERENIGINGSROLLEN = ['member', 'board', 'admin'] as const;
+type Verenigingsrol = (typeof VERENIGINGSROLLEN)[number];
+
 const inviteUserSchema = z.object({
   email: z.string().email('Ongeldig e-mailadres'),
-  role: z.enum(['member', 'board', 'admin']).default('member'),
+  role: z.enum(VERENIGINGSROLLEN).default('member'),
 });
+
+/**
+ * Hoe zwaar een rol weegt bij het uitnodigen. Rollen die niet in
+ * user_associations voorkomen (music_committee, conductor, ...) tellen als
+ * lid: die mogen niemand uitnodigen en geven niemand iets hogers dan 'member'.
+ */
+function rolGewicht(rol: string | null | undefined): number {
+  if (rol === 'admin') return 3;
+  if (rol === 'board') return 2;
+  return 1;
+}
+
+function isSuperAdmin(userId: string): boolean {
+  return !!db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(userId);
+}
+
+/**
+ * De rol die iemand nu in een vereniging heeft.
+ *
+ * Staat de gebruiker op dit moment in die vereniging, dan is dat users.role
+ * (die wordt bij het wisselen gelijkgezet met het lidmaatschap). Anders telt
+ * de actieve rij in user_associations. Een super-admin telt als beheerder.
+ */
+function rolInVereniging(userId: string, associationId: string): string | null {
+  if (isSuperAdmin(userId)) return 'admin';
+
+  const hier = db
+    .prepare(
+      `SELECT role FROM users
+       WHERE id = ? AND association_id = ? AND deleted_at IS NULL AND COALESCE(status, 'active') != 'inactive'`,
+    )
+    .get(userId, associationId) as { role: string } | undefined;
+  if (hier) return hier.role;
+
+  const lidmaatschap = db
+    .prepare(`SELECT role FROM user_associations WHERE user_id = ? AND association_id = ? AND status = 'active'`)
+    .get(userId, associationId) as { role: string } | undefined;
+  return lidmaatschap?.role ?? null;
+}
 
 const partnershipRequestSchema = z.object({
   targetAssociationId: z.string().uuid(),
@@ -560,6 +602,15 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = inviteUserSchema.parse(req.body);
 
+    // Niemand deelt een rol uit die hij zelf niet heeft. Een bestuurslid kon
+    // hier 'admin' opgeven, zijn eigen tweede account uitnodigen, aannemen en
+    // wisselen - en had dan een token met rol admin: ledenbeheer, back-ups,
+    // wachtwoorden resetten. Beheerder maken kan alleen een beheerder (of een
+    // super-admin).
+    if (rolGewicht(data.role) > rolGewicht(req.user!.role) && !isSuperAdmin(req.user!.id)) {
+      throw new ApiError(403, 'Je kunt niemand uitnodigen met een hogere rol dan je zelf hebt.');
+    }
+
     const existingUser = db
       .prepare(
         `
@@ -695,6 +746,23 @@ router.post(
 
     if (invitation.email.toLowerCase() !== req.user!.email?.toLowerCase()) {
       throw new ApiError(403, 'Deze uitnodiging is voor een ander e-mailadres.');
+    }
+
+    // De uitnodiger moet de rol die hij weggeeft nu nog zelf hebben. Dat vangt
+    // uitnodigingen die zijn verstuurd voordat POST /invitations dat
+    // controleerde (een bestuurslid dat 'admin' uitdeelde), en die van iemand
+    // die sindsdien is teruggezet of vertrokken. Aannemen zou anders via het
+    // wisselen alsnog die rol opleveren. Een uitnodiging als gewoon lid blijft
+    // geldig, ook als de uitnodiger inmiddels weg is.
+    if (rolGewicht(invitation.role) > rolGewicht('member')) {
+      const rolUitnodiger = rolInVereniging(invitation.invited_by, invitation.association_id);
+      if (!rolUitnodiger || rolGewicht(invitation.role) > rolGewicht(rolUitnodiger)) {
+        throw new ApiError(403, 'Deze uitnodiging is niet meer geldig. Vraag om een nieuwe.');
+      }
+    }
+
+    if (!(VERENIGINGSROLLEN as readonly string[]).includes(invitation.role)) {
+      throw new ApiError(403, 'Deze uitnodiging is niet meer geldig. Vraag om een nieuwe.');
     }
 
     // Tussen versturen en aannemen zit tot een week; de vereniging kan
@@ -1125,7 +1193,7 @@ router.put(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { role } = req.body;
 
-    if (!['member', 'board', 'admin'].includes(role)) {
+    if (!(VERENIGINGSROLLEN as readonly string[]).includes(role)) {
       throw new ApiError(400, 'Ongeldige rol.');
     }
 
@@ -1139,6 +1207,16 @@ router.put(
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Lid niet gevonden.');
+    }
+
+    // Staat het lid nu in deze vereniging, dan geldt de nieuwe rol meteen.
+    // users.role werd alleen bij het wisselen gelijkgezet; een beheerder die
+    // hier werd teruggezet naar lid bleef beheerder tot hij een keer wisselde.
+    const bijgewerkt = db
+      .prepare('UPDATE users SET role = ? WHERE id = ? AND association_id = ?')
+      .run(role, req.params.userId, req.user!.associationId);
+    if (bijgewerkt.changes > 0 && req.params.userId !== req.user!.id) {
+      revokeUserSessions(req.params.userId);
     }
 
     logActivity(req.user!.associationId, req.user!.id, 'member_role_changed', 'user', req.params.userId, {
@@ -1185,14 +1263,18 @@ router.delete(
     if (staatHier?.association_id === req.user!.associationId) {
       const elders = db
         .prepare(
-          `SELECT association_id FROM user_associations
+          `SELECT association_id, role FROM user_associations
            WHERE user_id = ? AND association_id != ? AND status = 'active'
            ORDER BY is_primary DESC, joined_at ASC LIMIT 1`,
         )
-        .get(req.params.userId, req.user!.associationId) as { association_id: string } | undefined;
+        .get(req.params.userId, req.user!.associationId) as { association_id: string; role: string } | undefined;
 
-      db.prepare('UPDATE users SET association_id = ? WHERE id = ?').run(
+      // De rol gaat mee. users.role is de rol uit déze vereniging; wie hier
+      // beheerder was en naar een vereniging gaat waar hij lid is, zou anders
+      // daar als beheerder binnenkomen.
+      db.prepare('UPDATE users SET association_id = ?, role = ? WHERE id = ?').run(
         elders?.association_id ?? null,
+        elders?.role ?? 'member',
         req.params.userId,
       );
     }
