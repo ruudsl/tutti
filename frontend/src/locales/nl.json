@@ -984,8 +984,7 @@
     "recipientStatusLabel": "Status",
     "searchRecipients": "Zoek in ontvangers",
     "viewRecipients": "Ontvangers bekijken",
-    "openedAt": "Geopend op {{date}}",
-    "deliveredAt": "Afgeleverd op {{date}}"
+    "openedAt": "Geopend op {{date}}"
   },
   "customFields": {
     "title": "Aangepaste velden",

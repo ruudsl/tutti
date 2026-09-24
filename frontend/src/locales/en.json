@@ -1012,8 +1012,7 @@
     "recipientStatusLabel": "Status",
     "searchRecipients": "Search recipients",
     "viewRecipients": "View recipients",
-    "openedAt": "Opened at {{date}}",
-    "deliveredAt": "Delivered at {{date}}"
+    "openedAt": "Opened at {{date}}"
   },
   "customFields": {
     "title": "Custom Fields",

@@ -191,10 +191,8 @@ export interface CampaignRecipient {
   name: string;
   status: RecipientDeliveryStatus;
   sentAt?: string;
-  deliveredAt?: string;
   openedAt?: string;
   clickedAt?: string;
-  bouncedAt?: string;
   bounceReason?: string;
 }
 

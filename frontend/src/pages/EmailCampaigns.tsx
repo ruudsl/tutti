@@ -968,10 +968,7 @@ function CampaignRecipientsDialog({ campaignId, onClose }: { campaignId: string;
                       {recipient.openedAt && (
                         <span>{t('emailCampaigns.openedAt', { date: formatDateTime(recipient.openedAt) })}</span>
                       )}
-                      {recipient.deliveredAt && !recipient.openedAt && (
-                        <span>{t('emailCampaigns.deliveredAt', { date: formatDateTime(recipient.deliveredAt) })}</span>
-                      )}
-                      {recipient.sentAt && !recipient.deliveredAt && !recipient.openedAt && (
+                      {recipient.sentAt && !recipient.openedAt && (
                         <span>{t('emailCampaigns.sentAt', { date: formatDateTime(recipient.sentAt) })}</span>
                       )}
                     </td>

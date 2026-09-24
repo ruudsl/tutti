@@ -336,8 +336,10 @@ describe('meldkanalen', () => {
       expect(antwoord.status).toBe(200);
       expect(antwoord.body).toEqual({ code: 'abc123', url: 'https://t.me/bot?start=abc123', expiresIn: 600 });
       // De code wordt voor de gebruiker uit het token gemaakt, niet voor een
-      // gebruiker die de aanvrager zelf aanwijst.
-      expect(vi.mocked(generateLinkUrl).mock.calls[0][0]).toBe(lid.id);
+      // gebruiker die de aanvrager zelf aanwijst, en met de bot van zijn eigen
+      // vereniging.
+      expect(vi.mocked(generateLinkUrl).mock.calls[0]).toEqual([lid.id, lid.associationId]);
+      expect(isTelegramConfigured).toHaveBeenCalledWith(lid.associationId);
     });
 
     it('meldt 500 als er geen link gemaakt kon worden', async () => {
@@ -526,7 +528,8 @@ describe('meldkanalen', () => {
       const verificatie = verificatieVan(lid.id);
       expect(verificatie?.phone_number).toBe('+31612345678');
       expect(verificatie?.code).toBe('123456');
-      expect(sendVerificationCode).toHaveBeenCalledWith('+31612345678', '123456');
+      // Met het WhatsApp-nummer van de eigen vereniging.
+      expect(sendVerificationCode).toHaveBeenCalledWith('+31612345678', '123456', lid.associationId);
     });
 
     it('geeft de verificatiecode niet terug in het antwoord', async () => {

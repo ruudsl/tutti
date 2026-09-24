@@ -6,15 +6,15 @@
  * door aan het formulier eromheen. Elk van die drie kan misgaan zonder dat er
  * iets op het scherm verandert, en juist daarom staat het hier vast.
  *
- * VASTGELEGD, NIET VERANDERD: bij een storing valt de CAPTCHA open. Deze
- * omhulling blokkeert namelijk niets uit zichzelf - laadt het script niet, dan
+ * Deze omhulling blokkeert niets uit zichzelf: laadt het script niet, dan
  * meldt hij dat via `onError` en houdt hij verder zijn mond; er komt geen
- * token, geen foutmelding in beeld, geen slot op het formulier. Wat er dan
- * gebeurt beslist de aanroeper (TicketPurchase zet zijn verstuurknop op slot)
- * en, aan de serverkant, `services/captcha.ts`, die verificatie overslaat als
- * er geen sleutel is ingesteld. Dat is een bewuste keuze en die blijft zo. De
- * tests hieronder leggen hem vast zodat een latere wijziging hem niet per
- * ongeluk omdraait; ze schrijven niet voor dat het anders moet.
+ * token, geen foutmelding in beeld, geen slot op het formulier. Het slot zit
+ * elders, en valt bij een storing dicht, niet open:
+ * - TicketPurchase houdt zijn verstuurknop uit zolang er geen token is;
+ * - `services/captcha.ts` weigert een bestelling als hCaptcha zelf niet
+ *   antwoordt (vastgelegd in de backendtest `captcha.test.ts`).
+ * Alleen een installatie zonder hCaptcha-sleutel, of met CAPTCHA_ENABLED=false,
+ * slaat de controle over. Dat is instelling, geen storing.
  *
  * Getest wordt wat de bezoeker ziet en doet: het vakje verschijnt met de juiste
  * taal en het juiste thema, het afronden van de puzzel geeft een token door,

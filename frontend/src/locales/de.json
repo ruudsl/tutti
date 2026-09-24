@@ -1030,8 +1030,7 @@
     "recipientStatusLabel": "Status",
     "searchRecipients": "Empfänger durchsuchen",
     "viewRecipients": "Empfänger anzeigen",
-    "openedAt": "Geöffnet am {{date}}",
-    "deliveredAt": "Zugestellt am {{date}}"
+    "openedAt": "Geöffnet am {{date}}"
   },
   "customFields": {
     "title": "Benutzerdefinierte Felder",
