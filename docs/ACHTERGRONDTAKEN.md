@@ -93,12 +93,23 @@ er `FOR UPDATE SKIP LOCKED` bij. Zie [POSTGRES_MIGRATION.md](./POSTGRES_MIGRATIO
 Kies `looptijdMs` ruim. Te kort, en een trage maar gezonde taak geldt als
 onderbroken terwijl hij nog loopt.
 
+## Het beheerscherm
+
+Superbeheerders zien de wachtrij op de pagina _Verenigingen Beheer_, tabblad
+_Achtergrondtaken_. Het scherm opent op de mislukte taken, met per taak de
+laatste fout, en heeft bij een mislukte taak een knop om hem opnieuw te
+proberen: dan staat hij weer op `wachtend` met een verse teller. De API staat
+in [API.md](./API.md#achtergrondtaken-api).
+
+Alleen superbeheerders, omdat de taken van nu systeemtaken zijn die bij geen
+vereniging horen. Komen er taken die wel bij een vereniging horen
+(`association_id` gevuld), dan krijgt de beheerder van die vereniging een eigen
+route die op `association_id` filtert.
+
 ## Nog niet af
 
 WP12 heeft meer onderdelen dan dit fundament. Nog open:
 
-- een beheerscherm met de wachtrij, de mislukte taken en een knop om er één
-  opnieuw te proberen;
 - zwaar werk binnen een verzoek (pdf's, exports, rapporten) naar de wachtrij;
 - `scheduler/workflow-runner.ts` en `scheduler/email-digest.ts`, die nooit
   starten: aanzetten of weghalen.

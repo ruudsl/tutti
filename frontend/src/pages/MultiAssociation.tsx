@@ -27,6 +27,7 @@ import {
   useActivityLog,
 } from '../hooks/useMultiAssociation';
 import { Icon } from '../components/Icon';
+import { AchtergrondtakenBeheer } from '../components/AchtergrondtakenBeheer';
 import { FormModal } from '../components/FormModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Association, Invitation, Partnership, AssociationMember, SuperAdmin } from '../api/multi-association';
@@ -41,7 +42,7 @@ const SUBSCRIPTION_TIERS = [
 export default function MultiAssociation() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<
-    'associations' | 'invitations' | 'partnerships' | 'members' | 'superadmins' | 'activity'
+    'associations' | 'invitations' | 'partnerships' | 'members' | 'superadmins' | 'activity' | 'achtergrondtaken'
   >('associations');
   const { data: superAdminStatus, isLoading: checkingAccess } = useIsSuperAdmin();
 
@@ -83,6 +84,7 @@ export default function MultiAssociation() {
             { id: 'members', label: t('multiAssociation.tabs.members'), icon: 'users' },
             { id: 'superadmins', label: t('multiAssociation.tabs.superadmins'), icon: 'shield' },
             { id: 'activity', label: t('multiAssociation.tabs.activity'), icon: 'clock' },
+            { id: 'achtergrondtaken', label: t('multiAssociation.tabs.achtergrondtaken'), icon: 'refresh' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -106,6 +108,7 @@ export default function MultiAssociation() {
       {activeTab === 'members' && <MembersTab />}
       {activeTab === 'superadmins' && <SuperAdminsTab />}
       {activeTab === 'activity' && <ActivityTab />}
+      {activeTab === 'achtergrondtaken' && <AchtergrondtakenBeheer />}
     </div>
   );
 }

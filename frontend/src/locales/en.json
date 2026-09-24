@@ -4439,7 +4439,8 @@
       "partnerships": "Partnerships",
       "members": "Members",
       "superadmins": "Super Admins",
-      "activity": "Activity"
+      "activity": "Activity",
+      "achtergrondtaken": "Background jobs"
     },
     "associations": {
       "title": "All Associations",
@@ -5953,5 +5954,38 @@
     "pending_changes_other": "{{count}} changes are waiting to sync",
     "clear_offline_data": "Clear offline data",
     "confirm_clear": "Are you sure you want to clear all offline data?"
+  },
+  "achtergrondtaken": {
+    "titel": "Background jobs",
+    "uitleg": "Work that runs outside a request: notifications, clean-up and backups. A failed job stays here until someone retries it.",
+    "filterOpStatus": "Filter by status",
+    "alle": "All",
+    "geen": "There are no jobs in the queue.",
+    "geenMetStatus": "No jobs with this status.",
+    "opnieuw": "Retry",
+    "opnieuwVoor": "Retry {{soort}}",
+    "opnieuwIngepland": "The job is back in the queue.",
+    "paginas": "Pages",
+    "paginaVan": "Page {{pagina}} of {{totaal}}",
+    "status": {
+      "wachtend": "Waiting",
+      "bezig": "Running",
+      "gelukt": "Succeeded",
+      "mislukt": "Failed"
+    },
+    "kolommen": {
+      "soort": "Job",
+      "status": "Status",
+      "pogingen": "Attempts",
+      "bijgewerkt": "Last updated",
+      "fout": "Last error",
+      "acties": "Actions"
+    },
+    "soorten": {
+      "opstelling-meldingen": "Seating notifications",
+      "mail-doorsturen-opnieuw": "Mail forwarding (retry)",
+      "avg-opschonen": "GDPR clean-up",
+      "database-back-up": "Database backup"
+    }
   }
 }

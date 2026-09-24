@@ -16,6 +16,7 @@ import {
   registreerTaak,
   registreerPeriodiek,
   verwerkWachtrij,
+  probeerOpnieuw,
   ruimOp,
   wachttijdNa,
   wisRegistratiesVoorTests,
@@ -273,6 +274,38 @@ describe('de wachtrij voor achtergrondtaken', () => {
 
       await verwerkWachtrij({ nu: klok(na(60_000)) });
       expect(uitvoeren).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('opnieuw proberen vanuit het beheerscherm', () => {
+    it('laat een mislukte taak weer draaien, met al zijn pogingen', async () => {
+      let stuk = true;
+      registreerTaak('herstelbaar', {
+        herhaalbaar: false,
+        uitvoeren: () => {
+          if (stuk) throw new Error('schijf vol');
+        },
+      });
+      const id = plaatsTaak('herstelbaar', {}, { nu: BEGIN })!;
+      await verwerkWachtrij({ nu: klok(BEGIN) });
+      expect(rij(id).status).toBe('mislukt');
+
+      stuk = false;
+      expect(probeerOpnieuw(id, na(60_000))).toBe(true);
+      await verwerkWachtrij({ nu: klok(na(60_000)) });
+
+      expect(rij(id).status).toBe('gelukt');
+      expect(rij(id).pogingen).toBe(1);
+      expect(rij(id).laatste_fout).toBeNull();
+    });
+
+    it('doet niets met een taak die niet mislukt is', async () => {
+      registreerTaak('iets', { herhaalbaar: true, uitvoeren: vi.fn() });
+      const id = plaatsTaak('iets', {}, { nu: BEGIN, geplandOp: na(60 * 60_000) })!;
+
+      expect(probeerOpnieuw(id, BEGIN)).toBe(false);
+      // Het planmoment is niet naar voren gehaald.
+      expect(rij(id).gepland_op).toBe(na(60 * 60_000).toISOString());
     });
   });
 

@@ -59,6 +59,7 @@ Response:
 | Cloud Import      | `/api/cloud-import/*`      | OneDrive and Google Drive file import                  |
 | Settings          | `/api/settings/*`          | Organization settings, theme, SMTP                     |
 | Backup            | `/api/backup/*`            | Database backup and restore                            |
+| Achtergrondtaken  | `/api/achtergrondtaken/*`  | Wachtrij voor achtergrondtaken bekijken (super admin)  |
 | Health            | `/api/health/*`            | System health monitoring (basic and detailed)          |
 | Analytics         | `/api/analytics/*`         | Usage analytics and statistics                         |
 | Microsoft         | `/api/microsoft-auth/*`    | Azure Entra SSO                                        |
@@ -1342,6 +1343,45 @@ GET /api/calendar/info-screen/:associationSlug
 ```
 
 Returns optimized data for display boards/kiosks.
+
+---
+
+## Achtergrondtaken API
+
+De wachtrij voor achtergrondtaken (zie [ACHTERGRONDTAKEN.md](./ACHTERGRONDTAKEN.md)). Alleen voor superbeheerders: de taken draaien voor de hele installatie en horen bij geen vereniging. Een gewone beheerder krijgt 403.
+
+### Taken opvragen
+
+```http
+GET /api/achtergrondtaken?status=mislukt&soort=database-back-up&page=1&limit=25
+```
+
+`status` (`wachtend`, `bezig`, `gelukt`, `mislukt`) en `soort` zijn optioneel. Het antwoord is een gepagineerde lijst, met daarbij `tellingen`: het aantal taken per status over de hele wachtrij, los van het filter.
+
+```json
+{
+  "data": [
+    {
+      "id": "…",
+      "soort": "database-back-up",
+      "status": "mislukt",
+      "pogingen": 3,
+      "laatste_fout": "Er is geen back-up gemaakt; zie het logboek voor de reden.",
+      "bijgewerkt_op": "2026-09-23T10:05:00.000Z"
+    }
+  ],
+  "pagination": { "page": 1, "limit": 25, "total": 1, "totalPages": 1, "hasNext": false, "hasPrev": false },
+  "tellingen": { "wachtend": 0, "bezig": 0, "gelukt": 40, "mislukt": 1 }
+}
+```
+
+### Een mislukte taak opnieuw proberen
+
+```http
+POST /api/achtergrondtaken/:id/opnieuw
+```
+
+Zet de taak terug op `wachtend` met een verse teller. Alleen voor een taak met status `mislukt`; anders `409`. Komt in het auditlogboek.
 
 ---
 
