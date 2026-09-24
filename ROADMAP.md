@@ -19,7 +19,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 9          | Community outreach (KNMO, federaties)           | 25h              | ⬜ Gepland   |
 | 10         | PWA hardening + mobile UX                       | 55h              | 🔄 Deels     |
 | 11         | Pilot deployments (2-3 verenigingen)            | 45h              | ⬜ Gepland   |
-| 12         | Achtergrondtaken die een herstart overleven     | 40h              | ⬜ Gepland   |
+| 12         | Achtergrondtaken die een herstart overleven     | 40h              | ✅ Voltooid  |
 | **Totaal** |                                                 | **540h + audit** |
 
 ¹ Alle deliverables zijn geleverd, maar de staging-uitrol is _ingericht_ en nog niet _aantoonbaar werkend_: hij heeft nog geen keer gedraaid, en de Build Command in het Render-dashboard staat nog zonder `--include=dev`. Zie WP8 hieronder.
@@ -505,7 +505,9 @@ Gestructureerde pilot deployments:
 
 ### Huidige status
 
-Achtergrondwerk zit nu volledig in het geheugen van het ene proces dat de
+_Zo stond het er vóór WP12 voor; de deliverables hieronder zijn allemaal geleverd (september 2026). Zie `docs/ACHTERGRONDTAKEN.md` voor hoe het nu werkt._
+
+Achtergrondwerk zat tot dan volledig in het geheugen van het ene proces dat de
 applicatie draait. Dat is te overzien zolang er één instantie is, maar het valt
 op drie manieren stil.
 
@@ -579,11 +581,16 @@ status = 'wachtend'`; wordt het er meer, dan hoort dit werk na de
 
 - [x] Tabel met migratie — _`achtergrondtaken`, migratie `20260923171135_achtergrondtaken` en `schema.ts`. De tabel heet niet `jobs` maar Nederlands, zoals nieuwe code hier hoort_
 - [x] Werker met sluis, herkansing en eindstation — _`backend/src/taken/wachtrij.ts`. Een niet-herhaalbare taak die door een herstart werd onderbroken, wordt niet opnieuw gedaan maar als mislukt gemarkeerd, met die reden erbij_
-- [x] De vier draaiende planners omgezet — _`backend/src/taken/index.ts`. Elke periodieke taak heeft een sleutel per tijdvak en draait daardoor één keer per vak, ook na een herstart. Dat was bij de AVG-opschoning niet zo: die draaide opnieuw als er binnen het opschoonuur werd uitgerold. En een mislukte back-up staat nu als mislukt in de wachtrij in plaats van alleen in het logboek_
-- [ ] `workflow-runner` en `email-digest` aangezet of weggehaald, met een reden — _vraagt een keuze: aanzetten betekent dat leden vanaf dan een wekelijkse mail krijgen en dat door beheerders ingestelde workflows ineens gaan lopen_
+- [x] De vier draaiende planners omgezet, en de twee verborgen opruimlussen in `routes/thumbnails.ts` en `routes/pdf-tools.ts` — _`backend/src/taken/index.ts`. Elke periodieke taak heeft een sleutel per tijdvak en draait daardoor één keer per vak, ook na een herstart. Dat was bij de AVG-opschoning niet zo: die draaide opnieuw als er binnen het opschoonuur werd uitgerold. En een mislukte back-up staat nu als mislukt in de wachtrij in plaats van alleen in het logboek_
+- [x] `workflow-runner` en `email-digest` aangezet of weggehaald, met een reden — _weggehaald, 24-09-2026, op keuze van de eigenaar. Ze zijn nooit gestart; aanzetten had leden een ongevraagde wekelijkse mail gestuurd en door beheerders ingestelde workflows zonder waarschuwing laten lopen. Het werk voor de workflows blijft in `services/workflowEngine.ts`, omdat de routes onder `/api/workflows/process/` het handmatig aftrappen_
+  - **Nog open, los hiervan:** het workflowscherm biedt de triggers _Gepland_ en _Datumveld_ nog aan. Die gingen al nooit vanzelf af, en doen dat nu ook niet. Weghalen uit het scherm of een taak in de wachtrij maken is een keuze voor later
 - [x] `backgroundQueue.ts` vervangen of verwijderd — _verwijderd, met zijn test; hij werd nergens gebruikt en de wachtrij vervangt hem_
 - [x] Beheerscherm voor de wachtrij en de mislukte taken — _tabblad Achtergrondtaken op de superbeheerderspagina, met `GET /api/achtergrondtaken` en `POST /api/achtergrondtaken/:id/opnieuw`. Alleen superbeheerders: de taken van nu horen bij geen vereniging_
-- [ ] Zwaar werk binnen een verzoek naar de wachtrij
+- [x] Zwaar werk binnen een verzoek onderzocht — _gemeten en **niet** naar de wachtrij verplaatst, 24-09-2026. Terug te draaien als de afweging anders uitvalt_
+  - **Gemeten:** 30 ingescande partituren samenvoegen (32 MB, 120 pagina's, via `pdf-lib` zoals `routes/pdf-tools.ts`) kost 125-150 ms. Het zwaarste toegestane zip-bestand uitpakken en wegschrijven (200 pdf's, 200 MB, de grens van `/music-pieces/upload-zip`) kost 1,8 s
+  - **Waarom niet:** de upload zelf duurt vele malen langer dan die 1,8 s, en daar helpt een wachtrij niet bij. Een taak die hetzelfde werk doet in hetzelfde proces blokkeert de event loop net zo lang. Wat een wachtrij wel toevoegt: de gebruiker krijgt geen resultaat meer terug, maar moet wachten en navragen of het klaar is - meer code aan beide kanten zonder dat iemand iets sneller heeft
+  - **De streamende downloads** (zip van een muzieklijst, AVG-export, back-up) sturen hun antwoord terwijl het gemaakt wordt en lopen niet tegen een tijdslimiet aan
+  - **Wat wel beter kan, los van de wachtrij:** de zip-import schrijft met `fs.writeFileSync` en houdt het proces daardoor zo'n twee seconden vast. Asynchroon schrijven haalt dat weg zonder dat de gebruiker iets anders merkt
 - [x] Documentatie in `docs/` en een regel in `CLAUDE.md` — _`docs/ACHTERGRONDTAKEN.md`, regel 21_
 
 ---

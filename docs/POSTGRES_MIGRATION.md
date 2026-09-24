@@ -282,17 +282,12 @@ vandaag geen haar trager.
 
 De plekken die met de vereniging meegroeien, op volgorde:
 
-| Plek                                   | Lus over                | Queries per doorloop                                           |
-| -------------------------------------- | ----------------------- | -------------------------------------------------------------- |
-| `scheduler/email-digest.ts`            | verenigingen, dan leden | 4 per vereniging + 1 per lid                                   |
-| `routes/seating.ts:1225`               | aanwezigen              | 2 (rol en instrumenten)                                        |
-| `routes/concerts.ts:530`               | leden                   | 1, met een deelquery die voor elk lid hetzelfde antwoord geeft |
-| `services/attendanceAnalytics.ts:733`  | repetities              | 1, voor een CSV over een heel seizoen                          |
-| `routes/accounting.ts:3344` en `:3600` | budgetten               | 1 aggregatie over `transaction_lines`                          |
-
-De weekmail is qua aantal het ergst - verenigingen maal leden - maar staat
-onderaan de urgentie omdat die planner nog nergens wordt gestart; zie WP12 in
-`../ROADMAP.md`.
+| Plek                                   | Lus over   | Queries per doorloop                                           |
+| -------------------------------------- | ---------- | -------------------------------------------------------------- |
+| `routes/seating.ts:1225`               | aanwezigen | 2 (rol en instrumenten)                                        |
+| `routes/concerts.ts:530`               | leden      | 1, met een deelquery die voor elk lid hetzelfde antwoord geeft |
+| `services/attendanceAnalytics.ts:733`  | repetities | 1, voor een CSV over een heel seizoen                          |
+| `routes/accounting.ts:3344` en `:3600` | budgetten  | 1 aggregatie over `transaction_lines`                          |
 
 Wat hier níét bij hoort: lussen over een vaste, kleine verzameling. Zes
 Mollie-betaalmethodes, twee meldkanalen, een herkansingslus die na tien pogingen

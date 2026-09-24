@@ -5985,7 +5985,9 @@
       "opstelling-meldingen": "Opstellingsmeldingen",
       "mail-doorsturen-opnieuw": "Mail doorsturen (opnieuw)",
       "avg-opschonen": "AVG-opschoning",
-      "database-back-up": "Back-up van de database"
+      "database-back-up": "Back-up van de database",
+      "miniaturen-opruimen": "Oude miniaturen opruimen",
+      "pdf-tijdelijk-opruimen": "Tijdelijke pdf-bestanden opruimen"
     }
   }
 }

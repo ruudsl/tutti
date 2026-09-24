@@ -351,7 +351,10 @@ router.post(
 );
 
 /**
- * Clean up old thumbnails periodically (called on startup and every 24 hours)
+ * Ruim miniaturen op die ouder zijn dan zeven dagen. Draait één keer per dag
+ * als achtergrondtaak (src/taken/index.ts); stond hier eerst als setInterval
+ * die al bij het laden van deze module begon - ook in elke test die de route
+ * importeerde.
  */
 export function cleanupOldThumbnails() {
   const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -380,9 +383,5 @@ export function cleanupOldThumbnails() {
     logger.error('Error cleaning up thumbnails:', error);
   }
 }
-
-// Run cleanup on startup and every 24 hours
-cleanupOldThumbnails();
-setInterval(cleanupOldThumbnails, 24 * 60 * 60 * 1000);
 
 export default router;

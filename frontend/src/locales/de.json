@@ -5985,7 +5985,9 @@
       "opstelling-meldingen": "Sitzplan-Benachrichtigungen",
       "mail-doorsturen-opnieuw": "E-Mail-Weiterleitung (erneut)",
       "avg-opschonen": "DSGVO-Bereinigung",
-      "database-back-up": "Datenbanksicherung"
+      "database-back-up": "Datenbanksicherung",
+      "miniaturen-opruimen": "Alte Vorschaubilder bereinigen",
+      "pdf-tijdelijk-opruimen": "Temporäre PDF-Dateien bereinigen"
     }
   }
 }

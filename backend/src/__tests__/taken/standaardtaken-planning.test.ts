@@ -16,6 +16,8 @@ const werk = vi.hoisted(() => ({
   doorsturen: vi.fn(async () => {}),
   opschonen: vi.fn(async () => []),
   backUp: vi.fn((): { file: string | null; removed: number } => ({ file: '/tmp/kopie.sqlite', removed: 0 })),
+  miniaturen: vi.fn(),
+  pdfTijdelijk: vi.fn(),
 }));
 
 vi.mock('../../scheduler/seating-notifications', () => ({ runNotificationRound: werk.meldingen }));
@@ -29,6 +31,9 @@ vi.mock('../../scheduler/backup', () => ({
   isBackupEnabled: () => process.env.BACKUP_ENABLED !== 'false',
   getIntervalHours: () => 24,
 }));
+
+vi.mock('../../routes/thumbnails', () => ({ cleanupOldThumbnails: werk.miniaturen }));
+vi.mock('../../routes/pdf-tools', () => ({ cleanupTempFiles: werk.pdfTijdelijk }));
 
 import { registreerStandaardTaken, tijdvak } from '../../taken';
 import { verwerkWachtrij, wisRegistratiesVoorTests } from '../../taken/wachtrij';
@@ -126,6 +131,25 @@ describe('de vaste achtergrondtaken', () => {
       expect(werk.opschonen).not.toHaveBeenCalled();
       await verwerkWachtrij({ nu: klok(om(22, 5)) });
       expect(werk.opschonen).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('het opruimen van bestanden op schijf', () => {
+    it('ruimt de tijdelijke pdf-bestanden één keer per uur op', async () => {
+      registreerStandaardTaken();
+      await verwerkWachtrij({ nu: klok(om(10, 0)) });
+      await verwerkWachtrij({ nu: klok(om(10, 59)) });
+      expect(werk.pdfTijdelijk).toHaveBeenCalledTimes(1);
+
+      await verwerkWachtrij({ nu: klok(om(11, 0)) });
+      expect(werk.pdfTijdelijk).toHaveBeenCalledTimes(2);
+    });
+
+    it('ruimt de miniaturen één keer per dag op', async () => {
+      registreerStandaardTaken();
+      await verwerkWachtrij({ nu: klok(om(10, 0)) });
+      await verwerkWachtrij({ nu: klok(om(18, 0)) });
+      expect(werk.miniaturen).toHaveBeenCalledTimes(1);
     });
   });
 

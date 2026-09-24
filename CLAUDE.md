@@ -134,7 +134,8 @@ Deze staan hier omdat ze in deze repository al eens zijn overtreden.
     wachtrij overleeft een herstart, draait met een sleutel hooguit één keer,
     en staat als mislukt in de database in plaats van alleen in het logboek.
     Elke taak zegt of hij `herhaalbaar` is: iets versturen of aanmaken is dat
-    niet. Zie `docs/ACHTERGRONDTAKEN.md`.
+    niet. Alleen het snoeien van een `Map` in het geheugen van het proces mag
+    een eigen lus houden. Zie `docs/ACHTERGRONDTAKEN.md`.
 
 ## Wat je niet zomaar doet
 

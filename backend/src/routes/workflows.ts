@@ -566,8 +566,7 @@ router.post(
 // Deze twee routes riepen de verwerking aan zonder vereniging, en dan gaat die
 // over de hele installatie. Een beheerder van de ene vereniging kon daarmee de
 // mails, meldingen en taken van elke andere vereniging laten afgaan, zo vaak
-// als hij het verzoek herhaalde. De planner in scheduler/workflow-runner.ts
-// roept dezelfde functies wel zonder vereniging aan; daar hoort dat ook.
+// als hij het verzoek herhaalde.
 router.post(
   '/process/scheduled',
   asyncHandler(async (req: AuthRequest, res: Response) => {

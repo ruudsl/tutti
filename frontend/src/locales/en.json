@@ -5985,7 +5985,9 @@
       "opstelling-meldingen": "Seating notifications",
       "mail-doorsturen-opnieuw": "Mail forwarding (retry)",
       "avg-opschonen": "GDPR clean-up",
-      "database-back-up": "Database backup"
+      "database-back-up": "Database backup",
+      "miniaturen-opruimen": "Clean up old thumbnails",
+      "pdf-tijdelijk-opruimen": "Clean up temporary PDF files"
     }
   }
 }

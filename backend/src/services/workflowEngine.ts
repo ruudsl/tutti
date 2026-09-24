@@ -548,11 +548,12 @@ function getTableName(entityType: string): string | null {
 /**
  * Draai de workflows waarvan het geplande tijdstip nu is.
  *
- * Zonder associationId gaat dit over alle verenigingen; zo roept de planner in
- * scheduler/workflow-runner.ts het aan, en daar hoort dat ook. De route die
- * hetzelfde handmatig aftrapt geeft de vereniging van de aanvrager mee: die
- * hoort alleen zijn eigen automatisering te kunnen laten afgaan, niet de mails
- * en meldingen van elke andere vereniging op de installatie.
+ * De route die dit handmatig aftrapt geeft de vereniging van de aanvrager mee:
+ * die hoort alleen zijn eigen automatisering te kunnen laten afgaan, niet de
+ * mails en meldingen van elke andere vereniging op de installatie. Zonder
+ * associationId gaat het over alle verenigingen. Dat deed de planner in
+ * scheduler/workflow-runner.ts, maar die startte nooit en is in september 2026
+ * weggehaald (WP12 in ROADMAP.md); er is geen aanroeper meer zonder vereniging.
  */
 export function processScheduledWorkflows(associationId?: string): void {
   const now = new Date();
