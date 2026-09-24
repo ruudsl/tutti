@@ -5244,7 +5244,9 @@
     "triggerTypeLabel": "Triggertyp",
     "triggerUpdated": "Trigger aktualisiert",
     "webhookMethod": "HTTP-Methode",
-    "webhookUrl": "Webhook-URL"
+    "webhookUrl": "Webhook-URL",
+    "nietAutomatisch": "Wird nicht automatisch ausgelöst",
+    "nietAutomatischUitleg": "Dieser Auslöser wird nicht automatisch ausgelöst. Führen Sie den Workflow manuell aus oder wählen Sie einen Ereignis-Auslöser."
   },
   "gdprAdmin": {
     "title": "DSGVO-Verwaltung",

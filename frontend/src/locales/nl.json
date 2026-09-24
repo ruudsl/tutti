@@ -5244,7 +5244,9 @@
     "triggerTypeLabel": "Type trigger",
     "triggerUpdated": "Trigger bijgewerkt",
     "webhookMethod": "HTTP methode",
-    "webhookUrl": "Webhook URL"
+    "webhookUrl": "Webhook URL",
+    "nietAutomatisch": "Gaat niet vanzelf af",
+    "nietAutomatischUitleg": "Deze trigger gaat niet vanzelf af. Voer de workflow met de hand uit, of kies een trigger bij een event."
   },
   "gdprAdmin": {
     "title": "AVG Beheer",

@@ -35,6 +35,14 @@ const TRIGGER_TYPE_ICONS: Record<string, IconName> = {
   manual: 'play',
 };
 
+/**
+ * Gepland en Datumveld gaan niet vanzelf af: de planner die ze liet lopen
+ * startte nooit en is in september 2026 weggehaald (WP12 in ROADMAP.md).
+ * Nieuwe triggers van die soort zijn daarom niet meer te kiezen. Bestaande
+ * blijven zichtbaar en te bewerken, met een melding erbij.
+ */
+const NIET_AUTOMATISCH = new Set(['schedule', 'date_field']);
+
 const ACTION_TYPE_ICONS: Record<string, IconName> = {
   send_email: 'envelope',
   send_notification: 'bell',
@@ -373,8 +381,6 @@ export default function Workflows() {
               >
                 <option value="manual">{t('workflows.triggerType.manual')}</option>
                 <option value="event">{t('workflows.triggerType.event')}</option>
-                <option value="schedule">{t('workflows.triggerType.schedule')}</option>
-                <option value="date_field">{t('workflows.triggerType.date_field')}</option>
               </select>
             </div>
 
@@ -594,9 +600,15 @@ function WorkflowDetailModal({
         >
           <option value="manual">{t('workflows.triggerType.manual')}</option>
           <option value="event">{t('workflows.triggerType.event')}</option>
-          <option value="schedule">{t('workflows.triggerType.schedule')}</option>
-          <option value="date_field">{t('workflows.triggerType.date_field')}</option>
+          {!isNew && triggerFormData.triggerType && NIET_AUTOMATISCH.has(triggerFormData.triggerType) && (
+            <option value={triggerFormData.triggerType}>
+              {t(`workflows.triggerType.${triggerFormData.triggerType}`)}
+            </option>
+          )}
         </select>
+        {triggerFormData.triggerType && NIET_AUTOMATISCH.has(triggerFormData.triggerType) && (
+          <p className="text-sm text-warning mt-1">{t('workflows.nietAutomatischUitleg')}</p>
+        )}
       </div>
 
       {triggerFormData.triggerType === 'event' && (
@@ -967,6 +979,9 @@ function WorkflowDetailModal({
                     <div className="flex items-center gap-2 flex-1">
                       <Icon name={TRIGGER_TYPE_ICONS[trigger.triggerType] || 'circle'} className="w-4 h-4" />
                       <span>{t(`workflows.triggerType.${trigger.triggerType}`)}</span>
+                      {NIET_AUTOMATISCH.has(trigger.triggerType) && (
+                        <span className="badge badge-sm badge-warning">{t('workflows.nietAutomatisch')}</span>
+                      )}
                       {trigger.eventName && <span className="badge badge-sm">{trigger.eventName}</span>}
                       {trigger.scheduleCron && (
                         <code className="text-xs bg-base-300 px-1 rounded">{trigger.scheduleCron}</code>

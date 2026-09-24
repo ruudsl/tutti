@@ -5244,7 +5244,9 @@
     "triggerTypeLabel": "Trigger type",
     "triggerUpdated": "Trigger updated",
     "webhookMethod": "HTTP method",
-    "webhookUrl": "Webhook URL"
+    "webhookUrl": "Webhook URL",
+    "nietAutomatisch": "Does not run automatically",
+    "nietAutomatischUitleg": "This trigger does not run automatically. Run the workflow manually, or choose an event trigger."
   },
   "gdprAdmin": {
     "title": "GDPR Administration",
