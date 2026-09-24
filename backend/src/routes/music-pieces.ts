@@ -294,6 +294,21 @@ function eigenMuzieklijst(req: AuthRequest, listId: string): { id: string; orche
 }
 
 /**
+ * Het volledige pad van een bestand dat multer in de uploadmap heeft gezet, en
+ * alleen als het daar ook echt ligt. De naam komt uit onze eigen zipStorage,
+ * maar voor een lezer van het bestandssysteem blijft het een waarde uit het
+ * verzoek; zo kan hij nooit buiten de uploadmap wijzen.
+ */
+function pakPadInUploadmap(bestandsnaam: string): string {
+  const map = path.resolve(UPLOAD_DIR);
+  const pad = path.resolve(map, path.basename(bestandsnaam));
+  if (!pad.startsWith(map + path.sep)) {
+    throw new ApiError(400, 'Ongeldig bestand.');
+  }
+  return pad;
+}
+
+/**
  * Pak één bestand uit een zip zonder de event loop vast te houden: het
  * uitpakken gebeurt door zlib buiten de JavaScript-thread. Een beschadigd item
  * (verkeerde controlesom) wordt een afwijzing.
@@ -2270,7 +2285,7 @@ router.post(
       // enkele andere gebruiker antwoord. Asynchroon duurt het even lang, maar
       // staat het proces hooguit enkele milliseconden stil (gemeten september
       // 2026, zie WP12 in ROADMAP.md).
-      const zip = new AdmZip(await fs.promises.readFile(file.path));
+      const zip = new AdmZip(await fs.promises.readFile(pakPadInUploadmap(file.filename)));
       const zipEntries = zip.getEntries();
 
       // Filter for PDF files only
