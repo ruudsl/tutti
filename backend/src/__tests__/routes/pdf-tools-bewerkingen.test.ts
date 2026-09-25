@@ -22,6 +22,8 @@ import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vites
 import request from 'supertest';
 import express from 'express';
 import fs from 'fs';
+import http from 'http';
+import type { AddressInfo } from 'net';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import { PDFDocument, degrees } from 'pdf-lib';
@@ -54,7 +56,7 @@ const mappen = vi.hoisted(() => {
   return { eerder, basis: basis as string, temp: temp as string, uploads: uploads as string };
 });
 
-import pdfToolsRoutes, { cleanupTempFiles } from '../../routes/pdf-tools';
+import pdfToolsRoutes, { cleanupTempFiles, MERGE_MAX_BESTANDEN, MERGE_MAX_TOTAAL } from '../../routes/pdf-tools';
 import { errorHandler } from '../../middleware/errorHandler';
 import db from '../../database/connection';
 import {
@@ -467,6 +469,52 @@ describe('bewerkingen op bladmuziek', () => {
         .attach('pdfs', BESCHADIGDE_PDF, 'kapot.pdf');
 
       expect(antwoord.status).toBe(400);
+    });
+
+    it('weigert meer bestanden dan de grens', async () => {
+      const pdf = await maakPdf([A4_STAAND]);
+      let verzoek = merge(commissieToken);
+      for (let i = 0; i <= MERGE_MAX_BESTANDEN; i++) verzoek = verzoek.attach('pdfs', pdf, `deel-${i}.pdf`);
+
+      const antwoord = await verzoek;
+
+      expect(antwoord.status).toBe(400);
+      expect(antwoord.body.error).toContain(String(MERGE_MAX_BESTANDEN));
+    });
+
+    it('weigert een verzoek dat samen groter is dan de grens voordat er iets wordt ingelezen', async () => {
+      // Alleen de kop zegt dat er meer dan de grens aankomt; de body zelf
+      // sturen we niet. De route moet dus antwoorden zonder erop te wachten.
+      const server = app.listen(0);
+      try {
+        const { port } = server.address() as AddressInfo;
+        const status = await new Promise<number>((resolve, reject) => {
+          const verzoek = http.request({
+            port,
+            method: 'POST',
+            path: '/api/pdf-tools/merge',
+            headers: {
+              Authorization: `Bearer ${commissieToken}`,
+              'Content-Type': 'multipart/form-data; boundary=grens',
+              'Content-Length': String(MERGE_MAX_TOTAAL + 1),
+            },
+          });
+          const wachter = setTimeout(() => reject(new Error('geen antwoord zonder de hele body')), 3000);
+          verzoek.on('response', (antwoord) => {
+            clearTimeout(wachter);
+            antwoord.resume();
+            verzoek.destroy();
+            resolve(antwoord.statusCode ?? 0);
+          });
+          verzoek.on('error', () => undefined);
+          verzoek.write('--grens\r\n');
+        });
+
+        expect(status).toBe(413);
+      } finally {
+        server.closeAllConnections();
+        server.close();
+      }
     });
   });
 

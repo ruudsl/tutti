@@ -19,6 +19,7 @@ import '../setup';
 import db from '../../database/connection';
 import app from '../testApp';
 import { createTestEnvironment, TestAssociation } from '../testUtils';
+import { ZIP_MAX_PER_BESTAND, ZIP_MAX_TOTAAL } from '../../routes/music-pieces';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../../uploads');
 
@@ -165,5 +166,67 @@ describe('de zip-import van bladmuziek', () => {
     const stukken = stukkenVan(vereniging.id);
     expect(stukken).toHaveLength(1);
     expect(nieuweBestanden()).toEqual([stukken[0].file_path]);
+  });
+
+  describe('grenzen aan de uitgepakte grootte', () => {
+    /** Een pdf-kop gevolgd door nullen: pakt samen tot bijna niets. */
+    const opgeblazen = (grootte: number) => Buffer.concat([Buffer.from('%PDF-1.1\n'), Buffer.alloc(grootte)]);
+
+    /** Overschrijf de opgegeven uitgepakte grootte in alle koppen van de zip. */
+    function zetOpgegevenGrootte(bytes: Buffer, grootte: number): Buffer {
+      for (let i = 0; i + 4 <= bytes.length; i++) {
+        const handtekening = bytes.readUInt32LE(i);
+        if (handtekening === 0x04034b50) bytes.writeUInt32LE(grootte, i + 22);
+        if (handtekening === 0x02014b50) bytes.writeUInt32LE(grootte, i + 24);
+      }
+      return bytes;
+    }
+
+    const importeerBytes = (bytes: Buffer) =>
+      request(app)
+        .post('/api/music-pieces/upload-zip')
+        .set('Authorization', `Bearer ${beheerderToken}`)
+        .attach('file', bytes, 'partijen.zip');
+
+    it('weigert een kleine zip die uitgepakt groter is dan de grens per bestand', async () => {
+      const zip = new AdmZip();
+      zip.addFile('Mars der Medici - Trompet 1.pdf', pdf('mars'));
+      zip.addFile('Opgeblazen - Trompet 2.pdf', opgeblazen(ZIP_MAX_PER_BESTAND + 1));
+      const bytes = zip.toBuffer();
+      expect(bytes.length).toBeLessThan(1024 * 1024);
+
+      const antwoord = await importeerBytes(bytes);
+
+      expect(antwoord.status).toBe(413);
+      expect(stukkenVan(vereniging.id)).toEqual([]);
+      expect(nieuweBestanden()).toEqual([]);
+    });
+
+    it('weigert een zip waarvan de opgegeven groottes samen boven de totale grens komen', async () => {
+      const zip = new AdmZip();
+      const aantal = Math.floor(ZIP_MAX_TOTAAL / ZIP_MAX_PER_BESTAND) + 1;
+      for (let i = 0; i < aantal; i++) zip.addFile(`Stuk ${i} - Trompet 1.pdf`, pdf(`stuk ${i}`));
+      const bytes = zetOpgegevenGrootte(zip.toBuffer(), ZIP_MAX_PER_BESTAND);
+
+      const antwoord = await importeerBytes(bytes);
+
+      expect(antwoord.status).toBe(413);
+      expect(nieuweBestanden()).toEqual([]);
+    });
+
+    it('stopt bij de grens ook als de kop van de zip over de grootte liegt', async () => {
+      const zip = new AdmZip();
+      zip.addFile('Mars der Medici - Trompet 1.pdf', pdf('mars'));
+      zip.addFile('Opgeblazen - Trompet 2.pdf', opgeblazen(ZIP_MAX_PER_BESTAND + 1));
+      // De kop zegt dat elk bestand een kilobyte is; de controle vooraf gaat
+      // dus goed en pas het uitpakken zelf kan de grens bewaken.
+      const bytes = zetOpgegevenGrootte(zip.toBuffer(), 1024);
+
+      const antwoord = await importeerBytes(bytes);
+
+      expect(antwoord.status).toBe(413);
+      expect(stukkenVan(vereniging.id)).toEqual([]);
+      expect(nieuweBestanden()).toEqual([]);
+    });
   });
 });
