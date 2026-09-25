@@ -140,7 +140,7 @@ async function sendWebhook(settings: NotificationSettings, payload: Record<strin
         body: JSON.stringify(payload),
         redirect: 'manual',
       },
-      { pogingen: 1 },
+      { pogingen: 1, gebruikersadres: true },
     );
 
     if (response.ok) {

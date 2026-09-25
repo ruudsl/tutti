@@ -41,6 +41,35 @@ describe('controleerUitgaandAdres', () => {
     await expect(controleerUitgaandAdres(adres, wijstNaar('93.184.216.34'))).rejects.toBeInstanceOf(OnveiligAdresFout);
   });
 
+  // IPv6-vormen die een IPv4-adres in zich dragen en daar via een vertaler,
+  // tunnel of de eigen netwerkkaart ook uitkomen. Deze gingen er eerder door.
+  it.each([
+    ['IPv4-compatibel (::/96)', 'http://[::127.0.0.1]/'],
+    ['IPv4-compatibel naar een privénetwerk', 'http://[::a00:1]/'],
+    ['6to4 met 127.0.0.1 erin', 'http://[2002:7f00:1::]/'],
+    ['6to4 met een thuisnetwerk erin', 'http://[2002:c0a8:101::1]/'],
+    ['NAT64 (64:ff9b::/96)', 'http://[64:ff9b::a9fe:a9fe]/'],
+    ['NAT64 voor lokaal gebruik (64:ff9b:1::/48)', 'http://[64:ff9b:1::a00:5]/'],
+    ['IPv4-mapped in hex', 'http://[::ffff:a9fe:a9fe]/'],
+    ['IPv4-mapped voluit geschreven', 'http://[0:0:0:0:0:ffff:7f00:1]/'],
+    ['IPv4-translated (::ffff:0:0:0/96)', 'http://[::ffff:0:7f00:1]/'],
+    ['Teredo', 'http://[2001:0:4136:e378:8000:63bf:3fff:fdd2]/'],
+    ['IPv6 site-local', 'http://[fec0::1]/'],
+  ])('weigert %s', async (_naam, adres) => {
+    await expect(controleerUitgaandAdres(adres, wijstNaar('93.184.216.34'))).rejects.toBeInstanceOf(OnveiligAdresFout);
+  });
+
+  it.each([
+    ['IPv4-mapped', '::ffff:169.254.169.254'],
+    ['6to4', '2002:a9fe:a9fe::1'],
+    ['IPv4-compatibel', '::10.0.0.5'],
+    ['NAT64', '64:ff9b:1::7f00:1'],
+  ])('weigert een naam die naar een %s-adres met een intern IPv4-adres wijst', async (_naam, adres) => {
+    await expect(controleerUitgaandAdres('https://tunnel.voorbeeld.nl/', wijstNaar(adres))).rejects.toBeInstanceOf(
+      OnveiligAdresFout,
+    );
+  });
+
   it('weigert 127.0.0.1 ook in hexadecimale en decimale schrijfwijze', async () => {
     // De URL-ontleder van Node maakt daar 127.0.0.1 van; de controle moet dat
     // genormaliseerde adres zien en niet de tekst.
@@ -88,6 +117,15 @@ describe('isVerbodenIp', () => {
     expect(isVerbodenIp('93.184.216.34')).toBe(false);
     expect(isVerbodenIp('203.0.113.7')).toBe(false);
     expect(isVerbodenIp('2001:4860:4860::8888')).toBe(false);
+  });
+
+  it('laat een IPv4-mapped openbaar adres door: dat is gewoon dat IPv4-adres', () => {
+    expect(isVerbodenIp('::ffff:93.184.216.34')).toBe(false);
+    expect(isVerbodenIp('::ffff:5db8:d822')).toBe(false);
+  });
+
+  it('negeert de zone van een link-local adres', () => {
+    expect(isVerbodenIp('fe80::1%eth0')).toBe(true);
   });
 
   it('ziet iets dat geen IP-adres is als verboden', () => {

@@ -23,6 +23,7 @@ import testDb from '../testDb';
 import { sendEmail } from '../../utils/email';
 import { createTestAssociation, createTestEnvironment, createTestUser, TestAssociation, TestUser } from '../testUtils';
 import { executeWorkflow, processScheduledWorkflows, processDateFieldWorkflows } from '../../services/workflowEngine';
+import { stelVerbinderInVoorTests, Verbinder } from '../../utils/uitgaandAdres';
 
 function zetModuleAan(associationId: string, userId: string): void {
   testDb
@@ -622,6 +623,25 @@ describe('workflowmotor', () => {
       expect(nep).toHaveBeenCalledOnce();
       expect(nep.mock.calls[0][1].method).toBe('PUT');
       expect(logboekVan(resultaat.executionId).join(' ')).toContain('204');
+    });
+
+    it('belt het adres van de gebruiker via de vastgepinde verbinding', async () => {
+      // Die zoekt de naam op bij het verbinden en verbindt met precies het
+      // gecontroleerde adres; gewone fetch zou opnieuw opzoeken (DNS-rebinding).
+      const nep = vi.fn();
+      vi.stubGlobal('fetch', nep);
+      const verbinder = vi.fn<Verbinder>(async () => new Response(null, { status: 204 }));
+      stelVerbinderInVoorTests(verbinder);
+      try {
+        const werkstroom = maakWorkflow([{ type: 'webhook', config: { url: 'https://elders.test/haak' } }]);
+        await executeWorkflow(werkstroom, vereniging.id, 'manual', beheerder.id);
+
+        expect(verbinder).toHaveBeenCalledOnce();
+        expect(String(verbinder.mock.calls[0][0])).toBe('https://elders.test/haak');
+        expect(nep).not.toHaveBeenCalled();
+      } finally {
+        stelVerbinderInVoorTests((url, init) => fetch(url.href, init));
+      }
     });
 
     it('laat de regel niet omvallen als het adres niet bereikbaar is', async () => {

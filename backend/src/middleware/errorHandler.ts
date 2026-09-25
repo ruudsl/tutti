@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import logger from '../utils/logger';
+import { veiligPad } from '../logging/requestLogger';
 import { FileValidationError } from '../utils/errors';
 import { DienstFout, StroomonderbrekerOpenFout, statusIsTijdelijk } from '../utils/veerkracht';
 import { maskeerGeheimen } from '../utils/maskeren';
@@ -73,7 +74,7 @@ export function isUniekheidsfout(err: unknown): boolean {
 
 export function errorHandler(err: Error | ApiError, req: Request, res: Response, next: NextFunction): void {
   // Log the error with full details for debugging
-  logger.error(`[${req.method} ${req.path}] ${err.name}: ${err.message}`, {
+  logger.error(`[${req.method} ${veiligPad(req.path)}] ${err.name}: ${err.message}`, {
     stack: err.stack,
     body: req.body && Object.keys(req.body).length > 0 ? maskeerGeheimen(req.body) : undefined,
   });

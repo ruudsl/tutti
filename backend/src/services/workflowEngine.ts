@@ -466,7 +466,7 @@ async function executeWebhook(config: Record<string, any>, context: ExecutionCon
         body: processedBody,
         redirect: 'manual',
       },
-      { pogingen: 1 },
+      { pogingen: 1, gebruikersadres: true },
     );
 
     context.log.push(`Webhook ${method || 'POST'} to ${url}: ${response.status}`);

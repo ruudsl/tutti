@@ -75,6 +75,11 @@
 
 5. **Deploy** and note the frontend URL
 
+`frontend/vercel.json` zet de beveiligingskoppen voor de pagina, waaronder de
+Content-Security-Policy. Omdat de API hier op een andere host staat, staat
+`connect-src` daar ook `https:` en `wss:` toe. Zie
+[SELF_HOSTING.md](SELF_HOSTING.md#beveiligingskoppen-bij-een-eigen-proxy).
+
 ## After Both Deployments
 
 Go back to Render.com and set `FRONTEND_URL` to the Vercel URL for CORS.

@@ -26,6 +26,7 @@
  */
 
 import logger from './logger';
+import { fetchNaarGebruikersadres } from './uitgaandAdres';
 
 /**
  * Een fout van een externe dienst, met de HTTP-status erbij.
@@ -465,6 +466,13 @@ export const STANDAARD_TIJDSLIMIET_MS = 10_000;
 export interface BeschermdeFetchOpties extends BeschermdOpties {
   /** Hoe lang één poging mag duren, inclusief het binnenhalen van de inhoud. */
   tijdslimietMs?: number;
+  /**
+   * Het adres komt van een gebruiker: een webhook, een koppeling. Dan gaat het
+   * verzoek via `fetchNaarGebruikersadres`: de naam wordt bij het verbinden
+   * opgezocht en gecontroleerd, de verbinding gaat naar precies dat adres, en
+   * omleidingen worden niet gevolgd. Zie `utils/uitgaandAdres.ts`.
+   */
+  gebruikersadres?: boolean;
 }
 
 /** Een tijdelijke status bij de laatste poging: het antwoord gaat alsnog terug. */
@@ -507,7 +515,8 @@ export async function beschermdeFetch(
   init: RequestInit = {},
   opties: BeschermdeFetchOpties = {},
 ): Promise<Response> {
-  const { tijdslimietMs = STANDAARD_TIJDSLIMIET_MS, ...beschermOpties } = opties;
+  const { tijdslimietMs = STANDAARD_TIJDSLIMIET_MS, gebruikersadres = false, ...beschermOpties } = opties;
+  const haal = gebruikersadres ? fetchNaarGebruikersadres : fetch;
 
   try {
     return await beschermd(
@@ -515,7 +524,7 @@ export async function beschermdeFetch(
       async () => {
         const tijdslimiet = AbortSignal.timeout(tijdslimietMs);
         const signal = init.signal ? AbortSignal.any([init.signal, tijdslimiet]) : tijdslimiet;
-        const antwoord = await fetch(url, { ...init, signal });
+        const antwoord = await haal(url, { ...init, signal });
         if (statusIsTijdelijk(antwoord.status)) {
           throw new TijdelijkAntwoord(dienst, antwoord);
         }
