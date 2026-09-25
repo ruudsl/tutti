@@ -1681,6 +1681,12 @@
     "confirmRestore": "Weet je zeker dat je de backup wilt herstellen? Dit overschrijft alle huidige data!",
     "encryptedDownload": "De download is versleuteld (.zip.enc). Je kunt hem alleen terugzetten op een installatie met dezelfde sleutel (ENCRYPTION_SECRET). Bewaar die sleutel ergens anders dan op de server."
   },
+  "opslag": {
+    "titel": "Opslag",
+    "gebruiktVanLimiet": "{{gebruikt}} van {{limiet}} in gebruik ({{procent}}%)",
+    "gebruiktOnbeperkt": "{{gebruikt}} in gebruik, zonder limiet",
+    "limietBereikt": "De opslaglimiet van je vereniging is bereikt. Verwijder eerst bestanden of vraag om een hogere limiet."
+  },
   "settings": {
     "title": "Instellingen",
     "organization": "Vereniging",
@@ -4525,6 +4531,7 @@
       "maxMembers": "Max Leden",
       "maxOrchestras": "Max Orkesten",
       "maxStorage": "Max Opslag (MB)",
+      "maxStorageHint": "De opslaglimiet die wordt gehandhaafd. Leeg: volgens het abonnement. 0: onbeperkt.",
       "isActive": "Vereniging is actief",
       "tiers": {
         "free": "Gratis",

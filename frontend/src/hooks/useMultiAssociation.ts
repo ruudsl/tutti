@@ -87,6 +87,7 @@ export function useUpdateAssociationSubscription() {
         maxMembers?: number;
         maxOrchestras?: number;
         maxStorageMb?: number;
+        opslagLimietBytes?: number | null;
         isActive?: boolean;
       };
     }) => updateAssociationSubscription(id, data),

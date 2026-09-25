@@ -7,6 +7,29 @@ export const getSettings = async (): Promise<AssociationSettings> => {
   return data;
 };
 
+/** Het opslaggebruik van de eigen vereniging per soort, in bytes. */
+export interface Opslaggebruik {
+  bladmuziek: number;
+  mp3: number;
+  musicxml: number;
+  opnames: number;
+  wikibijlagen: number;
+  mailbijlagen: number;
+  totaal: number;
+}
+
+/** Gebruik tegenover de grens; `limiet` is `null` als er geen grens is. */
+export interface Opslag {
+  gebruik: Opslaggebruik;
+  limiet: number | null;
+}
+
+/** Opslaggebruik van de eigen vereniging (alleen voor de beheerder). */
+export const getOpslag = async (): Promise<Opslag> => {
+  const { data } = await api.get('/settings/opslag');
+  return data;
+};
+
 export const updateSettings = async (settings: { displayName?: string }): Promise<void> => {
   await api.put('/settings', settings);
 };

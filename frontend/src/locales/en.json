@@ -1709,6 +1709,12 @@
     "confirmRestore": "Are you sure you want to restore the backup? This will overwrite all current data!",
     "encryptedDownload": "The download is encrypted (.zip.enc). It can only be restored on an installation with the same key (ENCRYPTION_SECRET). Keep that key somewhere other than on the server."
   },
+  "opslag": {
+    "titel": "Storage",
+    "gebruiktVanLimiet": "{{gebruikt}} of {{limiet}} used ({{procent}}%)",
+    "gebruiktOnbeperkt": "{{gebruikt}} used, no limit",
+    "limietBereikt": "Your association's storage limit has been reached. Delete files first or ask for a higher limit."
+  },
   "settings": {
     "title": "Settings",
     "organization": "Organization",
@@ -4525,6 +4531,7 @@
       "maxMembers": "Max Members",
       "maxOrchestras": "Max Orchestras",
       "maxStorage": "Max Storage (MB)",
+      "maxStorageHint": "The storage limit that is enforced. Empty: according to the subscription. 0: unlimited.",
       "isActive": "Association is active",
       "tiers": {
         "free": "Free",

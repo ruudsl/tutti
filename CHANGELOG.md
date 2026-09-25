@@ -18,6 +18,8 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 ### Toegevoegd
 
 - **Delen naar Tutti.** Deel je op een telefoon of computer een PDF met Tutti (via **Delen** in een andere app, met Tutti als geïnstalleerde app), dan staat hij klaar op de uploadpagina. Daar kies je orkest en lijst en upload je hem. Wie nog niet ingelogd is, logt eerst in en komt daarna terug. De deel-actie bestond al in de app-omschrijving, maar liep altijd op een fout.
+- **Opslaglimiet per vereniging.** Met `STORAGE_QUOTA_BYTES` (en per abonnement `STORAGE_QUOTA_BYTES_FREE`, `_BASIC`, `_PRO`, `_ENTERPRISE`) geldt een grens voor bladmuziek, mp3's, MusicXML, opnames en wiki- en mailbijlagen samen; een super-admin kan per vereniging een eigen grens zetten. Een upload die er niet meer bij past krijgt een duidelijke melding en wordt niet opgeslagen. Het beheergedeelte van het dashboard toont het gebruik tegenover de grens. Zonder instelling is er geen grens.
+- **De download van de reservekopie is versleuteld** zodra `ENCRYPTION_SECRET` staat: een `.zip.enc` in hetzelfde formaat als de automatische back-ups. Terugzetten in het beheerscherm neemt zowel `.zip.enc` als een oude `.zip` aan, maar een `.zip.enc` alleen op een installatie met dezelfde sleutel.
 
 ### Gewijzigd
 
