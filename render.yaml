@@ -36,6 +36,11 @@ services:
         value: 10000
       - key: JWT_SECRET
         generateValue: true
+      # Sleutel voor opgeslagen geheimen. Bewaar een kopie buiten Render: wordt
+      # de service opnieuw aangemaakt, dan komt er een nieuwe waarde en zijn de
+      # opgeslagen wachtwoorden en tokens niet meer te lezen.
+      - key: ENCRYPTION_SECRET
+        generateValue: true
       - key: DB_PATH
         value: /opt/render/project/data/harmonie.db
       - key: UPLOAD_DIR

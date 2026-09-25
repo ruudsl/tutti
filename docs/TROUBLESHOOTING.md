@@ -496,6 +496,27 @@ openssl rand -base64 64
 JWT_SECRET=je-gegenereerde-geheim
 ```
 
+### "ENCRYPTION_SECRET ontbreekt" (of "is korter dan 32 tekens", "is gelijk aan JWT_SECRET")
+
+In productie start Tutti niet zonder een eigen geheim voor de opgeslagen
+wachtwoorden en tokens van koppelingen. Ook de migraties stoppen dan, zodat er
+niets met de verkeerde sleutel wordt versleuteld.
+
+**Oplossing:**
+
+```bash
+# Genereer een geheim, anders dan JWT_SECRET
+openssl rand -base64 48
+
+# Voeg toe aan .env
+ENCRYPTION_SECRET=je-gegenereerde-geheim
+```
+
+Bewaar het geheim bij je back-ups. Wordt het later vervangen, dan zijn de
+opgeslagen SMTP-wachtwoorden, tokens en Spond- en Mollie-gegevens niet meer te
+lezen en moet een beheerder ze opnieuw invoeren; MFA-gebruikers moeten hun
+tweede factor opnieuw instellen.
+
 ### "Invalid token" of "Token expired"
 
 **Oorzaken:**

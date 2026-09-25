@@ -1,6 +1,5 @@
-import crypto from 'crypto';
-import config from '../config';
 import logger from '../utils/logger';
+import { decrypt, encrypt, isEncrypted } from '../utils/encryption';
 import { beschermd, BeschermdOpties, DienstFout, herkansNaUitKop, statusIsTijdelijk } from '../utils/veerkracht';
 
 const SPOND_API_BASE = 'https://api.spond.com/core/v1';
@@ -35,33 +34,16 @@ const SPOND_VEERKRACHT: BeschermdOpties = {
 // Credential encryption
 // ========================
 
-const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
-
-function getEncryptionKey(): Buffer {
-  // Derive a 32-byte key from the JWT secret
-  return crypto.scryptSync(config.jwtSecret, 'spond-encryption-salt', 32);
-}
-
-export function encryptPassword(plaintext: string): string {
-  const key = getEncryptionKey();
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
-  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  const authTag = cipher.getAuthTag().toString('hex');
-  return `${iv.toString('hex')}:${authTag}:${encrypted}`;
-}
-
 /**
- * Fout die zegt: het opgeslagen wachtwoord is niet meer te lezen.
- *
- * De sleutel wordt afgeleid van JWT_SECRET. Verandert die - en in render.yaml
- * staat hij op generateValue, dus bij het opnieuw aanmaken van de service
- * gebeurt dat - dan valt AES-GCM om op de authenticatietag. Dat is iets heel
- * anders dan een wachtwoord dat Spond weigert, en de gebruiker hoort dat
- * verschil te zien: hier moet je de koppeling opnieuw instellen, daar je
- * wachtwoord controleren.
+ * Het Spond-wachtwoord gaat door utils/encryption, net als elk ander opgeslagen
+ * geheim. Een wachtwoord dat nog met de oude, eigen Spond-sleutel is
+ * opgeslagen blijft leesbaar; de migratie oude_cijfertekst_herversleutelen zet
+ * het om naar de huidige sleutel.
  */
+export function encryptPassword(plaintext: string): string {
+  return encrypt(plaintext);
+}
+
 /**
  * Fout die zegt: het inloggen bij Spond zelf is misgegaan.
  *
@@ -117,20 +99,19 @@ export class SpondCredentialsUnreadableError extends Error {
   }
 }
 
+/**
+ * Het opgeslagen wachtwoord teruglezen.
+ *
+ * Lukt dat niet, dan is ENCRYPTION_SECRET vervangen (of, voor een wachtwoord
+ * van vóór de sleutelversie, JWT_SECRET). AES-GCM valt dan om op de
+ * authenticatietag. Dat is iets heel anders dan een wachtwoord dat Spond
+ * weigert, en de gebruiker hoort dat verschil te zien: hier moet je de
+ * koppeling opnieuw instellen, daar je wachtwoord controleren.
+ */
 export function decryptPassword(encrypted: string): string {
-  const key = getEncryptionKey();
-  const parts = encrypted.split(':');
-  if (parts.length !== 3) throw new SpondCredentialsUnreadableError();
-
+  if (!isEncrypted(encrypted)) throw new SpondCredentialsUnreadableError();
   try {
-    const iv = Buffer.from(parts[0], 'hex');
-    const authTag = Buffer.from(parts[1], 'hex');
-    const encryptedText = parts[2];
-    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
-    decipher.setAuthTag(authTag);
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
+    return decrypt(encrypted);
   } catch {
     throw new SpondCredentialsUnreadableError();
   }

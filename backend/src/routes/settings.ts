@@ -16,6 +16,7 @@ import { readFileHeader } from '../utils/fileValidation';
 import { bestandInMap } from '../utils/bestandInMap';
 import { controleerUitgaandAdres, OnveiligAdresFout } from '../utils/uitgaandAdres';
 import { logAuditEvent } from './audit-logs';
+import { ontsleutelGeheim, versleutelGeheim } from '../utils/encryption';
 
 const router = Router();
 
@@ -590,8 +591,9 @@ router.put(
     // Check if there's an existing password stored
     const existing = db.prepare('SELECT smtp_pass FROM associations WHERE id = ?').get(req.user!.associationId) as any;
 
-    // Only update password if a new one is provided
-    const smtpPass = password?.trim() || existing?.smtp_pass || null;
+    // Alleen een nieuw wachtwoord vervangt het oude. Het staat versleuteld in
+    // de database; het bestaande gaat ongewijzigd terug.
+    const smtpPass = password?.trim() ? versleutelGeheim(password.trim()) : existing?.smtp_pass || null;
 
     db.prepare(
       `
@@ -730,7 +732,7 @@ router.post(
       auth: association.smtp_user
         ? {
             user: association.smtp_user,
-            pass: association.smtp_pass || '',
+            pass: ontsleutelGeheim(association.smtp_pass, 'SMTP-wachtwoord') || '',
           }
         : undefined,
       connectionTimeout: 10000,
@@ -784,6 +786,12 @@ router.post(
 // =============================================
 
 /**
+ * Wat de beheerschermen zien in plaats van een opgeslagen token: alleen dát er
+ * een is. Ook een begin van het token gaat niet naar de browser.
+ */
+const GEHEIM_MASKER = '•'.repeat(20);
+
+/**
  * GET /settings/telegram - Get Telegram bot configuration (admin only)
  */
 router.get(
@@ -805,11 +813,11 @@ router.get(
       throw new ApiError(404, 'Vereniging niet gevonden.');
     }
 
-    const token = association.telegram_bot_token || '';
+    // Alleen of er een token is, geen enkel teken ervan.
+    const ingesteld = !!association.telegram_bot_token;
     res.json({
-      // Return a masked preview only; never return the full token
-      tokenPreview: token ? `${token.slice(0, 8)}${'•'.repeat(20)}` : '',
-      configured: !!token,
+      tokenPreview: ingesteld ? GEHEIM_MASKER : '',
+      configured: ingesteld,
       enabled: !!association.telegram_enabled,
     });
   }),
@@ -831,7 +839,9 @@ router.put(
       .prepare('SELECT telegram_bot_token FROM associations WHERE id = ?')
       .get(req.user!.associationId) as { telegram_bot_token: string | null } | undefined;
     const finalToken =
-      typeof botToken === 'string' && botToken.trim() ? botToken.trim() : existing?.telegram_bot_token || null;
+      typeof botToken === 'string' && botToken.trim()
+        ? versleutelGeheim(botToken.trim())
+        : existing?.telegram_bot_token || null;
 
     if (enabled && !finalToken) {
       throw new ApiError(400, 'Een bot token is vereist om Telegram in te schakelen.');
@@ -935,16 +945,12 @@ router.get(
       configured: provider === 'meta' ? metaConfigured : twilioConfigured,
       meta: {
         phoneNumberId: association.whatsapp_phone_number_id || '',
-        accessTokenPreview: association.whatsapp_access_token
-          ? `${association.whatsapp_access_token.slice(0, 6)}${'•'.repeat(20)}`
-          : '',
+        accessTokenPreview: association.whatsapp_access_token ? GEHEIM_MASKER : '',
         configured: metaConfigured,
       },
       twilio: {
         accountSid: association.twilio_account_sid || '',
-        authTokenPreview: association.twilio_auth_token
-          ? `${association.twilio_auth_token.slice(0, 6)}${'•'.repeat(20)}`
-          : '',
+        authTokenPreview: association.twilio_auth_token ? GEHEIM_MASKER : '',
         whatsappFrom: association.twilio_whatsapp_from || '',
         configured: twilioConfigured,
       },
@@ -984,9 +990,12 @@ router.put(
       { whatsapp_access_token: string | null; twilio_auth_token: string | null } | undefined;
 
     const phoneNumberId = body.meta?.phoneNumberId?.trim() || null;
-    const accessToken = body.meta?.accessToken?.trim() || existing?.whatsapp_access_token || null;
+    // Nieuwe tokens gaan versleuteld de database in; de bestaande staan er al zo.
+    const nieuwAccessToken = body.meta?.accessToken?.trim();
+    const accessToken = nieuwAccessToken ? versleutelGeheim(nieuwAccessToken) : existing?.whatsapp_access_token || null;
     const accountSid = body.twilio?.accountSid?.trim() || null;
-    const authToken = body.twilio?.authToken?.trim() || existing?.twilio_auth_token || null;
+    const nieuwAuthToken = body.twilio?.authToken?.trim();
+    const authToken = nieuwAuthToken ? versleutelGeheim(nieuwAuthToken) : existing?.twilio_auth_token || null;
     const whatsappFrom = body.twilio?.whatsappFrom?.trim() || null;
 
     const provider = body.provider || 'meta';

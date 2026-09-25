@@ -208,6 +208,7 @@ jobs:
       - name: Validate compose files
         env:
           JWT_SECRET: ci-dummy-secret
+          ENCRYPTION_SECRET: ci-dummy-encryption
           ADMIN_INIT_PASSWORD: ci-dummy-password
           ACME_EMAIL: ci@example.com
           DOMAIN: example.com
@@ -253,6 +254,8 @@ jobs:
           NODE_ENV: production
         run: |
           mkdir -p "$(dirname "$DB_PATH")"
+          # Verplicht in productie; hier alleen voor deze ene meting.
+          export ENCRYPTION_SECRET="$(openssl rand -base64 48)"
           npm start &
           for i in $(seq 1 60); do
             if curl -sf -o /dev/null http://localhost:3001/api/health; then

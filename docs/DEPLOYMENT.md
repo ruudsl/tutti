@@ -40,15 +40,16 @@
 
 5. **Add Environment Variables:**
 
-   | Key              | Value                                       |
-   | ---------------- | ------------------------------------------- |
-   | `NODE_ENV`       | `production`                                |
-   | `PORT`           | `10000`                                     |
-   | `JWT_SECRET`     | _(generate with `openssl rand -hex 32`)_    |
-   | `DB_PATH`        | `/opt/render/project/data/tutti.db`         |
-   | `UPLOAD_DIR`     | `/opt/render/project/data/uploads`          |
-   | `MP3_UPLOAD_DIR` | `/opt/render/project/data/uploads/mp3`      |
-   | `FRONTEND_URL`   | _(fill in later after frontend deployment)_ |
+   | Key                 | Value                                                                  |
+   | ------------------- | ---------------------------------------------------------------------- |
+   | `NODE_ENV`          | `production`                                                           |
+   | `PORT`              | `10000`                                                                |
+   | `JWT_SECRET`        | _(generate with `openssl rand -hex 32`)_                               |
+   | `ENCRYPTION_SECRET` | _(generate with `openssl rand -hex 32`; not the same as `JWT_SECRET`)_ |
+   | `DB_PATH`           | `/opt/render/project/data/tutti.db`                                    |
+   | `UPLOAD_DIR`        | `/opt/render/project/data/uploads`                                     |
+   | `MP3_UPLOAD_DIR`    | `/opt/render/project/data/uploads/mp3`                                 |
+   | `FRONTEND_URL`      | _(fill in later after frontend deployment)_                            |
 
 6. **Add a Disk** for persistent storage:
    - **Mount Path:** `/opt/render/project/data`
@@ -94,18 +95,19 @@ op een tweede service levert een kopie op die naar dezelfde database wijst.
 
 Neem de instellingen over van de productie-service, met deze verschillen:
 
-| Instelling        | Waarde                                                                |
-| ----------------- | --------------------------------------------------------------------- |
-| Name              | `harmonie-staging`                                                    |
-| Branch            | `main`                                                                |
-| Root Directory    | `backend`                                                             |
-| Build Command     | `cp ../CHANGELOG*.md . && npm install --include=dev && npm run build` |
-| Start Command     | `npm start`                                                           |
-| Health Check Path | `/api/health`                                                         |
-| Auto-Deploy       | **Off** — de workflow start de uitrol, anders gebeurt het twee keer   |
-| `JWT_SECRET`      | **een nieuwe**, `openssl rand -hex 32`                                |
-| `DB_PATH`         | een eigen pad, nooit dat van productie                                |
-| `FRONTEND_URL`    | de staging-URL van de frontend                                        |
+| Instelling          | Waarde                                                                |
+| ------------------- | --------------------------------------------------------------------- |
+| Name                | `harmonie-staging`                                                    |
+| Branch              | `main`                                                                |
+| Root Directory      | `backend`                                                             |
+| Build Command       | `cp ../CHANGELOG*.md . && npm install --include=dev && npm run build` |
+| Start Command       | `npm start`                                                           |
+| Health Check Path   | `/api/health`                                                         |
+| Auto-Deploy         | **Off** — de workflow start de uitrol, anders gebeurt het twee keer   |
+| `JWT_SECRET`        | **een nieuwe**, `openssl rand -hex 32`                                |
+| `ENCRYPTION_SECRET` | **een nieuwe**, `openssl rand -hex 32`, anders dan `JWT_SECRET`       |
+| `DB_PATH`           | een eigen pad, nooit dat van productie                                |
+| `FRONTEND_URL`      | de staging-URL van de frontend                                        |
 
 Twee daarvan zijn geen smaakkwestie. **Auto-Deploy uit**, anders rolt Render zelf
 óók uit bij elke push en gebeurt het twee keer; die twee lopen elkaar in de weg.
@@ -172,7 +174,7 @@ cd tutti
 # 2. Copy the example environment file
 cp .env.example .env
 
-# 3. Edit .env and set your JWT_SECRET and domain
+# 3. Edit .env and set your JWT_SECRET, ENCRYPTION_SECRET and domain
 nano .env
 
 # 4. Start with Docker Compose
@@ -203,22 +205,23 @@ docker-compose --profile production up -d
 
 ### Backend (`backend/.env`)
 
-| Variable                       | Default                 | Description                                                      |
-| ------------------------------ | ----------------------- | ---------------------------------------------------------------- |
-| `NODE_ENV`                     | `development`           | `development` or `production`                                    |
-| `PORT`                         | `3001`                  | Port for the API server                                          |
-| `JWT_SECRET`                   | _(dev-only default)_    | **Required in production!** Generate with `openssl rand -hex 32` |
-| `JWT_EXPIRES_IN`               | `7d`                    | JWT token validity period (e.g., `1d`, `12h`)                    |
-| `DB_PATH`                      | `./data/tutti.db`       | Path to SQLite database file                                     |
-| `UPLOAD_DIR`                   | `./uploads`             | Directory for uploaded PDF files                                 |
-| `MP3_UPLOAD_DIR`               | `./uploads/mp3`         | Directory for uploaded MP3 files                                 |
-| `MAX_FILE_SIZE`                | `52428800`              | Max file size in bytes (default 50MB)                            |
-| `FRONTEND_URL`                 | `http://localhost:5173` | Frontend URL for CORS configuration                              |
-| `ADMIN_INIT_PASSWORD`          | _(empty)_               | Optional: admin password on first start                          |
-| `MAKE_SUPER_ADMIN`             | _(empty)_               | Email of user to promote to super admin                          |
-| `RATE_LIMIT_WINDOW_MS`         | `900000`                | Rate limit window in ms (default 15 min)                         |
-| `RATE_LIMIT_MAX_REQUESTS`      | `100`                   | Max requests per window                                          |
-| `AUTH_RATE_LIMIT_MAX_REQUESTS` | `5`                     | Max login attempts per window                                    |
+| Variable                       | Default                             | Description                                                                                                                                                                                                                              |
+| ------------------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                     | `development`                       | `development` or `production`                                                                                                                                                                                                            |
+| `PORT`                         | `3001`                              | Port for the API server                                                                                                                                                                                                                  |
+| `JWT_SECRET`                   | _(dev-only default)_                | **Required in production!** Generate with `openssl rand -hex 32`                                                                                                                                                                         |
+| `ENCRYPTION_SECRET`            | _(`JWT_SECRET` outside production)_ | **Required in production!** Key for stored secrets (SMTP password, integration tokens, MFA). Generate with `openssl rand -hex 32`; must differ from `JWT_SECRET`. Keep it with your backups: changing it makes stored secrets unreadable |
+| `JWT_EXPIRES_IN`               | `7d`                                | JWT token validity period (e.g., `1d`, `12h`)                                                                                                                                                                                            |
+| `DB_PATH`                      | `./data/tutti.db`                   | Path to SQLite database file                                                                                                                                                                                                             |
+| `UPLOAD_DIR`                   | `./uploads`                         | Directory for uploaded PDF files                                                                                                                                                                                                         |
+| `MP3_UPLOAD_DIR`               | `./uploads/mp3`                     | Directory for uploaded MP3 files                                                                                                                                                                                                         |
+| `MAX_FILE_SIZE`                | `52428800`                          | Max file size in bytes (default 50MB)                                                                                                                                                                                                    |
+| `FRONTEND_URL`                 | `http://localhost:5173`             | Frontend URL for CORS configuration                                                                                                                                                                                                      |
+| `ADMIN_INIT_PASSWORD`          | _(empty)_                           | Optional: admin password on first start                                                                                                                                                                                                  |
+| `MAKE_SUPER_ADMIN`             | _(empty)_                           | Email of user to promote to super admin                                                                                                                                                                                                  |
+| `RATE_LIMIT_WINDOW_MS`         | `900000`                            | Rate limit window in ms (default 15 min)                                                                                                                                                                                                 |
+| `RATE_LIMIT_MAX_REQUESTS`      | `100`                               | Max requests per window                                                                                                                                                                                                                  |
+| `AUTH_RATE_LIMIT_MAX_REQUESTS` | `5`                                 | Max login attempts per window                                                                                                                                                                                                            |
 
 ### Frontend (`frontend/.env.local`)
 

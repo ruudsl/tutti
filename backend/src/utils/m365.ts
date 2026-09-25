@@ -12,6 +12,7 @@ import db from '../database/connection';
 import logger from './logger';
 import { ApiError } from '../middleware/errorHandler';
 import { beschermdeFetch, DienstFout } from './veerkracht';
+import { ontsleutelGeheim } from './encryption';
 
 /** Methoden die hetzelfde opleveren als je ze nog eens doet. */
 const HERHAALBARE_METHODEN = new Set(['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE']);
@@ -64,7 +65,11 @@ export function getMicrosoftConfig(associationId: string | null): MicrosoftConfi
   ) {
     return null;
   }
-  return association;
+
+  // Versleuteld opgeslagen; onleesbaar telt als niet ingesteld.
+  const clientSecret = ontsleutelGeheim(association.microsoft_client_secret, 'Entra-clientgeheim');
+  if (!clientSecret) return null;
+  return { ...association, microsoft_client_secret: clientSecret };
 }
 
 /**

@@ -17,6 +17,7 @@ import fs from 'fs';
 import path from 'path';
 import '../setup';
 import db from '../../database/connection';
+import { decrypt } from '../../utils/encryption';
 import settingsRoutes from '../../routes/settings';
 import { errorHandler } from '../../middleware/errorHandler';
 import {
@@ -195,7 +196,9 @@ describe('instellingen', () => {
       });
 
       expect(antwoord.status).toBe(200);
-      expect(opgeslagenWachtwoord()).toBe('nieuwgeheim');
+      // Versleuteld opgeslagen, en terug te lezen als het nieuwe wachtwoord.
+      expect(opgeslagenWachtwoord()).not.toContain('nieuwgeheim');
+      expect(decrypt(opgeslagenWachtwoord()!)).toBe('nieuwgeheim');
     });
 
     it('houdt het bestaande wachtwoord wanneer het niet opnieuw wordt meegegeven', async () => {
@@ -260,7 +263,8 @@ describe('instellingen', () => {
       const rij = db.prepare('SELECT telegram_bot_token FROM associations WHERE id = ?').get(vereniging.id) as {
         telegram_bot_token: string;
       };
-      expect(rij.telegram_bot_token).toBe('nieuwetoken');
+      expect(rij.telegram_bot_token).not.toContain('nieuwetoken');
+      expect(decrypt(rij.telegram_bot_token)).toBe('nieuwetoken');
     });
 
     it('wist de instellingen', async () => {

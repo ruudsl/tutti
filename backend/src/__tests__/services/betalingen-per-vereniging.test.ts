@@ -143,8 +143,8 @@ describe('de Mollie-sleutel per vereniging', () => {
     // Anders ging het geld van deze vereniging naar de rekening van de installatie.
     // Versleuteld, maar met een beschadigd controleteken: bijvoorbeeld na het
     // wisselen van ENCRYPTION_SECRET zonder de sleutels opnieuw in te voeren.
-    const [iv, , inhoud] = encrypt(EIGEN_LIVE).split(':');
-    koppel(vereniging.id, { live: `${iv}:${'0'.repeat(32)}:${inhoud}` });
+    const [versie, iv, , inhoud] = encrypt(EIGEN_LIVE).split(':');
+    koppel(vereniging.id, { live: `${versie}:${iv}:${'0'.repeat(32)}:${inhoud}` });
 
     expect(mollieSleutel(vereniging.id)).toBe('');
     expect(getPaymentProvider(vereniging.id)).not.toBe('mollie');
