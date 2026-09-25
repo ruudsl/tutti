@@ -91,7 +91,19 @@ const navGroups: SidebarNavGroup[] = [
     basePaths: ['/members', '/issues', '/practice-schedules', '/practice', '/contacts'],
     items: [
       { path: '/members', labelKey: 'nav.memberDirectory' },
-      { path: '/contacts', labelKey: 'nav.contacts' },
+      {
+        path: '/contacts',
+        labelKey: 'nav.contacts',
+        // Leden zien de contacten niet (routes/contacts.ts).
+        roles: [
+          ROLES.ADMIN,
+          ROLES.BOARD,
+          ROLES.MUSIC_COMMITTEE,
+          ROLES.EQUIPMENT_COMMITTEE,
+          ROLES.UNIFORMS_COMMITTEE,
+          ROLES.CONDUCTOR,
+        ],
+      },
       { path: '/issues', labelKey: 'nav.issues' },
       { path: '/practice-schedules', labelKey: 'nav.practiceSchedules' },
       { path: '/practice', labelKey: 'nav.practice' },
@@ -166,6 +178,7 @@ const navGroups: SidebarNavGroup[] = [
       '/upload',
       '/loans',
       '/genres',
+      '/instrumenten',
       '/statistics',
       '/pdf-tools',
       '/imslp',
@@ -181,6 +194,7 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/loans', labelKey: 'nav.loans', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/pdf-tools', labelKey: 'nav.pdfTools', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/genres', labelKey: 'nav.genres', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/instrumenten', labelKey: 'nav.instruments', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/statistics', labelKey: 'nav.statistics', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       // De beheerder vindt het importeren onder Beheer.
       { path: '/importeren', labelKey: 'nav.importeren', roles: [ROLES.MUSIC_COMMITTEE] },

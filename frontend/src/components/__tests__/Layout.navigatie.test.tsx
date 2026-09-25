@@ -174,7 +174,6 @@ describe('welke menu-onderdelen een rol ziet', () => {
         '/availability',
         '/my-tickets',
         '/members',
-        '/contacts',
         '/issues',
         '/practice-schedules',
         '/practice',

@@ -2,6 +2,88 @@
 
 All notable changes to this application are documented here.
 
+## [1.18.0] - 2026-09-24
+
+A month with two things the board benefits from straight away, and a lot of work under the hood. Data that still lives in Excel can now be brought over without retyping, and ticket money goes to the association's own account. On top of that: an internal security review, a queue for background work that survives a restart, and a time limit on every call to an external service. Along the way the Equipment page turned out not to work at all; it does now.
+
+### Note when upgrading
+
+For those who install and run Tutti themselves:
+
+- **In production the server no longer starts with a weak `JWT_SECRET`.** Besides a missing or too short secret, the example values from the documentation and monotonous values are now refused as well; the example files leave the field empty from now on. Generate a random secret, for instance with `openssl rand -base64 48`. On Render the secret is generated; nothing needs to be done there.
+- **Signing in with Microsoft needs your own organisation's tenant ID.** If the tenant is set to `common`, `organizations` or `consumers`, Microsoft sign-in counts as not configured. Fill in your own tenant ID.
+- **A full sign-in token in the URL now only works for downloads** (GET and HEAD requests). Your own scripts that put a token in the URL for anything else must send it in the `Authorization` header instead.
+- **Ticket money goes to the association's own Mollie account** for every association that has entered and connected its own key in the payment settings (**Payments**); see _Added_. Associations without their own key stay on the installation's account. If a stored key can no longer be decrypted, Tutti deliberately does not fall back to the installation's account; enter the key again.
+- **Docker setups:** in both compose files the backend port now only listens on `127.0.0.1`; visitors come in through nginx or Traefik. These now also forward `/socket.io` to the backend. If you use your own proxy configuration, it must do the same, or chat and notifications will not update live. If there is another layer in front of that proxy, set `TRUST_PROXY` to the number of proxies.
+- **Genres and instruments now differ per association.** The existing genres and instruments are the standard list for all associations; only the super admin changes it now. An admin who wants to change or remove a standard genre or instrument hides it and creates their own; see _Added_. Whatever is already linked to it — members, parts, titles — stays as it is.
+
+### Added
+
+- **Import from a spreadsheet.** Under **Admin → Import** you can read in members, the music library, instruments owned, contacts, uniforms and equipment. You first see what will happen to each row — new, already exists, or an error with the reason — and nothing changes until you click import.
+  - Save the worksheet as CSV (in Excel: _Save As → CSV_); an .xlsx file itself is not read. Column names may be Dutch, English or German, there is a sample file to download for each kind, and a CSV the way Excel on Windows saves it is read correctly. Tutti's own repertoire export can be read back in too.
+  - With the **Update existing records** checkbox, a row that already exists receives whatever is different in the file; the preview shows old → new per field. An empty cell erases nothing, and a value that cannot be read leaves the old one in place. For members only the name and private email address are updated, never the role. Uniforms do not take part: an item has no number to recognise it by.
+  - Imported members receive no email and no password. They set one themselves through _Forgot password_, or the admin sends invitations when the association is ready. The subscription's member limit applies here too.
+  - Who may import something is whoever manages it on the regular page: members only the admin; the music library and contacts also the music committee; instruments and equipment also the instrument committee (under _Inventory_); uniforms also the uniform committee. If the Inventory or Contacts module is switched off, those kinds disappear from the import as well.
+- **Ticket money to your own account.** In the payment settings an association could already enter its own Mollie key, but ticket sales only used the installation's key. With several associations on one installation, all ticket money therefore ended up in one account. Payments, payment status and refunds now go through the association's own account, in the chosen mode (live or test).
+- **Background jobs that survive a restart.** The line-up notifications, re-forwarding mail, the GDPR clean-up, the backup and clearing temporary files each ran in their own loop in the server's memory. Every update is a restart, and it threw away running work without a trace; a failed backup only appeared in the log. That work now sits in a queue in the database: it carries on after a restart, never runs twice, and whatever fails stays visible. Work that is safe to repeat gets new attempts automatically; anything that may already have been sent does not.
+  - The super admin has a new **Background jobs** tab. It opens on the failed jobs, shows the last error for each, and has a **Retry** button.
+- **Own genres and instruments.** An association adds genres and instruments that only it sees, and hides standard items it doesn't use; those then no longer appear in its pick lists. Two associations can each have their own genre with the same name. A new **Instruments** page under **Library** handles this; the **Genres** page shows what is standard and what is your own. Linking a part or a member to an instrument by name, when uploading and when importing, only looks at what the association sees.
+
+### Changed
+
+- **An outage at an external service no longer ties Tutti up.** Tutti talks to Mollie, Stripe, Microsoft 365, Google, Spond, Telegram, WhatsApp and IMSLP, among others. Some of those calls had no time limit, payments included: a hanging payment service kept a buyer stuck at checkout until they gave up. Every call now has a limit, a brief hiccup is retried automatically, and a service that is truly down is skipped for a while instead of costing the full wait again for every member.
+  - Creating or sending something — a payment, a refund, a message, a calendar appointment, a Microsoft account — never happens twice. After a time-out nobody knows whether the first attempt got through after all.
+  - When a service is down you get "try again later" instead of "Internal server error", as if Tutti itself were broken.
+  - The installation's detailed health check shows for each external service whether it is currently being skipped — the answer to "why aren't my notifications arriving".
+- **The login screen appears faster.** Where there used to be a white screen until everything had loaded, the logo now appears straight away, and of the Dutch texts the login screen only gets what it needs; the rest follows afterwards. The package the browser fetches first went from 96 to 39 KB, and the performance score on the build pipeline's measuring machine from 84 to around 90.
+- **The journal and invoices in accounting are paginated.** Both fetched everything an association had ever booked, and that grows every season. They now come in pages of 25, with buttons to page through. The counts on the overview — the number of bookings and the open invoices — come from the server, so they cover everything and not just the page you are looking at. Switching fiscal year takes you back to page 1; previously you could stay on page 3 of a year with only one page and look at an empty list. The list of bank statements has been given the same limit.
+- **The info screen only shows messages meant for everyone.** A message intended for a particular audience no longer appears on the public info screen.
+- **Two scheduled features that never ran on their own have been removed.** The weekly email digest was built but never started anywhere, and never reached a single member; switching it on would have sent members an unrequested weekly email. The same was true of workflows with the _On schedule_ or _On date field_ trigger: they never fired on their own. They are no longer offered for a new trigger; existing triggers of that kind stay visible and editable, with a note that they do not fire on their own.
+- **Who sees external contacts depends on the role.** Admin and board see everything. The committees and the conductor see the contacts, but not the bank details, the chamber of commerce and VAT numbers, or the notes. Regular members no longer see the contacts; the menu item disappears for them.
+
+### Fixed
+
+#### Security
+
+From an internal security review. Every item has a test that failed on the old code.
+
+- **Roles.** An admin could grant more rights through an invitation than they had themselves — that is no longer possible, and it is checked again when the invitation is accepted. After removal from an association or a role change, a member's role is correct straight away.
+- **Sessions.** When an admin changes a member's role or password, that member is signed out everywhere. A removed or inactive member no longer gets in with a session that was still open. The live connection for chat and notifications now also checks whether a session still exists; after signing out or a password change, that connection could keep working.
+- **Signing in with Microsoft** is checked more strictly against your own organisation. An account is only linked to a member automatically when it demonstrably belongs to that organisation, and an inactive member does not get in.
+- **The association boundary.** Workflows, shared annotations on sheet music, lending and issuing uniforms, equipment and instruments, and the repertoire statistics now stay within the association; lending is only possible to a member of your own association. Email — including from workflows — only goes through your own association's mail server or the installation's, never through another association's.
+- **Payments.** A payment confirmation from Mollie is only linked to the order the payment was created for, and the amount has to match.
+- **Addresses the server calls itself.** A webhook address (for line-up notifications and in workflows) and the mail server in the SMTP test may not point to the server's internal network. The OneDrive import only fetches files from Microsoft itself.
+- **The IP allowlist for the admin screen** and the check for suspicious ticket orders now determine the visitor's address in the same reliable way as the rest of the application.
+- **Logos and profile photos.** The file type is determined by the content, not the name, and the files are served in such a way that a browser can do nothing with them but display them.
+- **The overview of all associations and creating a new association** are reserved for the super admin.
+- Paths of uploaded files and log lines are checked more strictly, following reports from code scanning.
+
+#### Things that did not work
+
+- **The Equipment page did not work at all.** Creating an item gave an error, the list was always empty, and editing, lending, maintenance and recording damage called functions that did not exist on the server. The page and the server spoke two different languages, and the tests did not notice because they imitated the server. The page now follows what the server knows: type, status, condition, category, inventory number, brand and model, location and whether an item can be lent out. You pick the borrower from the member list instead of typing a number, and the overdue maintenance warning comes from the next maintenance date. A new test now compares every call the page makes with what the server actually offers.
+- **Uploading a zip of sheet music always failed**: the screen and the server used a different name for the file. On top of that, unpacking a large zip held the whole server for up to nearly two seconds, so nobody else got an answer in the meantime, and a file whose title did not make it into the database stayed on disk where nobody could find it. All three are fixed.
+- **Realtime did not work in the Docker setups.** Chat, notifications and the line-up only updated live when the browser ran on the server itself (see _Note when upgrading_).
+- **Telegram and WhatsApp notifications per association.** A member saw Telegram as available as soon as any association on the installation had set up a bot, and linking then failed. Which channels are available now depends on your own association.
+- **Forwarding mail when enrolling a new member in Microsoft 365** was skipped when Microsoft returned an error page instead of a regular response. Enrolment and the member synchronisation with Microsoft now use the same, repaired helper functions.
+- **Stripe:** a payment's status was silently not fetched when Stripe used a long payment reference.
+- **Every restart removed genres that were not in the standard list**, together with their links to titles. A genre an admin had added therefore only lasted until the next update. Startup now only adds to the standard list.
+
+#### GDPR
+
+- **One member who could not be erased blocked the erasure of all members.** The GDPR clean-up erased members who had been removed long enough all at once. If anything still referred to one of them — a chat message, or an invoice or booking they had created — nobody on the entire installation was erased, and that only showed up in the log. It now goes member by member: whoever cannot be erased stays and is named in the log, the rest are erased. The same applies to the retention periods per association and to the manual clean-up. What should happen to the chat messages and bookings of such a member is a decision for the board (see `docs/PIA.md`).
+
+#### Other
+
+- Signing up twice as a passenger for the same ride put you on it twice, taking up two seats.
+- Three messages were only in Dutch: when downloading a poster, saving a setlist and ending a practice session. They are translated now, and the Dutch reads "1 minuut" instead of "1 minuten".
+
+### Technical
+
+- **Vitest 5** for both test suites, together with the coverage measurement; **React 19**, with react and react-dom updated in one go. Also updated, among others: archiver 8 (backups and zip downloads adapted to the new call), multer, helmet, i18next, axios and react-dropzone. jsdom is temporarily pinned to 30.0.1, because 30.1.0 has a bug in the test environment; TypeScript 7 waits until typescript-eslint supports it.
+- The Lighthouse threshold in CI goes from 80 to 86.
+- Two tests that depended on the date or on the speed of the machine have been decoupled from it.
+- Agreements and recipes for those working on Tutti recorded (`CLAUDE.md`, `docs/VEERKRACHT.md`, `docs/ACHTERGRONDTAKEN.md`, `docs/IMPORTEREN.md`).
+
 ## [1.17.0] - 2026-08-24
 
 ### Added

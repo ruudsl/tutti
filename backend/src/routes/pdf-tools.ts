@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ZipArchive } from 'archiver';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { eisBruikbaar, zoekInstrument } from '../services/catalogus';
 import { FileValidationError } from '../utils/errors';
 import db from '../database/connection';
 import logger from '../utils/logger';
@@ -42,32 +43,6 @@ function parseFilename(filename: string): {
     groupNumber: parts[4] || null,
     clef: parts[5] || null,
   };
-}
-
-// Find instrument by name or alias
-function findInstrumentId(instrumentName: string): string | null {
-  if (!instrumentName) return null;
-  const searchName = instrumentName.toLowerCase().trim();
-
-  // First try exact match on instrument name
-  const instrument = db
-    .prepare(
-      `
-    SELECT id FROM instruments WHERE LOWER(name) = ?
-  `,
-    )
-    .get(searchName) as { id: string } | undefined;
-  if (instrument) return instrument.id;
-
-  // Try alias
-  const alias = db
-    .prepare(
-      `
-    SELECT instrument_id FROM instrument_aliases WHERE LOWER(alias) = ?
-  `,
-    )
-    .get(searchName) as { instrument_id: string } | undefined;
-  return alias ? alias.instrument_id : null;
 }
 
 // Configure multer for PDF uploads
@@ -585,6 +560,7 @@ router.post(
     if (title) {
       pieceTitle = title;
       pieceArranger = arranger || null;
+      eisBruikbaar('instrument', instrumentId, req.user!.associationId);
       pieceInstrumentId = instrumentId || null;
       pieceTuning = tuning || null;
       pieceGroupNumber = groupNumber || null;
@@ -593,7 +569,7 @@ router.post(
       const parsed = parseFilename(filename);
       pieceTitle = parsed.title;
       pieceArranger = parsed.arranger;
-      pieceInstrumentId = parsed.instrument ? findInstrumentId(parsed.instrument) : null;
+      pieceInstrumentId = parsed.instrument ? zoekInstrument(parsed.instrument, req.user!.associationId) : null;
       pieceTuning = parsed.tuning;
       pieceGroupNumber = parsed.groupNumber;
       pieceClef = parsed.clef;

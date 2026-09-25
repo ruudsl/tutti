@@ -57,7 +57,7 @@ export default function Seating() {
 
   const { data: instruments = [] } = useQuery({
     queryKey: ['instruments'],
-    queryFn: getInstruments,
+    queryFn: () => getInstruments(),
     enabled: !!isManager,
     staleTime: 5 * 60 * 1000,
   });

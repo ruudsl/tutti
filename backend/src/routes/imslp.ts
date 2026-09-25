@@ -8,6 +8,7 @@ import { searchImslp, getWorkDetails, downloadPdf } from '../services/imslp';
 import db from '../database/connection';
 import logger from '../utils/logger';
 import { isPdf } from '../utils/fileValidation';
+import { zichtbaarParams, zichtbaarVoorwaarde } from '../services/catalogus';
 
 const router = Router();
 
@@ -283,26 +284,25 @@ router.post(
     // Determine instrument from instrumentation or use a generic one
     let instrumentId: string | null = null;
     if (instrumentation) {
-      // Try to find a matching instrument
+      // Een passend instrument uit wat de vereniging ziet (services/catalogus.ts).
       const instrument = db
         .prepare(
-          // De instrumententabel is gedeeld en kent geen association_id; zie
-          // routes/instruments.ts, dat er ook niet op filtert.
-          `SELECT id FROM instruments WHERE name LIKE ? OR name = 'Score' OR name = 'Full Score'`,
+          `SELECT i.id FROM instruments i
+           WHERE (i.name LIKE ? OR i.name = 'Score' OR i.name = 'Full Score') AND ${zichtbaarVoorwaarde('i')}`,
         )
-        .get(`%${instrumentation.split(',')[0].trim()}%`) as { id: string } | undefined;
+        .get(`%${instrumentation.split(',')[0].trim()}%`, ...zichtbaarParams(user.associationId, 'instrument')) as
+        { id: string } | undefined;
       if (instrument) {
         instrumentId = instrument.id;
       }
     }
 
-    // If no instrument found, try to get or create a "Score" instrument
+    // Geen instrument gevonden: het standaardinstrument "Score", dat voor elke
+    // vereniging hetzelfde is en zo nodig hier wordt aangemaakt.
     if (!instrumentId) {
-      // instruments is een globale lijst, niet per vereniging: er is één
-      // "Score" voor iedereen. Eerder werd hier op association_id gefilterd,
-      // een kolom die de tabel niet heeft.
-      const scoreInstrument = db.prepare(`SELECT id FROM instruments WHERE name = 'Score'`).get() as
-        { id: string } | undefined;
+      const scoreInstrument = db
+        .prepare(`SELECT id FROM instruments WHERE name = 'Score' AND association_id IS NULL`)
+        .get() as { id: string } | undefined;
 
       if (scoreInstrument) {
         instrumentId = scoreInstrument.id;

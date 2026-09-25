@@ -2,6 +2,88 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.18.0] - 2026-09-24
+
+Ein Monat mit zwei Dingen, von denen der Vorstand sofort etwas hat, und viel Arbeit unter der Haube. Daten, die heute noch in Excel stehen, lassen sich ohne Abtippen übernehmen, und Kartengeld landet auf dem Konto des Vereins selbst. Dazu kommen eine eigene Sicherheitsprüfung, eine Warteschlange für Hintergrundarbeit, die einen Neustart übersteht, und ein Zeitlimit für jeden Aufruf an einen externen Dienst. Unterwegs stellte sich heraus, dass die Seite Ausrüstung in keinem Punkt funktionierte; jetzt tut sie es.
+
+### Beim Aktualisieren beachten
+
+Für alle, die Tutti selbst installieren und betreiben:
+
+- **Der Server startet in der Produktion nicht mehr mit einem schwachen `JWT_SECRET`.** Neben einem fehlenden oder zu kurzen Geheimnis werden jetzt auch die Beispielwerte aus der Dokumentation und eintönige Werte abgelehnt; die Beispieldateien lassen das Feld künftig leer. Erzeugen Sie ein zufälliges Geheimnis, zum Beispiel mit `openssl rand -base64 48`. Auf Render wird das Geheimnis erzeugt; dort ist nichts zu tun.
+- **Die Anmeldung mit Microsoft braucht die Tenant-ID der eigenen Organisation.** Steht der Tenant auf `common`, `organizations` oder `consumers`, gilt die Microsoft-Anmeldung als nicht eingerichtet. Tragen Sie die eigene Tenant-ID ein.
+- **Ein vollständiges Anmeldetoken in der URL funktioniert nur noch bei Downloads** (GET- und HEAD-Anfragen). Eigene Skripte, die für etwas anderes ein Token in der URL mitgeben, müssen es im Header `Authorization` senden.
+- **Kartengeld geht auf das eigene Mollie-Konto** jedes Vereins, der in den Zahlungseinstellungen (**Zahlungen**) einen eigenen Schlüssel eingetragen und verbunden hat; siehe _Hinzugefügt_. Vereine ohne eigenen Schlüssel bleiben beim Konto der Installation. Lässt sich ein gespeicherter Schlüssel nicht mehr entschlüsseln, fällt Tutti bewusst nicht auf das Konto der Installation zurück; tragen Sie den Schlüssel dann erneut ein.
+- **Docker-Installationen:** Der Backend-Port lauscht in beiden Compose-Dateien nur noch auf `127.0.0.1`; Besucher kommen über nginx oder Traefik herein. Diese leiten jetzt auch `/socket.io` an das Backend weiter. Wer eine eigene Proxy-Konfiguration verwendet, muss das ebenfalls tun, sonst werden Chat und Benachrichtigungen nicht live aktualisiert. Liegt vor diesem Proxy noch eine weitere Schicht, setzen Sie `TRUST_PROXY` auf die Anzahl der Proxys.
+- **Genres und Instrumente unterscheiden sich jetzt pro Verein.** Die bestehenden Genres und Instrumente sind die Standardliste für alle Vereine; sie ändert jetzt nur noch der Superadministrator. Wer ein Standardgenre oder -instrument ändern oder entfernen möchte, blendet es aus und legt ein eigenes an; siehe _Hinzugefügt_. Was bereits damit verknüpft ist — Mitglieder, Stimmen, Titel — bleibt, wie es ist.
+
+### Hinzugefügt
+
+- **Aus einer Tabelle importieren.** Unter **Verwaltung → Importieren** lesen Sie Mitglieder, die Notenbibliothek, Instrumente im Besitz, Kontakte, Uniformen und Ausrüstung ein. Sie sehen zuerst, was mit jeder Zeile geschehen wird — neu, bereits vorhanden oder ein Fehler mit Begründung — und nichts ändert sich, bis Sie auf Importieren klicken.
+  - Speichern Sie das Arbeitsblatt als CSV (in Excel: _Speichern unter → CSV_); eine .xlsx-Datei selbst wird nicht gelesen. Spaltennamen dürfen niederländisch, englisch oder deutsch sein, für jede Art gibt es eine Beispieldatei zum Herunterladen, und eine CSV, wie Excel unter Windows sie speichert, wird richtig gelesen. Auch der Repertoire-Export von Tutti selbst lässt sich wieder einlesen.
+  - Mit dem Häkchen **Vorhandene Daten aktualisieren** erhält eine bereits vorhandene Zeile das, was in der Datei anders ist; die Vorschau zeigt pro Feld alt → neu. Eine leere Zelle löscht nichts, und ein Wert, der sich nicht lesen lässt, lässt den alten stehen. Bei Mitgliedern werden nur Name und private E-Mail-Adresse aktualisiert, nie die Rolle. Uniformen machen nicht mit: Ein Teil hat keine Nummer, an der man es erkennen könnte.
+  - Importierte Mitglieder erhalten keine E-Mail und kein Passwort. Sie legen selbst eines über _Passwort vergessen?_ fest, oder der Administrator verschickt Einladungen, sobald der Verein so weit ist. Die Mitgliedergrenze des Abonnements gilt auch hier.
+  - Importieren darf, wer die Daten auch auf der normalen Seite verwaltet: Mitglieder nur der Administrator; die Notenbibliothek und Kontakte auch die Musikkommission; Instrumente und Ausrüstung auch der Materialausschuss (unter _Inventar_); Uniformen auch die Uniformkommission. Ist das Modul Inventar oder Kontakte ausgeschaltet, verschwinden diese Arten auch aus dem Import.
+- **Kartengeld auf das eigene Konto.** In den Zahlungseinstellungen konnte ein Verein schon einen eigenen Mollie-Schlüssel eintragen, doch der Kartenverkauf nutzte nur den der Installation. Mit mehreren Vereinen auf einer Installation landete so das gesamte Kartengeld auf einem Konto. Jetzt laufen Bezahlen, Zahlungsstatus und Rückerstattung über das Konto des Vereins selbst, im gewählten Modus (live oder Test).
+- **Hintergrundaufgaben, die einen Neustart überstehen.** Die Benachrichtigungen zur Aufstellung, das erneute Weiterleiten von E-Mails, die DSGVO-Bereinigung, die Sicherung und das Aufräumen temporärer Dateien liefen jeweils in einer eigenen Schleife im Arbeitsspeicher des Servers. Jedes Update ist ein Neustart, und der warf laufende Arbeit spurlos weg; eine fehlgeschlagene Sicherung stand nur im Protokoll. Diese Arbeit steht jetzt in einer Warteschlange in der Datenbank: Sie läuft nach einem Neustart weiter, läuft nie doppelt, und was fehlschlägt, bleibt sichtbar. Arbeit, die sich gefahrlos wiederholen lässt, bekommt automatisch neue Versuche; was womöglich schon verschickt wurde, nicht.
+  - Der Super-Administrator hat einen neuen Reiter **Hintergrundaufgaben**. Er öffnet mit den fehlgeschlagenen Aufgaben, zeigt zu jeder den letzten Fehler und hat eine Schaltfläche **Erneut versuchen**.
+- **Eigene Genres und Instrumente.** Ein Verein legt Genres und Instrumente an, die nur er sieht, und blendet Standardeinträge aus, die er nicht verwendet; diese erscheinen dann nicht mehr in seinen Auswahllisten. Zwei Vereine können jeweils ein eigenes Genre mit demselben Namen haben. Dafür gibt es unter **Bibliothek** eine neue Seite **Instrumente**; die Seite **Genres** zeigt, was Standard ist und was eigen. Das Zuordnen einer Stimme oder eines Mitglieds zu einem Instrument über den Namen, beim Hochladen und beim Importieren, berücksichtigt nur, was der Verein sieht.
+
+### Geändert
+
+- **Eine Störung bei einem externen Dienst hält Tutti nicht mehr fest.** Tutti spricht unter anderem mit Mollie, Stripe, Microsoft 365, Google, Spond, Telegram, WhatsApp und IMSLP. Ein Teil dieser Aufrufe hatte kein Zeitlimit, auch die Zahlungen nicht: Ein hängender Zahlungsdienst hielt einen Käufer an der Kasse fest, bis er aufgab. Jetzt hat jeder Aufruf ein Limit, ein kurzer Aussetzer wird automatisch wiederholt, und ein Dienst, der wirklich ausgefallen ist, wird eine Zeit lang übersprungen, statt bei jedem Mitglied erneut die volle Wartezeit zu kosten.
+  - Etwas anlegen oder verschicken — eine Zahlung, eine Rückerstattung, eine Nachricht, einen Kalendertermin, ein Microsoft-Konto — geschieht nie zweimal. Nach einer Zeitüberschreitung weiß niemand, ob der erste Versuch nicht doch angekommen ist.
+  - Ist ein Dienst ausgefallen, erscheint „später erneut versuchen“ statt „Interner Serverfehler“, als wäre Tutti selbst kaputt.
+  - Die ausführliche Zustandsprüfung der Installation zeigt pro externem Dienst, ob er gerade übersprungen wird — die Antwort auf „warum kommen meine Benachrichtigungen nicht an“.
+- **Der Anmeldebildschirm steht schneller da.** Wo früher ein weißer Bildschirm stand, bis alles geladen war, erscheint jetzt sofort das Logo, und von den niederländischen Texten bekommt der Anmeldebildschirm nur, was er braucht; der Rest folgt danach. Das Paket, das der Browser zuerst holt, ging von 96 auf 39 KB zurück, und der Leistungswert auf der Messmaschine der Build-Pipeline stieg von 84 auf rund 90.
+- **Journal und Rechnungen in der Buchhaltung seitenweise.** Beide holten alles, was ein Verein je gebucht hatte, und das wird jede Saison mehr. Jetzt kommen sie in Seiten zu 25, mit Schaltflächen zum Blättern. Die Zählungen auf der Übersicht — die Zahl der Buchungen und die offenen Rechnungen — kommen vom Server, sodass sie alles umfassen und nicht nur die Seite, die Sie gerade sehen. Wer das Geschäftsjahr wechselt, landet wieder auf Seite 1; vorher konnte man auf Seite 3 eines Jahres mit nur einer Seite stehen bleiben und auf eine leere Liste schauen. Die Liste der Kontoauszüge hat dieselbe Begrenzung bekommen.
+- **Der Infobildschirm zeigt nur Nachrichten für alle.** Eine Nachricht, die für eine bestimmte Zielgruppe gedacht ist, erscheint nicht mehr auf dem öffentlichen Infobildschirm.
+- **Zwei geplante Funktionen, die nie von selbst liefen, wurden entfernt.** Die wöchentliche Zusammenfassung per E-Mail war gebaut, wurde aber nirgends gestartet und kam nie bei einem Mitglied an; sie einzuschalten hätte den Mitgliedern eine ungefragte wöchentliche E-Mail geschickt. Dasselbe galt für Workflows mit dem Trigger _Nach Zeitplan_ oder _Bei Datumsfeld_: Sie lösten nie von selbst aus. Bei einem neuen Trigger werden sie nicht mehr angeboten; bestehende Trigger dieser Art bleiben sichtbar und bearbeitbar, mit dem Hinweis, dass sie nicht von selbst auslösen.
+- **Wer externe Kontakte sieht, hängt von der Rolle ab.** Administrator und Vorstand sehen alles. Die Ausschüsse und der Dirigent sehen die Kontakte, aber nicht die Bankdaten, die Handelsregister- und USt-Nummer und die Notizen. Normale Mitglieder sehen die Kontakte nicht mehr; der Menüpunkt verschwindet für sie.
+
+### Behoben
+
+#### Sicherheit
+
+Aus einer eigenen Sicherheitsprüfung. Zu jedem Punkt gibt es einen Test, der mit dem alten Code fehlschlug.
+
+- **Rollen.** Ein Administrator konnte über eine Einladung mehr Rechte vergeben, als er selbst hatte — das geht nicht mehr, und beim Annehmen der Einladung wird es erneut geprüft. Nach dem Entfernen aus einem Verein oder einer Rollenänderung stimmt die Rolle eines Mitglieds sofort.
+- **Sitzungen.** Ändert ein Administrator die Rolle oder das Passwort eines Mitglieds, wird dieses Mitglied überall abgemeldet. Ein entferntes oder inaktives Mitglied kommt mit einer noch offenen Sitzung nicht mehr hinein. Auch die Live-Verbindung für Chat und Benachrichtigungen prüft jetzt, ob eine Sitzung noch besteht; nach dem Abmelden oder einer Passwortänderung konnte diese Verbindung weiterlaufen.
+- **Die Anmeldung mit Microsoft** wird strenger gegen die eigene Organisation geprüft. Ein Konto wird nur noch automatisch mit einem Mitglied verknüpft, wenn es nachweislich zu dieser Organisation gehört, und ein inaktives Mitglied kommt nicht hinein.
+- **Die Vereinsgrenze.** Workflows, geteilte Anmerkungen in Noten, das Verleihen und Ausgeben von Uniformen, Ausrüstung und Instrumenten sowie die Repertoirestatistik bleiben jetzt innerhalb des eigenen Vereins; verliehen werden kann nur an ein Mitglied des eigenen Vereins. E-Mails — auch aus Workflows — gehen nur über den Mailserver des eigenen Vereins oder den der Installation, nie über den eines anderen Vereins.
+- **Zahlungen.** Eine Zahlungsbestätigung von Mollie wird nur noch der Bestellung zugeordnet, für die die Zahlung angelegt wurde, und der Betrag muss stimmen.
+- **Adressen, die der Server selbst aufruft.** Eine Webhook-Adresse (bei den Benachrichtigungen zur Aufstellung und in Workflows) und der Mailserver beim SMTP-Test dürfen nicht auf das interne Netz des Servers zeigen. Der Import aus OneDrive holt Dateien nur noch bei Microsoft selbst.
+- **Die IP-Freigabeliste für den Verwaltungsbildschirm** und die Prüfung auf verdächtige Kartenbestellungen bestimmen die Adresse des Besuchers jetzt auf dieselbe zuverlässige Weise wie der Rest der Anwendung.
+- **Logos und Profilfotos.** Der Dateityp wird am Inhalt bestimmt, nicht am Namen, und die Dateien werden so ausgeliefert, dass ein Browser nichts anderes damit tun kann, als sie anzuzeigen.
+- **Die Übersicht aller Vereine und das Anlegen eines neuen Vereins** sind dem Super-Administrator vorbehalten.
+- Pfade hochgeladener Dateien und Zeilen im Protokoll werden strenger geprüft, nach Meldungen aus dem Code-Scanning.
+
+#### Dinge, die nicht funktionierten
+
+- **Die Seite Ausrüstung funktionierte in keinem Punkt.** Anlegen ergab eine Fehlermeldung, die Liste blieb immer leer, und Bearbeiten, Verleihen, Wartung und das Erfassen von Schäden riefen Funktionen auf, die es auf dem Server nicht gab. Seite und Server sprachen zwei verschiedene Sprachen, und die Tests merkten es nicht, weil sie den Server nachahmten. Jetzt folgt die Seite dem, was der Server kennt: Art, Status, Zustand, Kategorie, Inventarnummer, Marke und Modell, Standort und ob etwas verleihbar ist. Den Entleiher wählen Sie aus der Mitgliederliste, statt eine Nummer einzutippen, und die Warnung vor überfälliger Wartung ergibt sich aus dem Datum der nächsten Wartung. Ein neuer Test vergleicht künftig jeden Aufruf der Seite mit dem, was der Server tatsächlich anbietet.
+- **Das Hochladen eines Zip-Archivs mit Noten schlug immer fehl**: Bildschirm und Server verwendeten einen anderen Namen für die Datei. Außerdem hielt das Entpacken eines großen Archivs den ganzen Server bis zu fast zwei Sekunden fest, sodass so lange niemand sonst eine Antwort bekam, und eine Datei, deren Titel nicht in die Datenbank kam, blieb unauffindbar auf der Festplatte liegen. Alle drei sind behoben.
+- **Echtzeit funktionierte in den Docker-Installationen nicht.** Chat, Benachrichtigungen und die Aufstellung wurden nur live aktualisiert, wenn der Browser auf dem Server selbst lief (siehe _Beim Aktualisieren beachten_).
+- **Benachrichtigungen über Telegram und WhatsApp pro Verein.** Ein Mitglied sah Telegram als verfügbar, sobald irgendein Verein auf der Installation einen Bot eingerichtet hatte, und das Verknüpfen scheiterte danach. Welche Kanäle verfügbar sind, hängt jetzt vom eigenen Verein ab.
+- **Das Weiterleiten von E-Mails beim Anlegen eines neuen Mitglieds in Microsoft 365** wurde übersprungen, wenn Microsoft eine Fehlerseite statt einer normalen Antwort zurückgab. Das Anlegen und die Mitgliedersynchronisation mit Microsoft nutzen jetzt dieselben, reparierten Hilfsfunktionen.
+- **Stripe:** Der Status einer Zahlung wurde stillschweigend nicht abgerufen, wenn Stripe eine lange Zahlungskennung verwendete.
+- **Bei jedem Neustart verschwanden Genres, die nicht in der Standardliste standen**, samt ihrer Verknüpfung mit den Titeln. Ein Genre, das ein Administrator angelegt hatte, bestand also nur bis zum nächsten Update. Der Start ergänzt die Standardliste jetzt nur noch.
+
+#### DSGVO
+
+- **Ein Mitglied, das sich nicht löschen ließ, blockierte das Löschen aller Mitglieder.** Die DSGVO-Bereinigung löschte Mitglieder, die lange genug entfernt sind, auf einen Schlag. Verwies noch etwas auf eines von ihnen — eine Chatnachricht oder eine Rechnung oder Buchung, die es angelegt hatte —, wurde auf der ganzen Installation niemand gelöscht, und das stand nur im Protokoll. Jetzt geht es Mitglied für Mitglied: Wer sich nicht löschen lässt, bleibt stehen und wird im Protokoll genannt, der Rest wird gelöscht. Dasselbe gilt für die Aufbewahrungsfristen pro Verein und für die manuelle Bereinigung. Was mit den Chatnachrichten und Buchungen eines solchen Mitglieds geschehen soll, ist eine Entscheidung für den Vorstand (siehe `docs/PIA.md`).
+
+#### Weiteres
+
+- Wer sich zweimal als Mitfahrer für dieselbe Fahrt anmeldete, stand zweimal darauf und belegte zwei Plätze.
+- Drei Meldungen gab es nur auf Niederländisch: beim Herunterladen eines Plakats, beim Speichern einer Setlist und am Ende einer Übungssitzung. Sie sind jetzt übersetzt, und auf Niederländisch heißt es „1 minuut“ statt „1 minuten“.
+
+### Technisch
+
+- **Vitest 5** für beide Testsuiten, zusammen mit der Abdeckungsmessung; **React 19**, mit react und react-dom in einem Schritt aktualisiert. Außerdem unter anderem archiver 8 (Sicherungen und Zip-Downloads an den neuen Aufruf angepasst), multer, helmet, i18next, axios und react-dropzone aktualisiert. jsdom ist vorübergehend auf 30.0.1 festgelegt, weil 30.1.0 in der Testumgebung einen Fehler hat; TypeScript 7 wartet, bis typescript-eslint es unterstützt.
+- Der Lighthouse-Schwellenwert in CI steigt von 80 auf 86.
+- Zwei Tests, die vom Datum oder von der Geschwindigkeit der Maschine abhingen, sind davon gelöst.
+- Absprachen und Anleitungen für alle, die an Tutti arbeiten, festgehalten (`CLAUDE.md`, `docs/VEERKRACHT.md`, `docs/ACHTERGRONDTAKEN.md`, `docs/IMPORTEREN.md`).
+
 ## [1.17.0] - 2026-08-24
 
 ### Hinzugefügt

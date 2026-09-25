@@ -40,12 +40,12 @@ Response:
 | ----------------- | -------------------------- | ------------------------------------------------------ |
 | Auth              | `/api/auth/*`              | Login, profile, password, MFA, password reset          |
 | Users             | `/api/users/*`             | CRUD members, assign instruments/orchestras            |
-| Instruments       | `/api/instruments/*`       | CRUD instruments and aliases                           |
+| Instruments       | `/api/instruments/*`       | Standard and own instruments, aliases, hiding          |
 | Orchestras        | `/api/orchestras/*`        | CRUD orchestras, member management                     |
 | Music Pieces      | `/api/music-pieces/*`      | Upload, download, metadata, MP3, sharing, ZIP upload   |
 | Music Titles      | `/api/music-titles/*`      | Metadata library (via music-pieces routes)             |
 | Music Lists       | `/api/music-lists/*`       | Setlists and concert programs                          |
-| Genres            | `/api/genres/*`            | Music genres/categories                                |
+| Genres            | `/api/genres/*`            | Standard and own genres, hiding                        |
 | Rehearsals        | `/api/rehearsals/*`        | Scheduling, default days, attendance, recurring series |
 | Availability      | `/api/availability/*`      | Personal and team availability management              |
 | Concerts          | `/api/concerts/*`          | Concert management, attendance prediction              |
@@ -1382,6 +1382,23 @@ POST /api/achtergrondtaken/:id/opnieuw
 ```
 
 Zet de taak terug op `wachtend` met een verse teller. Alleen voor een taak met status `mislukt`; anders `409`. Komt in het auditlogboek.
+
+---
+
+## Genres en instrumenten
+
+Een standaardlijst voor alle verenigingen (`standaard: true`) en eigen items per vereniging (`standaard: false`). Zie [ROLE_PERMISSIONS.md](./ROLE_PERMISSIONS.md#genres-en-instrumentsoorten) voor wie wat mag.
+
+| Route                                            | Wie                        | Wat                                                                                          |
+| ------------------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------- |
+| `GET /api/genres`, `GET /api/instruments`        | iedereen                   | Wat de vereniging ziet: standaard (niet verborgen) en eigen. `?alles=true` ook de verborgen. |
+| `POST /api/genres`, `POST /api/instruments`      | beheerder, muziekcommissie | Een eigen item. Een naam die de vereniging al ziet geeft `409`.                              |
+| `PUT /api/{genres,instruments}/:id`              | beheerder, muziekcommissie | Alleen een eigen item; een standaarditem `403` (behalve voor de superbeheerder).             |
+| `DELETE /api/{genres,instruments}/:id`           | beheerder                  | Idem.                                                                                        |
+| `POST /api/{genres,instruments}/:id/verbergen`   | beheerder, muziekcommissie | Een standaarditem verbergen voor de eigen vereniging. Een eigen item: `404`.                 |
+| `DELETE /api/{genres,instruments}/:id/verbergen` | beheerder, muziekcommissie | Weer tonen.                                                                                  |
+
+Een eigen item van een andere vereniging bestaat voor jou niet: `404` bij beheren, `400 Onbekend genre.` of `400 Onbekend instrument.` als een ander verzoek ernaar verwijst (een lid, een partij, een titel, een opstelling).
 
 ---
 

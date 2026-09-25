@@ -2,6 +2,88 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.18.0] - 2026-09-24
+
+Een maand met twee dingen waar het bestuur direct iets aan heeft, en veel werk onder de motorkap. Gegevens die nu nog in Excel staan zet je over zonder overtypen, en kaartgeld komt op de rekening van de vereniging zelf. Daarnaast een eigen beveiligingsreview, een wachtrij voor achtergrondwerk die een herstart overleeft, en een tijdslimiet op elke aanroep naar een externe dienst. Onderweg bleek de pagina Apparatuur op geen enkel punt te werken; dat doet hij nu wel.
+
+### Let op bij bijwerken
+
+Voor wie Tutti zelf installeert en beheert:
+
+- **De server start in productie niet meer met een zwak `JWT_SECRET`.** Naast een ontbrekend of te kort geheim worden nu ook de voorbeeldwaarden uit de documentatie en eentonige waarden geweigerd; de voorbeeldbestanden laten het veld voortaan leeg. Maak een willekeurig geheim, bijvoorbeeld met `openssl rand -base64 48`. Op Render wordt het geheim gegenereerd; daar hoeft niets te gebeuren.
+- **Inloggen met Microsoft vraagt de tenant-id van de eigen organisatie.** Staat de tenant op `common`, `organizations` of `consumers`, dan geldt Microsoft-inloggen als niet ingesteld. Vul de eigen tenant-id in.
+- **Een volledig inlogtoken in de URL werkt alleen nog bij downloads** (GET- en HEAD-verzoeken). Eigen scripts die voor iets anders een token in de URL meegeven, moeten het in de kopregel `Authorization` zetten.
+- **Kaartgeld gaat naar het eigen Mollie-account** van elke vereniging die bij de betaalinstellingen (**Betalingen**) een eigen sleutel heeft ingevoerd en gekoppeld; zie _Toegevoegd_. Verenigingen zonder eigen sleutel blijven op het account van de installatie. Is een opgeslagen sleutel niet meer te ontsleutelen, dan valt Tutti bewust niet terug op het account van de installatie; voer de sleutel dan opnieuw in.
+- **Docker-opstellingen:** de backendpoort luistert in beide compose-bestanden alleen nog op `127.0.0.1`; bezoekers komen via nginx of Traefik binnen. Die sturen nu ook `/socket.io` door naar de backend. Wie een eigen proxyconfiguratie gebruikt, moet dat ook doen, anders worden chat en meldingen niet live bijgewerkt. Staat er vóór die proxy nog een laag, stel dan `TRUST_PROXY` in op het aantal proxy's.
+- **Genres en instrumenten verschillen nu per vereniging.** De bestaande genres en instrumenten zijn de standaardlijst voor alle verenigingen; die wijzigt alleen nog de superbeheerder. Een beheerder die een standaardgenre of -instrument wil aanpassen of weghalen, verbergt het en maakt een eigen; zie _Toegevoegd_. Wat er al aan hangt — leden, partijen, titels — blijft zoals het is.
+
+### Toegevoegd
+
+- **Importeren uit een spreadsheet.** Onder **Beheer → Importeren** lees je leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en apparatuur in. Je ziet eerst per regel wat er gaat gebeuren — nieuw, bestaat al, of een fout met de reden erbij — en er verandert niets tot je op importeren klikt.
+  - Sla het werkblad op als CSV (in Excel: _Opslaan als → CSV_); een .xlsx-bestand zelf wordt niet gelezen. Kolomnamen mogen Nederlands, Engels of Duits zijn, er is per soort een voorbeeldbestand om te downloaden, en een CSV zoals Excel op Windows die opslaat wordt goed gelezen. De repertoire-export van Tutti zelf is ook weer in te lezen.
+  - Met het vinkje **Bestaande gegevens bijwerken** krijgt een regel die er al is wat in het bestand anders is; het voorbeeld toont per veld oud → nieuw. Een lege cel wist niets, en een waarde die niet te lezen is laat het oude staan. Van leden worden alleen naam en privé-e-mailadres bijgewerkt, nooit de rol. Uniformen doen hier niet aan mee: een onderdeel heeft geen nummer om het aan te herkennen.
+  - Geïmporteerde leden krijgen geen mail en geen wachtwoord. Ze stellen er zelf een in via _Wachtwoord vergeten_, of de beheerder stuurt uitnodigingen wanneer de vereniging er klaar voor is. De ledengrens van het abonnement geldt ook hier.
+  - Wie iets mag importeren is wie het ook op de gewone pagina beheert: leden alleen de beheerder; de muziekbibliotheek en contacten ook de muziekcommissie; instrumenten en apparatuur ook de instrumentencommissie (onder _Inventaris_); uniformen ook de uniformcommissie. Staat de module Inventaris of Contacten uit, dan verdwijnen die soorten ook uit de import.
+- **Kaartgeld naar de eigen rekening.** Bij de betaalinstellingen kon een vereniging al een eigen Mollie-sleutel invoeren, maar de kaartverkoop gebruikte alleen die van de installatie. Met meerdere verenigingen op één installatie kwam al het kaartgeld zo op één rekening. Nu gaan betalen, de betaalstatus en terugbetalen via het account van de vereniging zelf, in de gekozen modus (live of test).
+- **Achtergrondtaken die een herstart overleven.** De meldingen voor de opstelling, het opnieuw doorsturen van mail, de AVG-opschoning, de back-up en het opruimen van tijdelijke bestanden liepen elk in een eigen lus in het geheugen van de server. Elke update is een herstart, en die gooide lopend werk weg zonder spoor; een mislukte back-up stond alleen in het logboek. Dat werk staat nu in een wachtrij in de database: het gaat na een herstart verder, draait niet dubbel, en wat mislukt blijft zichtbaar. Werk dat veilig te herhalen is, krijgt vanzelf nieuwe pogingen; iets dat mogelijk al verstuurd is niet.
+  - De superbeheerder heeft een nieuw tabblad **Achtergrondtaken**. Het opent op de mislukte taken, toont per taak de laatste fout, en heeft een knop **Opnieuw proberen**.
+- **Eigen genres en instrumenten.** Een vereniging voegt genres en instrumenten toe die alleen zij ziet, en verbergt standaarditems die ze niet gebruikt; die staan dan niet meer in de keuzelijsten. Twee verenigingen kunnen elk een eigen genre met dezelfde naam hebben. Onder **Bibliotheek** staat daarvoor een nieuwe pagina **Instrumenten**; de pagina **Genres** laat zien wat standaard is en wat eigen. Het koppelen van een partij of een lid aan een instrument op naam, bij het uploaden en bij het importeren, kijkt alleen naar wat de vereniging ziet.
+
+### Gewijzigd
+
+- **Een storing bij een externe dienst legt Tutti niet meer vast.** Tutti praat met onder meer Mollie, Stripe, Microsoft 365, Google, Spond, Telegram, WhatsApp en IMSLP. Een deel van die aanroepen had geen tijdslimiet, ook de betalingen niet: een hangende betaaldienst hield een koper aan het afrekenen vast tot die het opgaf. Nu heeft elke aanroep een limiet, wordt een korte hapering vanzelf opnieuw geprobeerd, en wordt een dienst die er echt uit ligt een tijdje overgeslagen in plaats van bij elk lid opnieuw de volle wachttijd te kosten.
+  - Iets aanmaken of versturen — een betaling, een terugbetaling, een bericht, een agenda-afspraak, een Microsoft-account — gebeurt nooit twee keer. Na een time-out weet niemand of de eerste poging toch aankwam.
+  - Ligt een dienst plat, dan krijg je "probeer het straks nog eens" in plaats van "Interne serverfout", alsof Tutti zelf stuk was.
+  - De uitgebreide gezondheidscontrole van de installatie toont per externe dienst of hij op dit moment wordt overgeslagen — het antwoord op "waarom komen mijn meldingen niet aan".
+- **Het inlogscherm staat sneller op het scherm.** Waar eerst een wit scherm stond tot alles geladen was, staat nu meteen het logo, en van de Nederlandse teksten krijgt het inlogscherm alleen wat het nodig heeft; de rest volgt daarna. Het pakket dat de browser als eerste ophaalt ging van 96 naar 39 KB, en de prestatiescore op de meetmachine van de bouwstraat van 84 naar rond de 90.
+- **Het journaal en de facturen in de boekhouding per pagina.** Beide haalden alles op wat een vereniging ooit had geboekt, en dat wordt elk seizoen meer. Nu staan ze per pagina van 25, met knoppen om door te bladeren. De tellingen op het overzicht — het aantal boekingen en de openstaande facturen — komen van de server, zodat ze over alles gaan en niet alleen over de pagina die je ziet. Wie van boekjaar wisselt, begint weer op pagina 1; eerder kon je op pagina 3 van een jaar met maar één pagina blijven staan, voor een lege lijst. De lijst met bankafschriften heeft dezelfde begrenzing gekregen.
+- **Het infoscherm toont alleen berichten voor iedereen.** Een bericht dat voor een bepaalde doelgroep is bedoeld, verschijnt niet meer op het openbare infoscherm.
+- **Twee geplande functies die nooit vanzelf draaiden, zijn weggehaald.** De wekelijkse samenvatting per mail was gebouwd maar werd nergens gestart, en is nooit bij een lid aangekomen; aanzetten had leden een ongevraagde wekelijkse mail gestuurd. Hetzelfde gold voor workflows met de trigger _Op schema_ of _Bij datumveld_: die gingen nooit vanzelf af. Bij een nieuwe trigger worden ze niet meer aangeboden; bestaande triggers van die soort blijven zichtbaar en te bewerken, met een melding dat ze niet vanzelf afgaan.
+- **Wie externe contacten ziet, hangt af van de rol.** Beheerder en bestuur zien alles. De commissies en de dirigent zien de contacten, maar niet de rekeninggegevens, het KvK- en btw-nummer en de notities. Gewone leden zien de contacten niet meer; het menu-item verdwijnt voor hen.
+
+### Opgelost
+
+#### Beveiliging
+
+Uit een eigen beveiligingsreview. Elk punt heeft een test die op de oude code faalde.
+
+- **Rollen.** Een beheerder kon via een uitnodiging meer rechten toekennen dan hij zelf had — dat kan niet meer, en bij het aannemen van de uitnodiging wordt het opnieuw gecontroleerd. Na het verwijderen uit een vereniging of een rolwijziging klopt de rol van een lid meteen.
+- **Sessies.** Wijzigt een beheerder de rol of het wachtwoord van een lid, dan wordt dat lid overal afgemeld. Een verwijderd of inactief lid komt niet meer binnen met een sessie die nog openstond. De live-verbinding voor chat en meldingen controleert nu ook of een sessie nog bestaat; na uitloggen of een wachtwoordwijziging kon die verbinding blijven werken.
+- **Inloggen met Microsoft** wordt strenger gecontroleerd op de eigen organisatie. Een account wordt alleen nog automatisch aan een lid gekoppeld als het aantoonbaar bij die organisatie hoort, en een inactief lid komt niet binnen.
+- **De verenigingsgrens.** Workflows, gedeelde aantekeningen op bladmuziek, het uitlenen en uitgeven van uniformen, apparatuur en instrumenten, en de repertoirestatistiek blijven nu binnen de eigen vereniging; uitlenen kan alleen aan een lid van de eigen vereniging. Mail — ook uit workflows — gaat alleen via de mailserver van de eigen vereniging of die van de installatie, nooit via die van een andere vereniging.
+- **Betalingen.** Een betaalbevestiging van Mollie wordt alleen nog gekoppeld aan de bestelling waarvoor de betaling is aangemaakt, en het bedrag moet kloppen.
+- **Adressen die de server zelf aanroept.** Een webhookadres (bij de meldingen voor de opstelling en in workflows) en de mailserver bij de SMTP-test mogen niet naar het interne netwerk van de server wijzen. De import uit OneDrive haalt bestanden alleen nog bij Microsoft zelf op.
+- **De IP-witlijst voor het beheerscherm** en de controle op verdachte kaartbestellingen bepalen het adres van de bezoeker nu op dezelfde betrouwbare manier als de rest van de applicatie.
+- **Logo's en profielfoto's.** Het bestandstype wordt bepaald aan de inhoud, niet aan de naam, en de bestanden worden zo aangeboden dat een browser er niets anders mee kan doen dan ze tonen.
+- **Het overzicht van alle verenigingen en het aanmaken van een nieuwe vereniging** zijn voorbehouden aan de superbeheerder.
+- Paden van geüploade bestanden en regels in het logboek worden strenger gecontroleerd, naar aanleiding van meldingen uit code scanning.
+
+#### Dingen die niet werkten
+
+- **De pagina Apparatuur werkte op geen enkel punt.** Aanmaken gaf een foutmelding, de lijst bleef altijd leeg, en bewerken, uitlenen, onderhoud en schade vastleggen riepen functies aan die op de server niet bestonden. De pagina en de server spraken twee verschillende talen, en de tests merkten dat niet omdat ze de server nabootsten. Nu volgt de pagina wat de server kent: soort, status, staat, categorie, inventarisnummer, merk en model, locatie en of iets uitleenbaar is. De lener kies je uit de ledenlijst in plaats van een nummer in te typen, en de waarschuwing voor achterstallig onderhoud komt uit de datum van het volgende onderhoud. Een nieuwe test vergelijkt voortaan elke aanroep van de pagina met wat de server werkelijk aanbiedt.
+- **Een zip met bladmuziek uploaden gaf altijd een storing**: het scherm en de server gebruikten een andere naam voor het bestand. Daarnaast hield het uitpakken van een grote zip de hele server tot bijna twee seconden vast, zodat niemand anders zolang antwoord kreeg, en een bestand waarvan de titel niet in de database kwam, bleef onvindbaar op schijf staan. Alle drie opgelost.
+- **Realtime werkte niet in de Docker-opstellingen.** Chat, meldingen en de opstelling werden alleen live bijgewerkt als de browser op de server zelf draaide (zie _Let op bij bijwerken_).
+- **Meldingen via Telegram en WhatsApp per vereniging.** Een lid zag Telegram als beschikbaar zodra welke vereniging op de installatie dan ook een bot had ingesteld, en het koppelen mislukte daarna. Welke kanalen beschikbaar zijn, hangt nu af van de eigen vereniging.
+- **Het doorsturen van mail bij het aanmelden van een nieuw lid in Microsoft 365** werd overgeslagen als Microsoft een foutpagina teruggaf in plaats van een gewoon antwoord. Het aanmelden en de ledensynchronisatie met Microsoft gebruiken nu dezelfde, gerepareerde hulpfuncties.
+- **Stripe:** de status van een betaling werd stilzwijgend niet opgehaald als Stripe een lang betaalkenmerk gebruikte.
+- **Bij elke herstart verdwenen genres die niet in de standaardlijst stonden**, met hun koppeling aan de titels. Een genre dat een beheerder had toegevoegd, bleef dus maar tot de volgende update bestaan. De opstart vult de standaardlijst nu alleen nog aan.
+
+#### AVG
+
+- **Eén lid dat niet gewist kon worden, hield het wissen van alle leden tegen.** De AVG-opschoning wiste leden die lang genoeg verwijderd zijn in één keer. Verwees er nog iets naar één van hen — een chatbericht, of een factuur of boeking die hij had aangemaakt — dan werd niemand op de hele installatie gewist, en dat stond alleen in het logboek. Nu gaat het lid voor lid: wie niet te wissen is blijft staan en wordt in het logboek genoemd, de rest wordt gewist. Hetzelfde geldt voor de bewaartermijnen per vereniging en voor de handmatige opruiming. Wat er met de chatberichten en boekingen van zo'n lid moet gebeuren, is een keuze voor het bestuur (zie `docs/PIA.md`).
+
+#### Verder
+
+- Wie zich twee keer als passagier voor dezelfde rit aanmeldde, stond er twee keer op en nam twee plaatsen in.
+- Drie meldingen waren alleen in het Nederlands: bij het downloaden van een poster, het opslaan van een setlist en het einde van een oefensessie. Ze zijn nu vertaald, en het is "1 minuut" in plaats van "1 minuten".
+
+### Technisch
+
+- **Vitest 5** voor beide testsuites, samen met de dekkingsmeting; **React 19**, met react en react-dom in één keer bijgewerkt. Verder onder meer archiver 8 (back-ups en zip-downloads aangepast aan de nieuwe aanroep), multer, helmet, i18next, axios en react-dropzone bijgewerkt. jsdom staat tijdelijk vast op 30.0.1, omdat 30.1.0 in de testomgeving een fout heeft; TypeScript 7 wacht tot typescript-eslint het ondersteunt.
+- De Lighthouse-drempel in CI gaat van 80 naar 86.
+- Twee tests die afhingen van de datum of van de snelheid van de machine, zijn daarvan losgemaakt.
+- Afspraken en recepten voor wie aan Tutti werkt vastgelegd (`CLAUDE.md`, `docs/VEERKRACHT.md`, `docs/ACHTERGRONDTAKEN.md`, `docs/IMPORTEREN.md`).
+
 ## [1.17.0] - 2026-08-24
 
 ### Toegevoegd

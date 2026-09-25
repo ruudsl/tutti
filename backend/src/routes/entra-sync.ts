@@ -10,6 +10,7 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import { withTransaction } from '../utils/database';
+import { bruikbaarVoorwaarde } from '../services/catalogus';
 import logger from '../utils/logger';
 import { getAppAccessToken, getMicrosoftConfig, graphFetch } from '../utils/m365';
 
@@ -254,8 +255,11 @@ router.post(
       throw new ApiError(400, 'Job title en instrument zijn verplicht.');
     }
 
-    // Check if instrument exists
-    const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(instrumentId);
+    // Het instrument moet bestaan en bruikbaar zijn: standaard of van deze
+    // vereniging, nooit een eigen instrument van een andere vereniging.
+    const instrument = db
+      .prepare(`SELECT id FROM instruments i WHERE i.id = ? AND ${bruikbaarVoorwaarde('i')}`)
+      .get(instrumentId, req.user!.associationId ?? '');
     if (!instrument) {
       throw new ApiError(404, 'Instrument niet gevonden.');
     }
@@ -303,8 +307,11 @@ router.put(
       throw new ApiError(400, 'Instrument is verplicht.');
     }
 
-    // Check if instrument exists
-    const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(instrumentId);
+    // Het instrument moet bestaan en bruikbaar zijn: standaard of van deze
+    // vereniging, nooit een eigen instrument van een andere vereniging.
+    const instrument = db
+      .prepare(`SELECT id FROM instruments i WHERE i.id = ? AND ${bruikbaarVoorwaarde('i')}`)
+      .get(instrumentId, req.user!.associationId ?? '');
     if (!instrument) {
       throw new ApiError(404, 'Instrument niet gevonden.');
     }

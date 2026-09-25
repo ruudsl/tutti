@@ -73,6 +73,7 @@ const navGroups: NavGroup[] = [
       '/upload',
       '/loans',
       '/genres',
+      '/instrumenten',
       '/statistics',
       '/pdf-tools',
       '/imslp',
@@ -86,6 +87,7 @@ const navGroups: NavGroup[] = [
       { path: '/loans', labelKey: 'nav.loans', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/pdf-tools', labelKey: 'nav.pdfTools', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/genres', labelKey: 'nav.genres', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/instrumenten', labelKey: 'nav.instruments', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/statistics', labelKey: 'nav.statistics', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       // De beheerder vindt het importeren onder Beheer.
       { path: '/importeren', labelKey: 'nav.importeren', roles: [ROLES.MUSIC_COMMITTEE] },

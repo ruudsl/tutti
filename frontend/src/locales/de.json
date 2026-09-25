@@ -1357,7 +1357,8 @@
       "arranger": "Arrangeur",
       "duration": "Dauer",
       "parts": "Stimmen"
-    }
+    },
+    "uitleg": "Standardgenres gelten für alle Vereine. Passt eines nicht, blenden Sie es aus und legen Sie ein eigenes Genre an."
   },
   "pdfTools": {
     "title": "PDF-Tools",
@@ -2223,7 +2224,8 @@
     "voiceParts": "$t(nav.voiceParts)",
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
-    "importeren": "$t(nav.importeren)"
+    "importeren": "$t(nav.importeren)",
+    "instrumenten": "$t(nav.instruments)"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -6065,8 +6067,8 @@
       "muziektitels": "Titel für die Notenbibliothek aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Bereits vorhandene Titel mit demselben Bearbeiter werden übersprungen.",
       "instrumenten": "Die Instrumente des Vereins aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Ein Instrument mit derselben Seriennummer oder ohne Seriennummer mit demselben Namen wird übersprungen.",
       "contacten": "Kontakte aus einer CSV-Datei einlesen: Lieferanten, Säle, Sponsoren. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Ein Kontakt mit demselben Namen wird übersprungen.",
-      "uniformen": "Uniformteile aus einer CSV-Datei einlesen, mit einer Anzahl pro Zeile oder mit der E-Mail-Adresse des Mitglieds, das es trägt. Du siehst zuerst pro Zeile, was passiert; nichts ändert sich, bis du auf Importieren klickst. Teile haben keine Nummer: Gibt es bereits gleich viele derselben Art, Größe, Farbe und desselben Trägers, wird die Zeile übersprungen. Dieselbe Datei zweimal einzulesen verdoppelt also nichts.",
-      "apparatuur": "Ausrüstung aus einer CSV-Datei einlesen: Ton, Licht, Notenständer, ein Anhänger. Du siehst zuerst pro Zeile, was passiert; nichts ändert sich, bis du auf Importieren klickst. Ausrüstung mit derselben Inventarnummer, Seriennummer oder (ohne diese beiden) demselben Namen wird übersprungen. Ein Stück ohne Inventarnummer bekommt eine."
+      "uniformen": "Uniformteile aus einer CSV-Datei einlesen, mit einer Anzahl pro Zeile oder mit der E-Mail-Adresse des Mitglieds, das es trägt. Sie sehen zuerst pro Zeile, was passiert; nichts ändert sich, bis Sie auf Importieren klicken. Teile haben keine Nummer: Gibt es bereits gleich viele derselben Art, Größe, Farbe und desselben Trägers, wird die Zeile übersprungen. Dieselbe Datei zweimal einzulesen verdoppelt also nichts.",
+      "apparatuur": "Ausrüstung aus einer CSV-Datei einlesen: Ton, Licht, Notenständer, ein Anhänger. Sie sehen zuerst pro Zeile, was passiert; nichts ändert sich, bis Sie auf Importieren klicken. Ausrüstung mit derselben Inventarnummer, Seriennummer oder (ohne diese beiden) demselben Namen wird übersprungen. Ein Stück ohne Inventarnummer bekommt eine."
     },
     "kiesBestand": "CSV-Datei auswählen",
     "sjabloon": "Beispieldatei herunterladen",
@@ -6202,5 +6204,34 @@
       "kvk": "Handelsregisternummer",
       "btw": "USt-IdNr."
     }
+  },
+  "catalogus": {
+    "standaard": "Standard",
+    "eigen": "Eigene",
+    "verborgen": "Ausgeblendet",
+    "verbergen": "Ausblenden",
+    "tonen": "Wieder anzeigen",
+    "verborgenMelding": "„{{name}}“ erscheint nicht mehr in den Auswahllisten Ihres Vereins.",
+    "getoondMelding": "„{{name}}“ erscheint wieder in den Auswahllisten."
+  },
+  "instrumenten": {
+    "titel": "Instrumente",
+    "nieuw": "Neues Instrument",
+    "bewerken": "Instrument bearbeiten",
+    "verwijderen": "Instrument löschen",
+    "verwijderenVraag": "Möchten Sie „{{name}}“ wirklich löschen? Mitglieder und Stimmen mit diesem Instrument verlieren es.",
+    "naam": "Name",
+    "naamVoorbeeld": "z. B. Alphorn",
+    "stemming": "Stimmung",
+    "stemmingVoorbeeld": "z. B. B, Es, F",
+    "sleutel": "Schlüssel",
+    "sleutels": {
+      "sol": "Violinschlüssel",
+      "fa": "Bassschlüssel",
+      "ut": "C-Schlüssel"
+    },
+    "andereNamen": "Andere Namen",
+    "geen": "Keine Instrumente gefunden.",
+    "uitleg": "Standardinstrumente gelten für alle Vereine. Passt eines nicht, blenden Sie es aus und legen Sie ein eigenes Instrument an."
   }
 }

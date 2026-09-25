@@ -144,7 +144,9 @@ async function initializeDatabase() {
   console.log('Initializing database...');
 
   // Check if instruments already exist
-  const existingInstruments = db.prepare('SELECT COUNT(*) as count FROM instruments').get() as { count: number };
+  const existingInstruments = db
+    .prepare('SELECT COUNT(*) as count FROM instruments WHERE association_id IS NULL')
+    .get() as { count: number };
 
   if (existingInstruments.count === 0) {
     console.log('Seeding instruments...');
@@ -267,39 +269,18 @@ async function initializeDatabase() {
     }
   }
 
-  // Seed genres if they don't exist
-  const existingGenres = db.prepare('SELECT COUNT(*) as count FROM genres').get() as { count: number };
-
-  if (existingGenres.count === 0) {
-    console.log('Seeding genres...');
-    const insertGenre = db.prepare('INSERT INTO genres (id, name) VALUES (?, ?)');
-
-    for (const genre of defaultGenres) {
-      insertGenre.run(uuidv4(), genre);
-    }
-
-    console.log(`Seeded ${defaultGenres.length} genres`);
-  }
-
-  // Migration: Replace old genres with new genre list
+  // De standaardgenres aanvullen. Dit draait bij elke opstart en raakt alleen
+  // de standaardlijst (association_id leeg): wat een vereniging zelf toevoegt,
+  // blijft staan. Een standaardgenre dat een vereniging niet wil, verbergt ze.
   try {
-    const existingGenreRows = db.prepare('SELECT name FROM genres').all() as { name: string }[];
-    const existingGenreNames = new Set(existingGenreRows.map((g) => g.name));
-    const newGenreNames = new Set(defaultGenres);
-
-    // Remove genres not in the new list
-    for (const name of existingGenreNames) {
-      if (!newGenreNames.has(name)) {
-        db.prepare('DELETE FROM genres WHERE name = ?').run(name);
-        console.log(`Migration: Removed genre "${name}"`);
-      }
-    }
-
-    // Add new genres that don't exist yet
-    for (const name of defaultGenres) {
-      if (!existingGenreNames.has(name)) {
-        db.prepare('INSERT INTO genres (id, name) VALUES (?, ?)').run(uuidv4(), name);
-      }
+    const bestaand = new Set(
+      (db.prepare('SELECT name FROM genres WHERE association_id IS NULL').all() as { name: string }[]).map(
+        (g) => g.name,
+      ),
+    );
+    const voegToe = db.prepare('INSERT INTO genres (id, name) VALUES (?, ?)');
+    for (const naam of defaultGenres) {
+      if (!bestaand.has(naam)) voegToe.run(uuidv4(), naam);
     }
   } catch (e) {
     console.error('Migration: Error updating genres', e);
@@ -390,8 +371,8 @@ async function initializeDatabase() {
       const instrument = db
         .prepare(
           tuning !== null
-            ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ?'
-            : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL',
+            ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ? AND association_id IS NULL'
+            : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL AND association_id IS NULL',
         )
         .get(...(tuning !== null ? [instrumentName, tuning] : [instrumentName])) as { id: string } | undefined;
       if (!instrument) return;
@@ -411,8 +392,8 @@ async function initializeDatabase() {
       const existing = db
         .prepare(
           tuning !== null
-            ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ?'
-            : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL',
+            ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ? AND association_id IS NULL'
+            : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL AND association_id IS NULL',
         )
         .get(...(tuning !== null ? [name, tuning] : [name])) as { id: string } | undefined;
       if (existing) return;
@@ -950,8 +931,8 @@ async function initializeDatabase() {
           const instrument = db
             .prepare(
               mapping.tuning !== null
-                ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ?'
-                : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL',
+                ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ? AND association_id IS NULL'
+                : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL AND association_id IS NULL',
             )
             .get(...(mapping.tuning !== null ? [mapping.instrumentName, mapping.tuning] : [mapping.instrumentName])) as
             { id: string } | undefined;

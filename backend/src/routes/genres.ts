@@ -5,43 +5,94 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import { createGenreSchema, updateGenreSchema } from '../validation/schemas';
+import {
+  catalogusItem,
+  isSuperbeheerder,
+  toon,
+  verberg,
+  zichtbaarParams,
+  zichtbaarVoorwaarde,
+} from '../services/catalogus';
+
+/**
+ * Genres: een standaardlijst voor de hele installatie, plus eigen genres per
+ * vereniging. Een vereniging kan standaardgenres verbergen. Zie
+ * services/catalogus.ts.
+ *
+ * - Een eigen genre maken, wijzigen en (beheerder) verwijderen doet de
+ *   vereniging zelf.
+ * - Een standaardgenre wijzigen of verwijderen raakt elke vereniging, en dat
+ *   doet alleen de superbeheerder. Een vereniging die er een anders wil,
+ *   verbergt het en maakt een eigen.
+ */
 
 const router = Router();
 
 // Cache path for invalidation
 const CACHE_PATH = '/api/genres';
 
+/** Het genre, als de vereniging het mag beheren; anders een 403 of 404. */
+function beheerbaarGenre(req: AuthRequest, id: string) {
+  const genre = catalogusItem('genre', id);
+  if (!genre || (genre.association_id !== null && genre.association_id !== req.user!.associationId)) {
+    throw new ApiError(404, 'Genre niet gevonden.');
+  }
+  if (genre.association_id === null && !isSuperbeheerder(req.user!.id)) {
+    throw new ApiError(
+      403,
+      'Dit is een standaardgenre voor alle verenigingen. Verberg het en maak een eigen genre als je het anders wilt.',
+    );
+  }
+  return genre;
+}
+
+/** Bestaat er voor deze vereniging al een zichtbaar genre met deze naam? */
+function naamBezet(req: AuthRequest, naam: string, behalve?: string): boolean {
+  const associationId = req.user!.associationId ?? null;
+  return !!db
+    .prepare(
+      `SELECT 1 FROM genres g
+       WHERE LOWER(g.name) = LOWER(?) AND g.id != ?
+         AND ${associationId ? zichtbaarVoorwaarde('g') : 'g.association_id IS NULL'}`,
+    )
+    .get(naam, behalve ?? '', ...(associationId ? zichtbaarParams(associationId, 'genre') : []));
+}
+
 /**
- * @swagger
- * /genres:
- *   get:
- *     summary: Get all genres
- *     tags: [Genres]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of genres
+ * GET /genres - de genres die deze vereniging ziet: standaard (niet
+ * verborgen) en eigen. Met `?alles=true` ook de verborgen standaardgenres,
+ * voor het beheerscherm.
  */
 router.get(
   '/',
   authenticateToken,
   cacheMiddleware({ ttlSeconds: 300 }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId ?? '';
+    const alles = req.query.alles === 'true';
     const genres = db
       .prepare(
-        `
-        SELECT id, name, created_at
-        FROM genres
-        ORDER BY name
-    `,
+        `SELECT g.id, g.name, g.created_at, g.association_id,
+                EXISTS (SELECT 1 FROM catalogus_verborgen v
+                        WHERE v.association_id = ? AND v.soort = 'genre' AND v.item_id = g.id) AS verborgen
+         FROM genres g
+         WHERE ${alles ? '(g.association_id IS NULL OR g.association_id = ?)' : zichtbaarVoorwaarde('g')}
+         ORDER BY g.name`,
       )
-      .all();
+      .all(associationId, ...(alles ? [associationId] : zichtbaarParams(associationId, 'genre'))) as {
+      id: string;
+      name: string;
+      created_at: string;
+      association_id: string | null;
+      verborgen: number;
+    }[];
 
     res.json(
-      genres.map((g: any) => ({
+      genres.map((g) => ({
         id: g.id,
         name: g.name,
+        standaard: g.association_id === null,
+        verborgen: !!g.verborgen,
         createdAt: g.created_at,
       })),
     );
@@ -49,28 +100,8 @@ router.get(
 );
 
 /**
- * @swagger
- * /genres:
- *   post:
- *     summary: Create a new genre
- *     tags: [Genres]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [name]
- *             properties:
- *               name:
- *                 type: string
- *     responses:
- *       201:
- *         description: Genre created
- *       409:
- *         description: Genre already exists
+ * POST /genres - een eigen genre voor deze vereniging. Een superbeheerder
+ * zonder vereniging maakt een standaardgenre.
  */
 router.post(
   '/',
@@ -78,91 +109,52 @@ router.post(
   requireRole('admin', 'music_committee'),
   cacheInvalidator(CACHE_PATH),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { name } = createGenreSchema.parse(req.body);
+    const naam = createGenreSchema.parse(req.body).name.trim();
+    const associationId = req.user!.associationId ?? null;
+    if (!associationId && !isSuperbeheerder(req.user!.id)) {
+      throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
 
-    // Check if genre already exists
-    const existing = db.prepare('SELECT id FROM genres WHERE LOWER(name) = LOWER(?)').get(name.trim());
-    if (existing) {
-      throw new ApiError(409, `Genre "${name}" bestaat al.`);
+    if (naamBezet(req, naam)) {
+      throw new ApiError(409, `Genre "${naam}" bestaat al.`);
     }
 
     const genreId = uuidv4();
-    db.prepare('INSERT INTO genres (id, name) VALUES (?, ?)').run(genreId, name.trim());
+    db.prepare('INSERT INTO genres (id, name, association_id) VALUES (?, ?, ?)').run(genreId, naam, associationId);
 
     res.status(201).json({
       id: genreId,
-      name: name.trim(),
+      name: naam,
+      standaard: associationId === null,
       message: 'Genre succesvol aangemaakt.',
     });
   }),
 );
 
-/**
- * @swagger
- * /genres/{id}:
- *   put:
- *     summary: Update a genre
- *     tags: [Genres]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Genre updated
- *       404:
- *         description: Genre not found
- */
+/** PUT /genres/:id - een eigen genre hernoemen (een standaardgenre: alleen de superbeheerder). */
 router.put(
   '/:id',
   authenticateToken,
   requireRole('admin', 'music_committee'),
   cacheInvalidator(CACHE_PATH),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { name } = updateGenreSchema.parse(req.body);
+    const naam = updateGenreSchema.parse(req.body).name.trim();
+    beheerbaarGenre(req, req.params.id);
 
-    const genre = db.prepare('SELECT id FROM genres WHERE id = ?').get(req.params.id);
-    if (!genre) {
-      throw new ApiError(404, 'Genre niet gevonden.');
+    if (naamBezet(req, naam, req.params.id)) {
+      throw new ApiError(409, `Genre "${naam}" bestaat al.`);
     }
 
-    // Check uniqueness
-    const existing = db
-      .prepare('SELECT id FROM genres WHERE LOWER(name) = LOWER(?) AND id != ?')
-      .get(name.trim(), req.params.id);
-    if (existing) {
-      throw new ApiError(409, `Genre "${name}" bestaat al.`);
-    }
-
-    db.prepare('UPDATE genres SET name = ? WHERE id = ?').run(name.trim(), req.params.id);
+    db.prepare('UPDATE genres SET name = ? WHERE id = ?').run(naam, req.params.id);
 
     res.json({ message: 'Genre succesvol bijgewerkt.' });
   }),
 );
 
 /**
- * @swagger
- * /genres/{id}:
- *   delete:
- *     summary: Delete a genre
- *     tags: [Genres]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Genre deleted
- *       404:
- *         description: Genre not found
+ * DELETE /genres/:id - een eigen genre verwijderen. Het verdwijnt ook van de
+ * titels van deze vereniging; andere verenigingen kunnen er niet aan hangen.
+ * Een standaardgenre verwijdert alleen de superbeheerder.
  */
 router.delete(
   '/:id',
@@ -170,14 +162,45 @@ router.delete(
   requireRole('admin'),
   cacheInvalidator(CACHE_PATH),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare('DELETE FROM genres WHERE id = ?').run(req.params.id);
+    const genre = beheerbaarGenre(req, req.params.id);
 
-    if (result.changes === 0) {
-      throw new ApiError(404, 'Genre niet gevonden.');
+    db.prepare('DELETE FROM genres WHERE id = ?').run(genre.id);
+    if (genre.association_id === null) {
+      db.prepare("DELETE FROM catalogus_verborgen WHERE soort = 'genre' AND item_id = ?").run(genre.id);
     }
 
     res.json({ message: 'Genre succesvol verwijderd.' });
   }),
+);
+
+/** Een standaardgenre verbergen of weer tonen, voor deze vereniging. */
+function zetVerborgen(verbergen: boolean) {
+  return asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    const genre = catalogusItem('genre', req.params.id);
+    if (!genre || genre.association_id !== null) {
+      throw new ApiError(404, 'Standaardgenre niet gevonden.');
+    }
+    if (verbergen) verberg(associationId, 'genre', genre.id);
+    else toon(associationId, 'genre', genre.id);
+    res.json({ id: genre.id, verborgen: verbergen });
+  });
+}
+
+router.post(
+  '/:id/verbergen',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  cacheInvalidator(CACHE_PATH),
+  zetVerborgen(true),
+);
+router.delete(
+  '/:id/verbergen',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  cacheInvalidator(CACHE_PATH),
+  zetVerborgen(false),
 );
 
 export default router;

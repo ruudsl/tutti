@@ -14,6 +14,12 @@ export interface Migration {
   name: string;
   up: () => void;
   down: () => void;
+  /**
+   * Zet de foreign keys uit tijdens deze migratie; zie `voerUit`. Alleen voor
+   * een migratie die een tabel opnieuw opbouwt waar andere tabellen naar
+   * verwijzen. Een migratie zet dit met `export const zonderForeignKeys = true`.
+   */
+  zonderForeignKeys?: boolean;
 }
 
 export interface MigrationRecord {
@@ -110,10 +116,58 @@ export async function loadMigrationFiles(): Promise<Migration[]> {
       name,
       up: migrationModule.up,
       down: migrationModule.down,
+      zonderForeignKeys: migrationModule.zonderForeignKeys === true,
     });
   }
 
   return migrations;
+}
+
+/** Een verwijzing die niet klopt, zoals PRAGMA foreign_key_check hem meldt. */
+function verwijzingen(): Set<string> {
+  const rijen = db.prepare('PRAGMA foreign_key_check').all() as {
+    table: string;
+    rowid: number | null;
+    parent: string;
+    fkid: number;
+  }[];
+  return new Set(rijen.map((r) => `${r.table}|${r.rowid}|${r.parent}|${r.fkid}`));
+}
+
+/**
+ * Voer het werk van een migratie (up of down) uit in één transactie.
+ *
+ * Een migratie met `zonderForeignKeys` bouwt een tabel opnieuw op waar andere
+ * tabellen naar verwijzen. Met de foreign keys aan is `DROP TABLE` een
+ * `DELETE` van elke rij, en dan halen de `ON DELETE CASCADE`-verwijzingen de
+ * rijen in die andere tabellen mee weg. Dus gaan de foreign keys uit, zoals
+ * SQLite voorschrijft (https://sqlite.org/lang_altertable.html, "Making Other
+ * Kinds Of Table Schema Changes"). Dat kan niet binnen een transactie, dus het
+ * gebeurt ervoor en erna.
+ *
+ * Voor de commit mogen er geen verwijzingen bij gekomen zijn die niet kloppen;
+ * anders gaat de hele migratie terug. Verwijzingen die er vooraf al waren,
+ * tellen niet: een oude database met één losse rij zou de migratie anders voor
+ * altijd tegenhouden.
+ */
+export function voerUit(migratie: Migration, werk: () => void): void {
+  if (!migratie.zonderForeignKeys) {
+    db.transaction(werk)();
+    return;
+  }
+  const vooraf = verwijzingen();
+  db.exec('PRAGMA foreign_keys = OFF');
+  try {
+    db.transaction(() => {
+      werk();
+      const nieuw = [...verwijzingen()].filter((v) => !vooraf.has(v));
+      if (nieuw.length > 0) {
+        throw new Error(`Na de migratie kloppen ${nieuw.length} verwijzingen niet meer, bijvoorbeeld ${nieuw[0]}.`);
+      }
+    })();
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON');
+  }
 }
 
 /**
@@ -139,11 +193,10 @@ export async function runMigrations(): Promise<{ applied: string[]; errors: stri
       console.log(`Running migration: ${migration.version}_${migration.name}`);
 
       // Run the up migration in a transaction
-      const runTransaction = db.transaction(() => {
+      voerUit(migration, () => {
         migration.up();
         recordMigration(migration.version, migration.name);
       });
-      runTransaction();
 
       applied.push(`${migration.version}_${migration.name}`);
       console.log(`  ✓ Applied successfully`);
@@ -185,11 +238,10 @@ export async function rollbackLastMigration(): Promise<{ rolledBack: string | nu
     console.log(`Rolling back migration: ${migration.version}_${migration.name}`);
 
     // Run the down migration in a transaction
-    const runTransaction = db.transaction(() => {
+    voerUit(migration, () => {
       migration.down();
       removeMigrationRecord(migration.version);
     });
-    runTransaction();
 
     console.log(`  ✓ Rolled back successfully`);
     return { rolledBack: `${migration.version}_${migration.name}`, error: null };

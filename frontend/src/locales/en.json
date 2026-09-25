@@ -1339,7 +1339,8 @@
       "arranger": "Arranger",
       "duration": "Duration",
       "parts": "Parts"
-    }
+    },
+    "uitleg": "Standard genres apply to all associations. If one doesn't fit, hide it and create your own genre."
   },
   "pdfTools": {
     "title": "PDF Tools",
@@ -2249,7 +2250,8 @@
     "voiceParts": "$t(nav.voiceParts)",
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
-    "importeren": "$t(nav.importeren)"
+    "importeren": "$t(nav.importeren)",
+    "instrumenten": "$t(nav.instruments)"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -6202,5 +6204,34 @@
       "kvk": "Chamber of Commerce number",
       "btw": "VAT number"
     }
+  },
+  "catalogus": {
+    "standaard": "Standard",
+    "eigen": "Own",
+    "verborgen": "Hidden",
+    "verbergen": "Hide",
+    "tonen": "Show again",
+    "verborgenMelding": "\"{{name}}\" no longer appears in your association's pick lists.",
+    "getoondMelding": "\"{{name}}\" appears in the pick lists again."
+  },
+  "instrumenten": {
+    "titel": "Instruments",
+    "nieuw": "New instrument",
+    "bewerken": "Edit instrument",
+    "verwijderen": "Delete instrument",
+    "verwijderenVraag": "Are you sure you want to delete \"{{name}}\"? Members and parts that have this instrument will lose it.",
+    "naam": "Name",
+    "naamVoorbeeld": "E.g. Alphorn",
+    "stemming": "Tuning",
+    "stemmingVoorbeeld": "E.g. Bb, Eb, F",
+    "sleutel": "Clef",
+    "sleutels": {
+      "sol": "Treble clef",
+      "fa": "Bass clef",
+      "ut": "C clef"
+    },
+    "andereNamen": "Other names",
+    "geen": "No instruments found.",
+    "uitleg": "Standard instruments apply to all associations. If one doesn't fit, hide it and create your own instrument."
   }
 }

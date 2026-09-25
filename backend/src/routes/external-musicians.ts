@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { eisBruikbaar } from '../services/catalogus';
 import { z } from 'zod';
 import logger from '../logging/logger';
 
@@ -272,6 +273,11 @@ router.post(
     const data = createExternalMusicianSchema.parse(req.body);
     const associationId = req.user!.associationId;
     const userId = req.user!.id;
+    eisBruikbaar(
+      'instrument',
+      (data.instruments ?? []).map((i) => i.instrumentId),
+      associationId,
+    );
 
     const musicianId = uuidv4();
 
@@ -350,6 +356,12 @@ router.put(
     if (!musician) {
       throw new ApiError(404, 'Muzikant niet gevonden');
     }
+
+    eisBruikbaar(
+      'instrument',
+      (data.instruments ?? []).map((i) => i.instrumentId),
+      associationId,
+    );
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -487,6 +499,8 @@ router.post(
     if (!musician) {
       throw new ApiError(404, 'Muzikant niet gevonden');
     }
+
+    eisBruikbaar('instrument', data.instrumentId, associationId);
 
     // Check if instrument already exists for this musician
     const existing = db

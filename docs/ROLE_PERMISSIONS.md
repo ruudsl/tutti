@@ -41,6 +41,31 @@ Harmonie gebruikt een rollenstructuur om te bepalen welke acties gebruikers kunn
 | Interne notities zien    | Volledig | Volledig        | Volledig | -        |
 | PDF's downloaden         | Volledig | Volledig        | Volledig | Volledig |
 
+### Genres en instrumentsoorten
+
+Een standaardlijst voor alle verenigingen, plus eigen genres en instrumenten per vereniging (sinds 1.18.0). De standaardlijst wijzigt alleen de superbeheerder; een vereniging kan een standaarditem verbergen, dan staat het niet meer in haar keuzelijsten.
+
+| Functie                               | Admin    | Muziekcommissie | Superbeheerder | Lid   |
+| ------------------------------------- | -------- | --------------- | -------------- | ----- |
+| Genres en instrumenten bekijken       | Volledig | Volledig        | Volledig       | Lezen |
+| Eigen genre of instrument toevoegen   | Volledig | Volledig        | Volledig       | -     |
+| Eigen genre of instrument bewerken    | Volledig | Volledig        | Volledig       | -     |
+| Eigen genre of instrument verwijderen | Volledig | -               | Volledig       | -     |
+| Standaarditem verbergen en weer tonen | Volledig | Volledig        | Volledig       | -     |
+| Standaarditem bewerken of verwijderen | -        | -               | Volledig       | -     |
+
+### Externe contacten
+
+Leveranciers, zalen, sponsors en privépersonen. Leden zien ze niet; rekeninggegevens, KvK, btw en notities zijn voor beheerder en bestuur (sinds 1.18.0).
+
+| Functie                             | Admin    | Bestuur  | Commissies en dirigent | Lid |
+| ----------------------------------- | -------- | -------- | ---------------------- | --- |
+| Contacten bekijken                  | Volledig | Volledig | Lezen                  | -   |
+| IBAN, KvK, btw en notities zien     | Volledig | Volledig | -                      | -   |
+| Contacten aanmaken en bewerken      | Volledig | -        | Alleen muziekcommissie | -   |
+| IBAN, KvK, btw en notities invullen | Volledig | -        | -                      | -   |
+| Contacten verwijderen               | Volledig | -        | -                      | -   |
+
 ### Repetities en aanwezigheid
 
 | Functie                | Admin    | Muziekcommissie | Dirigent | Lid   |

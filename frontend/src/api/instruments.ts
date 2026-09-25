@@ -1,8 +1,9 @@
 import api from './client';
 import type { Instrument } from '../types';
 
-export const getInstruments = async (): Promise<Instrument[]> => {
-  const { data } = await api.get('/instruments');
+/** De instrumenten die de vereniging ziet; met `alles` ook de verborgen standaardinstrumenten (voor het beheer). */
+export const getInstruments = async (alles = false): Promise<Instrument[]> => {
+  const { data } = await api.get('/instruments', alles ? { params: { alles: 'true' } } : undefined);
   return data;
 };
 
@@ -31,4 +32,10 @@ export const addInstrumentAlias = async (instrumentId: string, alias: string): P
 
 export const deleteInstrumentAlias = async (instrumentId: string, aliasId: string): Promise<void> => {
   await api.delete(`/instruments/${instrumentId}/aliases/${aliasId}`);
+};
+
+/** Een standaardinstrument verbergen of weer tonen voor de eigen vereniging. */
+export const zetInstrumentVerborgen = async (id: string, verborgen: boolean): Promise<void> => {
+  if (verborgen) await api.post(`/instruments/${id}/verbergen`);
+  else await api.delete(`/instruments/${id}/verbergen`);
 };

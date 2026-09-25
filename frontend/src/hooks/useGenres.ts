@@ -1,16 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
-import { getGenres, createGenre, updateGenre, deleteGenre } from '../api';
+import { getGenres, zetGenreVerborgen, createGenre, updateGenre, deleteGenre } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 
 /**
  * Hook to fetch all genres
  */
-export function useGenres() {
+export function useGenres(alles = false) {
   return useQuery({
-    queryKey: queryKeys.genres,
-    queryFn: getGenres,
+    // Het beheerscherm vraagt ook de verborgen standaarditems; een eigen
+    // sleutel onder dezelfde voorvoegsel, zodat invalideren beide raakt.
+    queryKey: alles ? ([...queryKeys.genres, 'beheer'] as const) : queryKeys.genres,
+    queryFn: () => getGenres(alles),
   });
 }
 
@@ -67,6 +69,24 @@ export function useDeleteGenre() {
       // (database/schema.ts): met het genre verdwijnt het bij alle titels.
       queryClient.invalidateQueries({ queryKey: ['musicTitles'] });
       showSuccess('Genre verwijderd');
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+}
+
+/**
+ * Een standaardgenre verbergen of weer tonen voor de eigen vereniging.
+ * De melding geeft het scherm zelf, in de taal van de gebruiker.
+ */
+export function useZetGenreVerborgen() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, verborgen }: { id: string; verborgen: boolean }) => zetGenreVerborgen(id, verborgen),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.genres });
     },
     onError: (error) => {
       showError(getErrorMessage(error));

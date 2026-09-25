@@ -109,6 +109,7 @@ const ImslpBrowser = lui(() => import('./pages/ImslpBrowser'));
 
 // Reference data management
 const Genres = lui(() => import('./pages/Genres'));
+const Instrumenten = lui(() => import('./pages/Instrumenten'));
 const Loans = lui(() => import('./pages/Loans'));
 
 // Statistics and reporting
@@ -308,7 +309,23 @@ function AppRoutes() {
           <Route path="my-music" element={<MyMusic />} />
           <Route path="tools" element={<Tools />} />
           <Route path="issues" element={<Issues />} />
-          <Route path="contacts" element={<Contacts />} />
+          <Route
+            path="contacts"
+            element={
+              <PrivateRoute
+                roles={[
+                  ROLES.ADMIN,
+                  ROLES.BOARD,
+                  ROLES.MUSIC_COMMITTEE,
+                  ROLES.EQUIPMENT_COMMITTEE,
+                  ROLES.UNIFORMS_COMMITTEE,
+                  ROLES.CONDUCTOR,
+                ]}
+              >
+                <Contacts />
+              </PrivateRoute>
+            }
+          />
           <Route
             path="custom-fields"
             element={
@@ -443,6 +460,14 @@ function AppRoutes() {
             element={
               <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
                 <Genres />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="instrumenten"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+                <Instrumenten />
               </PrivateRoute>
             }
           />

@@ -3,6 +3,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import db from '../../database/connection';
 import { withTransaction } from '../../utils/database';
+import { genresOpNaam } from '../catalogus';
 import {
   bepaalWijzigingen,
   herkenKolommen,
@@ -79,11 +80,7 @@ function beoordeelTitelsIntern(associationId: string, csv: string, opties: Impor
     ).map((rij) => [sleutel(String(rij.title), (rij.arranger as string | null) ?? null), rij]),
   );
   const bijwerkingen: Bijwerking[] = [];
-  const genres = new Map(
-    (db.prepare('SELECT id, LOWER(name) AS naam FROM genres').all() as { id: string; naam: string }[]).map(
-      ({ id, naam }) => [naam, id],
-    ),
-  );
+  const genres = genresOpNaam(associationId);
 
   const gezien = new Set<string>();
   const regels: Beoordeling<TitelIntern>[] = rijen.map((rij, i) => {

@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getMusicTitles } from '../api';
 import { Icon } from '../components/Icon';
-import { useGenres, useCreateGenre, useUpdateGenre, useDeleteGenre } from '../hooks/useGenres';
+import { useGenres, useCreateGenre, useUpdateGenre, useDeleteGenre, useZetGenreVerborgen } from '../hooks/useGenres';
+import { useIsSuperAdmin } from '../hooks/useMultiAssociation';
+import { showSuccess } from '../utils/toast';
 import { FormField } from '../components/FormField';
 import { queryKeys } from '../lib/queryClient';
 import { FormModal } from '../components/Modal';
@@ -26,9 +28,14 @@ export default function Genres() {
   const [formName, setFormName] = useState('');
 
   const isAdmin = user?.role === ROLES.ADMIN;
+  // Een standaardgenre geldt voor alle verenigingen; alleen de superbeheerder
+  // wijzigt of verwijdert het. Een vereniging verbergt het.
+  const { data: isSuperAdmin = false } = useIsSuperAdmin();
+  const magBeheren = (genre: Genre) => !genre.standaard || isSuperAdmin;
 
-  // TanStack Query hooks
-  const { data: genres = [], isLoading } = useGenres();
+  // TanStack Query hooks; ook de verborgen standaardgenres, om ze weer te kunnen tonen
+  const { data: genres = [], isLoading } = useGenres(true);
+  const zetVerborgenMutation = useZetGenreVerborgen();
   const createGenreMutation = useCreateGenre();
   const updateGenreMutation = useUpdateGenre();
   const deleteGenreMutation = useDeleteGenre();
@@ -72,6 +79,11 @@ export default function Genres() {
     }
 
     setDeletingGenre(null);
+  };
+
+  const zetVerborgen = async (genre: Genre, verborgen: boolean) => {
+    await zetVerborgenMutation.mutateAsync({ id: genre.id, verborgen });
+    showSuccess(t(verborgen ? 'catalogus.verborgenMelding' : 'catalogus.getoondMelding', { name: genre.name }));
   };
 
   const openEditModal = (genre: Genre) => {
@@ -118,6 +130,7 @@ export default function Genres() {
         <div className="card">
           <div className="card-header">
             <h3>{t('genres.allGenres')}</h3>
+            <p className="text-light text-sm mb-0">{t('genres.uitleg')}</p>
           </div>
           <div className="card-body flush">
             <table className="table mb-0">
@@ -136,20 +149,37 @@ export default function Genres() {
                     className={`${selectedGenre?.id === genre.id ? 'table-row-selected' : ''} cursor-pointer`}
                     onClick={() => setSelectedGenre(selectedGenre?.id === genre.id ? null : genre)}
                   >
-                    <td>
+                    <td className={genre.verborgen ? 'text-light' : undefined}>
                       <strong>{genre.name}</strong>
+                      <span className={`badge ml-2 ${genre.standaard ? 'badge-secondary' : 'badge-primary'}`}>
+                        {t(genre.standaard ? 'catalogus.standaard' : 'catalogus.eigen')}
+                      </span>
+                      {genre.verborgen && <span className="badge badge-warning ml-1">{t('catalogus.verborgen')}</span>}
                     </td>
                     <td>
                       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => openEditModal(genre)}
-                          aria-label={`${t('common.edit')}: ${genre.name}`}
-                          title={t('common.edit')}
-                        >
-                          <Icon name="pencil" size={16} />
-                        </button>
-                        {isAdmin && (
+                        {genre.standaard && (
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => zetVerborgen(genre, !genre.verborgen)}
+                            disabled={zetVerborgenMutation.isPending}
+                            aria-label={`${t(genre.verborgen ? 'catalogus.tonen' : 'catalogus.verbergen')}: ${genre.name}`}
+                            title={t(genre.verborgen ? 'catalogus.tonen' : 'catalogus.verbergen')}
+                          >
+                            <Icon name={genre.verborgen ? 'eye' : 'eyeOff'} size={16} />
+                          </button>
+                        )}
+                        {magBeheren(genre) && (
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => openEditModal(genre)}
+                            aria-label={`${t('common.edit')}: ${genre.name}`}
+                            title={t('common.edit')}
+                          >
+                            <Icon name="pencil" size={16} />
+                          </button>
+                        )}
+                        {isAdmin && magBeheren(genre) && (
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => setDeletingGenre(genre)}

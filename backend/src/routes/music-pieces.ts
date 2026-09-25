@@ -7,6 +7,7 @@ import AdmZip from 'adm-zip';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { eisBruikbaar, instrumentenOpNaam } from '../services/catalogus';
 import { FileValidationError } from '../utils/errors';
 import { isPdf, readFileHeader } from '../utils/fileValidation';
 import {
@@ -185,70 +186,11 @@ function parseFilename(filename: string): {
   };
 }
 
-// Load all instruments + aliases once into a lookup map (lowercase name -> id).
-// Use this in bulk flows to avoid 1-2 queries per music piece.
-function loadInstrumentMap(): Map<string, string> {
-  const map = new Map<string, string>();
-
-  // Aliases first, then instrument names: an exact instrument-name match
-  // overwrites an alias with the same name (same precedence as findInstrumentId).
-  const aliases = db
-    .prepare(
-      `
-        SELECT LOWER(alias) as name, instrument_id as id FROM instrument_aliases
-    `,
-    )
-    .all() as { name: string; id: string }[];
-  for (const alias of aliases) {
-    map.set(alias.name, alias.id);
-  }
-
-  const instruments = db
-    .prepare(
-      `
-        SELECT LOWER(name) as name, id FROM instruments
-    `,
-    )
-    .all() as { name: string; id: string }[];
-  for (const instrument of instruments) {
-    map.set(instrument.name, instrument.id);
-  }
-
-  return map;
-}
-
-// Find instrument by name or alias. Pass a preloaded map (loadInstrumentMap)
-// when calling in a loop; without a map it falls back to per-call queries.
-function findInstrumentId(instrumentName: string, instrumentMap?: Map<string, string>): string | null {
+// Instrument op naam of andere naam, uit een vooraf geladen kaart
+// (instrumentenOpNaam uit services/catalogus.ts: alleen wat de vereniging ziet).
+function findInstrumentId(instrumentName: string, instrumentMap: Map<string, string>): string | null {
   if (!instrumentName) return null;
-
-  const searchName = instrumentName.toLowerCase().trim();
-
-  if (instrumentMap) {
-    return instrumentMap.get(searchName) ?? null;
-  }
-
-  // First try exact match on instrument name
-  const instrument = db
-    .prepare(
-      `
-        SELECT id FROM instruments WHERE LOWER(name) = ?
-    `,
-    )
-    .get(searchName) as { id: string } | undefined;
-
-  if (instrument) return instrument.id;
-
-  // Try alias
-  const alias = db
-    .prepare(
-      `
-        SELECT instrument_id FROM instrument_aliases WHERE LOWER(alias) = ?
-    `,
-    )
-    .get(searchName) as { instrument_id: string } | undefined;
-
-  return alias ? alias.instrument_id : null;
+  return instrumentMap.get(instrumentName.toLowerCase().trim()) ?? null;
 }
 
 /**
@@ -848,6 +790,7 @@ router.put(
   requireRole('admin', 'music_committee'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = updateTitleMetaSchema.parse(req.body);
+    eisBruikbaar('genre', data.genreIds, req.user!.associationId);
 
     let titleId: string;
 
@@ -1935,7 +1878,7 @@ router.post(
     let notFound = 0;
 
     // Load instruments + aliases once instead of querying per piece
-    const instrumentMap = loadInstrumentMap();
+    const instrumentMap = instrumentenOpNaam(req.user!.associationId);
 
     withTransaction(() => {
       const updateStmt = db.prepare('UPDATE music_pieces SET instrument_id = ? WHERE id = ?');
@@ -2115,7 +2058,7 @@ router.post(
     }
 
     // Load instruments + aliases once instead of querying per file
-    const instrumentMap = loadInstrumentMap();
+    const instrumentMap = instrumentenOpNaam(req.user!.associationId);
 
     withTransaction(() => {
       for (const file of validFiles) {
@@ -2306,7 +2249,7 @@ router.post(
       }
 
       // Load instruments + aliases once instead of querying per entry
-      const instrumentMap = loadInstrumentMap();
+      const instrumentMap = instrumentenOpNaam(req.user!.associationId);
 
       // Eerst alle bestanden op schijf, één voor één zodat er nooit meer dan
       // één uitgepakt bestand tegelijk in het geheugen staat. De transactie
@@ -2560,6 +2503,8 @@ router.put(
       throw new ApiError(400, 'Maximaal 100 stukken tegelijk bijwerken.');
     }
 
+    eisBruikbaar('instrument', data.updates.instrumentId, req.user!.associationId);
+
     let updated = 0;
 
     withTransaction(() => {
@@ -2739,6 +2684,8 @@ router.put(
     if (!piece) {
       throw new ApiError(404, 'Muziekstuk niet gevonden.');
     }
+
+    eisBruikbaar('instrument', data.instrumentId, req.user!.associationId);
 
     db.prepare(
       `
