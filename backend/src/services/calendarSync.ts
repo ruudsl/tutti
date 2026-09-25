@@ -493,6 +493,31 @@ export async function refreshGoogleToken(
 }
 
 /**
+ * Trek de toestemming van een lid in bij Google (RFC 7009).
+ *
+ * Met een refresh token gaat de hele toestemming eruit, inclusief de access
+ * tokens die ermee zijn uitgegeven. Eén poging: dit is geen opvraging maar
+ * een opdracht, en een tweede poging na een time-out levert niets op wat de
+ * eerste niet al deed. Het token zelf komt niet in de foutmelding.
+ */
+export async function trekGoogleToestemmingIn(token: string): Promise<void> {
+  const response = await beschermdeFetch(
+    'google',
+    'https://oauth2.googleapis.com/revoke',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token }),
+    },
+    { pogingen: 1 },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Google weigerde het intrekken (status ${response.status})`);
+  }
+}
+
+/**
  * Create event in Google Calendar
  */
 export async function createGoogleCalendarEvent(
