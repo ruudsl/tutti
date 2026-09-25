@@ -2,6 +2,51 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [Nog niet uitgebracht]
+
+### Let op bij bijwerken
+
+- **Zet vóór het bijwerken een `ENCRYPTION_SECRET`.** Opgeslagen geheimen (SMTP-wachtwoord, tokens van koppelingen, MFA-geheimen, Mollie-sleutels, het Spond-wachtwoord) worden voortaan versleuteld met een eigen sleutel in plaats van een sleutel die van `JWT_SECRET` is afgeleid. Maak er een met `openssl rand -base64 48`; hij moet verschillen van `JWT_SECRET`. Zonder deze sleutel start de server in productie niet, en de migraties stoppen voordat ze iets aanraken. Docker: zet hem in `.env`. Render: `render.yaml` maakt hem aan voor diensten die via de blauwdruk lopen; een met de hand aangemaakte dienst krijgt hem in het dashboard.
+- **Laat `JWT_SECRET` bij deze eerste update ongewijzigd.** De migratie heeft hem één keer nodig om de bestaande waarden te lezen; daarna kan hij los worden vervangen.
+- **Bewaar `ENCRYPTION_SECRET` samen met de back-ups, maar niet op dezelfde server.** De automatische back-ups en de kopieën van vóór een terugzetting worden er nu ook mee versleuteld (`.sqlite.enc`). Ontsleutelen gaat met `npm run backup:ontsleutel --workspace=backend -- <bestand>`. Raakt de sleutel kwijt, dan zijn de back-ups niet terug te zetten en moeten beheerders hun koppelingen en leden hun MFA opnieuw instellen.
+- **Het databasebestand en de back-ups krijgen rechten 0600.** Een eigen script dat ze leest, moet onder dezelfde gebruiker draaien als de server.
+- **Eigen proxy of CDN voor de frontend:** de beveiligingskoppen (Content-Security-Policy, `Referrer-Policy: no-referrer` en andere) staan nu ook in `frontend/nginx.conf`, de Traefik-labels en `vercel.json`. Wie `frontend/dist` op een andere manier serveert, neemt ze over; zie `docs/SELF_HOSTING.md`. Staat de API op een ander adres, zet dat adres dan in `connect-src`.
+- **Traefik:** het label `frameDeny` is vervangen door `customFrameOptionsValue=SAMEORIGIN`. De openbare agenda is niet meer in een iframe op een andere site te tonen.
+- **Het toegangslogboek van nginx** gebruikt een eigen formaat zonder querystring en zonder Referer. Hulpmiddelen die het standaardformaat verwachten (fail2ban, GoAccess) moeten worden aangepast.
+- **Leden met een tijdelijk wachtwoord** van de aanmelding worden bij de volgende keer inloggen naar hun profiel gestuurd om het te wijzigen. Tutti bewaart dat tijdelijke wachtwoord niet meer.
+
+### Toegevoegd
+
+- **Delen naar Tutti.** Deel je op een telefoon of computer een PDF met Tutti (via **Delen** in een andere app, met Tutti als geïnstalleerde app), dan staat hij klaar op de uploadpagina. Daar kies je orkest en lijst en upload je hem. Wie nog niet ingelogd is, logt eerst in en komt daarna terug. De deel-actie bestond al in de app-omschrijving, maar liep altijd op een fout.
+
+### Gewijzigd
+
+- **Na te veel verkeerde inlogpogingen volgt een wachttijd in plaats van een slot.** Na vijf pogingen wacht je per e-mailadres en apparaat 1, 2, 4 en hooguit 15 minuten; een geslaagde inlog zet de teller terug. Een account wordt niet meer vergrendeld, zodat niemand een ander kan buitensluiten. Verkeerde codes van de tweestapsverificatie tellen mee.
+- **Uitloggen meldt de sessie ook op de server af.** Andere apparaten blijven ingelogd.
+- **Wachtwoorden zijn overal minstens 8 tekens.**
+- **De mail bij _Wachtwoord vergeten_** gaat via de wachtrij en kan een paar tellen later aankomen.
+- **Leden van een gedeactiveerde vereniging** komen er niet meer in; de agendafeed van een lid dat uit dienst is, stopt.
+
+### Opgelost
+
+#### Beveiliging
+
+Uit de eigen beveiligingsreview van september:
+
+- **Inloggen:** een onbekend en een bekend adres krijgen hetzelfde antwoord, ook in de tijd die het kost. Een ingetrokken sessie blijft ingetrokken zolang het token geldig is. Als de sessiecontrole de database niet bereikt, wordt het verzoek geweigerd in plaats van doorgelaten.
+- **Uploads:** een zip met bladmuziek wordt begrensd op de uitgepakte grootte, vóór en tijdens het uitpakken. Samenvoegen van PDF's heeft een grens aan het aantal bestanden en de omvang.
+- **Eigen velden:** een controlepatroon dat de server lang bezig zou houden, wordt na korte tijd afgebroken; een ongeldig patroon wordt bij het opslaan geweigerd.
+- **Ingevoerde namen** worden veilig weergegeven in het printvenster van een ticket en in de HTML van e-mails.
+- **Geen geheimen in het logboek:** wachtwoorden, tokens en sleutels worden ook in geneste velden gemaskeerd, in het logboek en in Sentry, en e-mailadressen worden ingekort. Tokens in adressen en de Referer komen niet meer in het verzoeklogboek.
+- **Beveiligingskoppen** komen nu ook mee met de pagina's van de frontend, niet alleen met de API.
+- **Adressen die de server zelf aanroept** (webhooks) worden strenger gecontroleerd, ook op IPv6-vormen, en de verbinding gaat naar precies het gecontroleerde adres.
+- **Koppelingsgeheimen** staan versleuteld in de database, en de instellingenschermen tonen geen tekens van een token meer.
+
+#### AVG
+
+- **Het verwijderen van een lid** neemt nu ook de profielfoto, telefoonnummers, meldkanalen en de koppeling met Google Agenda mee (die wordt bij Google ingetrokken). In het auditlogboek worden naam en e-mailadres vervangen; de regels zelf blijven.
+- **Het tijdelijke wachtwoord van een nieuw lid** wordt niet meer bewaard; het staat alleen in het antwoord bij het aanmaken. Bestaande opgeslagen wachtwoorden worden gewist.
+
 ## [1.18.0] - 2026-09-24
 
 Een maand met twee dingen waar het bestuur direct iets aan heeft, en veel werk onder de motorkap. Gegevens die nu nog in Excel staan zet je over zonder overtypen, en kaartgeld komt op de rekening van de vereniging zelf. Daarnaast een eigen beveiligingsreview, een wachtrij voor achtergrondwerk die een herstart overleeft, en een tijdslimiet op elke aanroep naar een externe dienst. Onderweg bleek de pagina Apparatuur op geen enkel punt te werken; dat doet hij nu wel.
