@@ -57,22 +57,23 @@ function loop(waarde: unknown, diepte: number, blad: (w: unknown) => unknown, ge
       return waarde.map((item) => loop(item, diepte + 1, blad, gezien));
     }
 
-    // Zonder prototype, zodat een sleutel als __proto__ uit de aanvraag hier
-    // een gewone eigenschap wordt in plaats van het prototype van dit object
-    // te verzetten. De sleutels komen immers rechtstreeks van buiten.
-    const uit: Record<string, unknown> = Object.create(null);
+    // De sleutels komen rechtstreeks van buiten. Object.fromEntries maakt van
+    // elke sleutel een gewone eigen eigenschap - ook van `__proto__` - in
+    // plaats van via een toewijzing het prototype of een ingebouwde methode
+    // te verzetten; gevaarlijke sleutels gaan er bovendien helemaal niet in.
+    // Het resultaat heeft geen prototype, zodat er ook later niets van
+    // Object.prototype door een sleutel uit de aanvraag wordt overschaduwd.
+    const paren: [string, unknown][] = [];
 
     if (waarde instanceof Error) {
-      uit.name = waarde.name;
-      uit.message = blad(waarde.message);
-      uit.stack = blad(waarde.stack);
+      paren.push(['name', waarde.name], ['message', blad(waarde.message)], ['stack', blad(waarde.stack)]);
     }
 
     for (const [sleutel, item] of Object.entries(waarde as Record<string, unknown>)) {
       if (GEVAARLIJKE_SLEUTELS.has(sleutel)) continue;
-      uit[sleutel] = isGeheimeSleutel(sleutel) ? WEGGELATEN : loop(item, diepte + 1, blad, gezien);
+      paren.push([sleutel, isGeheimeSleutel(sleutel) ? WEGGELATEN : loop(item, diepte + 1, blad, gezien)]);
     }
-    return uit;
+    return Object.setPrototypeOf(Object.fromEntries(paren), null) as Record<string, unknown>;
   } finally {
     gezien.delete(waarde);
   }
