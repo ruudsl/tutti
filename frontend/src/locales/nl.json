@@ -3368,6 +3368,7 @@
       "type": "Notificatie type",
       "webhookUrl": "Webhook URL",
       "webhookHelp": "URL waar de notificatie naartoe gestuurd wordt (bijv. Make, n8n, of eigen endpoint)",
+      "webhookKeepHint": "Er is een webhook-URL opgeslagen. Die wordt niet getoond; laat het veld leeg om hem te houden.",
       "twilioHelp": "Maak een gratis Twilio account aan op twilio.com en activeer de WhatsApp Sandbox.",
       "twilioFrom": "Twilio WhatsApp nummer",
       "twilioFromHelp": "Het Twilio WhatsApp nummer (bijv. +14155238886 voor sandbox)",

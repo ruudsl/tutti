@@ -2915,6 +2915,7 @@
       "type": "Benachrichtigungstyp",
       "webhookUrl": "Webhook-URL",
       "webhookHelp": "URL wohin die Benachrichtigung gesendet wird (z.B. Make, n8n oder eigener Endpoint)",
+      "webhookKeepHint": "Eine Webhook-URL ist gespeichert. Sie wird nicht angezeigt; lassen Sie das Feld leer, um sie zu behalten.",
       "twilioHelp": "Erstellen Sie ein kostenloses Twilio-Konto auf twilio.com und aktivieren Sie die WhatsApp Sandbox.",
       "twilioFrom": "Twilio WhatsApp Nummer",
       "twilioFromHelp": "Die Twilio WhatsApp Nummer (z.B. +14155238886 für Sandbox)",

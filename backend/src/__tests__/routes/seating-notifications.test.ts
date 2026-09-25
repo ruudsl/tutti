@@ -107,7 +107,8 @@ describe('meldingen rond de opstelling', () => {
       zetInstellingen(orkest.id, 'https://intern.example/hook');
       const antwoord = await als(beheerderToken, 'get', `/settings/${orkest.id}`);
       expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
-      expect(antwoord.body.webhook_url).toBe('https://intern.example/hook');
+      // Het adres zelf is een geheim; ook een beheerder ziet alleen dát er een is.
+      expect(antwoord.body.webhook_url).toBe('••••••••');
     });
 
     it('laat een dirigent toe', async () => {
