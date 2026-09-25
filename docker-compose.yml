@@ -30,6 +30,7 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET:?ENCRYPTION_SECRET is required}
       - JWT_EXPIRES_IN=7d
       - DB_PATH=/app/data/tutti.db
       - UPLOAD_DIR=/app/uploads

@@ -117,12 +117,13 @@ For production, set up automated backups:
 
 ### Admin-Related Variables
 
-| Variable              | Description                                                   |
-| --------------------- | ------------------------------------------------------------- |
-| `ADMIN_INIT_PASSWORD` | Set the initial admin password (instead of random generation) |
-| `MAKE_SUPER_ADMIN`    | Email of user to promote to super admin on startup            |
-| `JWT_SECRET`          | **Required in production** — secret for signing JWT tokens    |
-| `JWT_EXPIRES_IN`      | Token validity period (default: `7d`)                         |
+| Variable              | Description                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ADMIN_INIT_PASSWORD` | Set the initial admin password (instead of random generation)                                                                              |
+| `MAKE_SUPER_ADMIN`    | Email of user to promote to super admin on startup                                                                                         |
+| `JWT_SECRET`          | **Required in production** — secret for signing JWT tokens                                                                                 |
+| `ENCRYPTION_SECRET`   | **Required in production** — key for stored secrets (SMTP password, integration tokens, MFA, Mollie, Spond); must differ from `JWT_SECRET` |
+| `JWT_EXPIRES_IN`      | Token validity period (default: `7d`)                                                                                                      |
 
 ### Security Variables
 

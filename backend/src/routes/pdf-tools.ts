@@ -158,6 +158,37 @@ const upload = multer({
 });
 
 /**
+ * Grenzen voor samenvoegen. Multer houdt alle bestanden tegelijk in het
+ * geheugen; met alleen een grens per bestand (100 MB) en 50 bestanden kon één
+ * verzoek 5 GB vragen. Multer kent geen grens voor het totaal, dus die leggen
+ * we vooraf op de opgegeven lengte van het verzoek: de HTTP-parser van Node
+ * laat nooit meer body binnen dan in Content-Length staat.
+ */
+export const MERGE_MAX_BESTANDEN = 20;
+export const MERGE_MAX_TOTAAL = 200 * 1024 * 1024;
+
+function mergeUpload(req: Request, res: Response, next: (err?: unknown) => void): void {
+  const lengte = req.headers['content-length'];
+  if (lengte === undefined && req.headers['transfer-encoding']) {
+    // Zonder lengte weten we vooraf niet hoeveel er komt.
+    return next(new ApiError(411, 'De lengte van het verzoek ontbreekt.'));
+  }
+  if (Number(lengte ?? 0) > MERGE_MAX_TOTAAL) {
+    return next(new ApiError(413, `Samen hooguit ${MERGE_MAX_TOTAAL / 1024 / 1024} MB samenvoegen.`));
+  }
+  upload.array('pdfs', MERGE_MAX_BESTANDEN)(req, res, (err?: unknown) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') return next(new ApiError(413, 'Een van de bestanden is te groot.'));
+      if (err.code === 'LIMIT_UNEXPECTED_FILE' || err.code === 'LIMIT_FILE_COUNT') {
+        return next(new ApiError(400, `Hooguit ${MERGE_MAX_BESTANDEN} bestanden tegelijk samenvoegen.`));
+      }
+      return next(new ApiError(400, 'Ongeldige upload.'));
+    }
+    next(err);
+  });
+}
+
+/**
  * @swagger
  * /pdf-tools/info:
  *   post:
@@ -454,7 +485,7 @@ router.post(
   '/merge',
   authenticateToken,
   requireRole('music_committee', 'admin'),
-  upload.array('pdfs', 50),
+  mergeUpload,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const uploadedFiles = req.files;
     if (!Array.isArray(uploadedFiles) || uploadedFiles.length < 2) {

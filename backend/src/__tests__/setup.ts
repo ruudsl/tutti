@@ -56,13 +56,20 @@ process.env.CSRF_ENABLED = 'false';
 
 import testDb from './testDb';
 import { herstelAlleStroomonderbrekers } from '../utils/veerkracht';
-import { stelOpzoekerInVoorTests } from '../utils/uitgaandAdres';
+import { wisAlleInlogvertragingen } from '../utils/inlogvertraging';
+import { stelOpzoekerInVoorTests, stelVerbinderInVoorTests } from '../utils/uitgaandAdres';
 
 // Tests gaan niet het netwerk op, ook niet voor DNS. Adressen die een gebruiker
 // opgeeft (webhooks) worden vóór het aanroepen opgezocht om interne adressen te
 // weigeren; hier wijst elke naam naar een openbaar documentatieadres. Wie het
 // weigeren zelf test, geeft een eigen opzoeker mee.
 stelOpzoekerInVoorTests(async () => [{ address: '203.0.113.10' }]);
+
+// Om dezelfde reden gaat een verzoek naar zo'n adres in tests door `fetch`, dat
+// de tests zelf vervangen, en niet door de vastgepinde verbinding van
+// uitgaandAdres.ts: die zou echt naar 203.0.113.10 bellen. Wie die verbinding
+// zelf test, zet hem met stelVerbinderInVoorTests(null) terug.
+stelVerbinderInVoorTests((url, init) => fetch(url.href, init));
 
 beforeAll(async () => {
   await testDb.init();
@@ -77,6 +84,10 @@ beforeEach(async () => {
   // zou de onderbreker openzetten en elke volgende test in datzelfde bestand
   // laten falen op iets wat die test niet doet. Elke test begint dicht.
   herstelAlleStroomonderbrekers();
+
+  // Hetzelfde voor de wachttijd na mislukte inlogpogingen: die staat in het
+  // geheugen, per adres en IP-adres, en alle tests komen van hetzelfde IP.
+  wisAlleInlogvertragingen();
 });
 
 afterAll(() => {

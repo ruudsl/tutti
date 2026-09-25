@@ -17,6 +17,7 @@ import db from './database/connection';
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { csrfTokenMiddleware, validateCsrfToken, getCsrfToken } from './middleware/csrf';
+import { helmetOpties, permissionsPolicy } from './middleware/beveiligingskoppen';
 
 // Import Swagger
 import { swaggerSpec } from './swagger';
@@ -146,82 +147,18 @@ app.use(requestIdMiddleware);
 // Request logging middleware (after request ID)
 app.use(requestLoggerMiddleware);
 
-// Content Security Policy configuration for production
-const getContentSecurityPolicy = (): false | { directives: Record<string, string[]> } => {
-  if (!config.isProduction) {
-    // Disable CSP entirely in development: Vite dev tooling (HMR, React refresh)
-    // needs eval/inline scripts. Production gets the strict policy below.
-    return false;
-  }
-
-  const directives: Record<string, string[]> = {
-    defaultSrc: ["'self'"],
-    scriptSrc: [
-      "'self'",
-      // NOTE: no 'unsafe-inline' / 'unsafe-eval' here. Vite production builds
-      // load only external module scripts and need neither directive; dev
-      // tooling that requires eval is covered by the early return above.
-      'https://www.youtube.com',
-      'https://s.ytimg.com',
-      'https://alcdn.msauth.net',
-      'https://apis.google.com',
-      'https://accounts.google.com',
-    ],
-    styleSrc: [
-      "'self'",
-      "'unsafe-inline'", // Required for styled-components / CSS-in-JS
-    ],
-    // Het lettertype komt uit het project zelf; fonts.googleapis.com en
-    // fonts.gstatic.com stonden hier voor een verwijzing die er niet meer is.
-    // Een toestemming die niets meer bedient hoort weg: dan valt het meteen op
-    // als er ooit weer een externe bron bij komt.
-    fontSrc: ["'self'", 'data:'],
-    imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-    mediaSrc: ["'self'", 'blob:', 'https://www.youtube.com'],
-    frameSrc: [
-      "'self'",
-      'https://www.youtube.com',
-      'https://www.youtube-nocookie.com',
-      'https://accounts.google.com',
-      'https://docs.google.com',
-      'https://login.microsoftonline.com',
-    ],
-    connectSrc: [
-      "'self'",
-      config.frontendUrl,
-      'https://graph.microsoft.com',
-      'https://login.microsoftonline.com',
-      'https://www.googleapis.com',
-      'https://accounts.google.com',
-    ],
-    objectSrc: ["'none'"],
-    baseUri: ["'self'"],
-    formAction: ["'self'"],
-    // Kept at 'self' (not 'none'): the app has a public calendar embed feature
-    // (frontend route /calendar/:slug and /api/calendar, meant for embedding on
-    // external websites), so frames must not be blocked outright.
-    frameAncestors: ["'self'"],
-    workerSrc: ["'self'", 'blob:'], // Service workers and web workers
-    childSrc: ["'self'", 'blob:'], // Web workers (legacy)
-    manifestSrc: ["'self'"], // PWA manifests
-    upgradeInsecureRequests: [],
-  };
-
-  // Add report-uri if configured
-  if (config.cspReportUri) {
-    directives.reportUri = [config.cspReportUri];
-  }
-
-  return { directives };
-};
-
-// Security middleware
+// Beveiligingskoppen. Het beleid staat in middleware/beveiligingskoppen.ts,
+// omdat nginx, Traefik en Vercel dezelfde koppen voor de pagina meesturen.
 app.use(
-  helmet({
-    contentSecurityPolicy: getContentSecurityPolicy(),
-    crossOriginEmbedderPolicy: false, // Allow embedding YouTube videos
-  }),
+  helmet(
+    helmetOpties({
+      isProduction: config.isProduction,
+      frontendUrl: config.frontendUrl,
+      cspReportUri: config.cspReportUri,
+    }),
+  ),
 );
+app.use(permissionsPolicy);
 
 // Compression middleware - compress all responses
 app.use(

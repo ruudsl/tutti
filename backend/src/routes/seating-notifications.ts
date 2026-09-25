@@ -7,6 +7,7 @@ import logger from '../utils/logger';
 import { beschermdeFetch } from '../utils/veerkracht';
 import { controleerUitgaandAdres } from '../utils/uitgaandAdres';
 import twilio from 'twilio';
+import { ontsleutelGeheim, versleutelGeheim } from '../utils/encryption';
 
 const router = Router();
 
@@ -163,8 +164,10 @@ router.put(
         )
         .get(orchestraId) as { id: string; twilio_auth_token: string | null } | undefined;
 
-      // Keep existing token if not changed (masked value sent back)
-      const tokenToSave = twilio_auth_token === '••••••••' ? existing?.twilio_auth_token : twilio_auth_token;
+      // Het masker komt terug als het token niet is gewijzigd: dan het
+      // bestaande houden. Een nieuw token gaat versleuteld de database in.
+      const tokenToSave =
+        twilio_auth_token === '••••••••' ? existing?.twilio_auth_token : versleutelGeheim(twilio_auth_token);
 
       if (existing) {
         db.prepare(
@@ -204,7 +207,7 @@ router.put(
           notifType,
           webhook_url || null,
           twilio_account_sid || null,
-          twilio_auth_token || null,
+          tokenToSave || null,
           twilio_whatsapp_from || null,
           twilio_whatsapp_to || null,
           minutes_before ?? 15,
@@ -310,12 +313,13 @@ async function sendWhatsApp(
   settings: NotificationSettings,
   message: string,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!settings.twilio_account_sid || !settings.twilio_auth_token) {
+  const authToken = ontsleutelGeheim(settings.twilio_auth_token, 'Twilio-token');
+  if (!settings.twilio_account_sid || !authToken) {
     return { success: false, error: 'Twilio credentials not configured' };
   }
 
   try {
-    const client = twilio(settings.twilio_account_sid, settings.twilio_auth_token);
+    const client = twilio(settings.twilio_account_sid, authToken);
 
     // Parse destination numbers (comma-separated)
     const destinations = settings.twilio_whatsapp_to?.split(',').map((n) => n.trim()) || [];
@@ -384,7 +388,7 @@ async function sendWebhook(
         body: JSON.stringify(payload),
         redirect: 'manual',
       },
-      { pogingen: 1 },
+      { pogingen: 1, gebruikersadres: true },
     );
 
     const responseText = await response.text();

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ModulesProvider, useModules } from './context/ModulesContext';
 import { isLocationHidden } from './utils/modules';
+import { terugNaInloggen } from './utils/terugNaInloggen';
 import { useTheme } from './hooks/useTheme';
 import { queryClient, queryPersister, persistOptions } from './lib/queryClient';
 import { Toaster } from './utils/toast';
@@ -198,6 +199,9 @@ function RouteLoadingFallback() {
   );
 }
 
+/** Waar het scherm staat om het wachtwoord te wijzigen. */
+const WACHTWOORD_WIJZIGEN_PAD = '/profile';
+
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user } = useAuth();
   const { enabled, loaded } = useModules();
@@ -205,6 +209,14 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  // Nog het tijdelijke wachtwoord van de aanmelding: eerst een eigen kiezen.
+  // Dat wachtwoord heeft iemand anders gezien (de beheerder die het lid
+  // aanmeldde), dus verder dan het profiel, waar het gewijzigd wordt, gaat
+  // het lid niet.
+  if (user.mustChangePassword && location.pathname !== WACHTWOORD_WIJZIGEN_PAD) {
+    return <Navigate to={WACHTWOORD_WIJZIGEN_PAD} replace />;
   }
 
   if (roles && !roles.includes(user.role)) {
@@ -224,9 +236,11 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const location = useLocation();
 
+  // Na het inloggen terug naar de pagina die erom vroeg (zie terugNaInloggen).
   if (user) {
-    return <Navigate to="/" />;
+    return <Navigate to={terugNaInloggen(location.state)} />;
   }
 
   return <>{children}</>;

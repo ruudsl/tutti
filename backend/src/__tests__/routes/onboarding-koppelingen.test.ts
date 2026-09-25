@@ -401,16 +401,24 @@ describe('de koppeltabellen rond in- en uitschrijven', () => {
     });
 
     it('geeft de metadata als object terug, niet als tekst', async () => {
-      const gemaakt = await als(beheerderToken, 'post', '/member').send({
-        firstName: 'Nieuw',
-        lastName: 'Lid',
-        email: 'nieuw@vereniging.nl',
-      });
+      // Deze test las hier eerder het tijdelijke wachtwoord terug uit de
+      // metadata van harmonie_create. Dat wachtwoord wordt niet meer bewaard
+      // (zie onboarding-eerste-wachtwoord.test.ts), dus de vorm van de
+      // metadata wordt nu met een eigen taak nagekeken.
+      db.prepare(
+        `INSERT INTO onboarding_tasks (id, user_id, association_id, task_type, status, metadata)
+         VALUES (?, ?, ?, 'email_forwarding', 'completed', ?)`,
+      ).run(
+        'taak-meta',
+        lid.id,
+        vereniging.id,
+        JSON.stringify({ privateEmail: 'prive@example.org', method: 'initial' }),
+      );
 
-      const antwoord = await als(beheerderToken, 'get', `/tasks/${gemaakt.body.userId}`);
-      const aanmaak = antwoord.body.find((t: { taskType: string }) => t.taskType === 'harmonie_create');
-      expect(aanmaak.metadata.tempPassword).toBe(gemaakt.body.tempPassword);
-      expect(aanmaak.status).toBe('completed');
+      const antwoord = await als(beheerderToken, 'get', `/tasks/${lid.id}`);
+      const taak = antwoord.body.find((t: { taskType: string }) => t.taskType === 'email_forwarding');
+      expect(taak.metadata).toEqual({ privateEmail: 'prive@example.org', method: 'initial' });
+      expect(taak.status).toBe('completed');
     });
 
     it('laat een taak zonder metadata leeg', async () => {
@@ -441,7 +449,7 @@ describe('de koppeltabellen rond in- en uitschrijven', () => {
     });
 
     it('is niet voor een gewoon lid', async () => {
-      // In de metadata van harmonie_create staat het tijdelijke wachtwoord.
+      // De metadata van de taken kan privégegevens bevatten (privéadres).
       expect((await als(lidToken, 'get', `/tasks/${lid.id}`)).status).toBe(403);
     });
   });

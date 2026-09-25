@@ -2,11 +2,12 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import db from '../database/connection';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest, verenigingGesloten } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { isModuleEnabled } from '../modules/service';
 import logger from '../utils/logger';
 import config from '../config';
+import { ontsleutelGeheim, versleutelGeheim } from '../utils/encryption';
 import {
   generateEventIcs,
   generateCalendarFeed,
@@ -142,19 +143,24 @@ router.get(
     // daar uit zichzelf opgehaald, dus het verwijderen van de gebruiker moet
     // de feed afsluiten - niemand komt er later nog aan te pas om de token in
     // te trekken.
+    //
+    // Om dezelfde reden telt een lid uit dienst (status 'inactive', zonder
+    // deleted_at - zo neemt routes/onboarding.ts iemand uit dienst) en een
+    // gedeactiveerde vereniging: die komen er via inloggen ook niet meer in
+    // (routes/auth.ts, middleware/auth.ts).
     const user = db
       .prepare(
         `
         SELECT u.first_name, u.last_name, u.association_id, a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
-        WHERE u.id = ? AND u.deleted_at IS NULL
+        WHERE u.id = ? AND u.deleted_at IS NULL AND COALESCE(u.status, 'active') != 'inactive'
     `,
       )
       .get(userId) as
       { first_name: string; last_name: string; association_id: string; association_name: string } | undefined;
 
-    if (!user) {
+    if (!user || verenigingGesloten(user.association_id, userId)) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
@@ -475,7 +481,7 @@ router.get(
       const tokens = await exchangeGoogleCode(
         code,
         association.google_calendar_client_id,
-        association.google_calendar_client_secret,
+        ontsleutelGeheim(association.google_calendar_client_secret, 'Google-clientgeheim') || '',
         redirectUri,
       );
 
@@ -489,7 +495,12 @@ router.get(
                 google_calendar_id = 'primary'
             WHERE user_id = ?
         `,
-      ).run(tokens.accessToken, tokens.refreshToken, tokens.expiresAt.toISOString(), oauthState.user_id);
+      ).run(
+        versleutelGeheim(tokens.accessToken),
+        versleutelGeheim(tokens.refreshToken),
+        tokens.expiresAt.toISOString(),
+        oauthState.user_id,
+      );
 
       logger.info('Google Calendar connected', { userId: oauthState.user_id });
 
@@ -548,7 +559,10 @@ router.post(
       )
       .get(req.user!.id) as CalendarSettings | undefined;
 
-    if (!settings?.google_refresh_token) {
+    // Beide tokens staan versleuteld opgeslagen. Een onleesbaar vernieuwtoken
+    // is hetzelfde als geen koppeling: opnieuw koppelen lost het op.
+    const refreshToken = settings && ontsleutelGeheim(settings.google_refresh_token, 'Google-vernieuwtoken');
+    if (!settings || !refreshToken) {
       throw new ApiError(400, 'Google Calendar is niet gekoppeld.');
     }
 
@@ -568,16 +582,16 @@ router.post(
     }
 
     // Check if token needs refresh
-    let accessToken = settings.google_access_token!;
+    let accessToken = ontsleutelGeheim(settings.google_access_token, 'Google-toegangstoken') || '';
     if (settings.google_token_expires_at) {
       const expiresAt = new Date(settings.google_token_expires_at);
       if (expiresAt <= new Date()) {
         // Refresh token
         try {
           const newTokens = await refreshGoogleToken(
-            settings.google_refresh_token,
+            refreshToken,
             association.google_calendar_client_id,
-            association.google_calendar_client_secret,
+            ontsleutelGeheim(association.google_calendar_client_secret, 'Google-clientgeheim') || '',
           );
           accessToken = newTokens.accessToken;
 
@@ -587,7 +601,7 @@ router.post(
                     SET google_access_token = ?, google_token_expires_at = ?
                     WHERE user_id = ?
                 `,
-          ).run(accessToken, newTokens.expiresAt.toISOString(), req.user!.id);
+          ).run(versleutelGeheim(accessToken), newTokens.expiresAt.toISOString(), req.user!.id);
         } catch (err: any) {
           logger.error('Failed to refresh Google token', { error: err.message, userId: req.user!.id });
           throw new ApiError(401, 'Google authenticatie verlopen. Koppel opnieuw.');

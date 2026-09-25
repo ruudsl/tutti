@@ -431,13 +431,6 @@ export const revokeBlobUrl = (url: string): void => {
  * pagina binnen zonder eerst iets van de applicatie gezien te hebben, en een
  * verlopen sessie gaf dan alleen "Fout bij verwerken".
  */
-export const uploadSharedPdf = async (bestand: File): Promise<{ id?: string; filename?: string }> => {
-  const formData = new FormData();
-  formData.append('file', bestand);
-  const { data } = await api.post('/upload/pdf', formData);
-  return data;
-};
-
 /**
  * Deze drie stonden alleen in src/api.ts en hadden nog geen module-thuis.
  * Verhuisd bij het opheffen van dat bestand.

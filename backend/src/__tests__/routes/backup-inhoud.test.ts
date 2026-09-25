@@ -79,6 +79,7 @@ vi.mock('../../config', async (importOriginal) => {
 import db from '../../database/connection';
 import backupRoutes from '../../routes/backup';
 import { errorHandler } from '../../middleware/errorHandler';
+import { ontsleutelBuffer } from '../../utils/encryption';
 import {
   createTestAssociation,
   createTestEnvironment,
@@ -482,6 +483,39 @@ describe('inhoud van de reservekopie', () => {
       expect(momentopnames).toHaveLength(1);
       const bewaard = fs.readFileSync(path.join(tijdelijk.backups, 'pre-restore', momentopnames[0]));
       expect(bewaard.toString('utf-8')).toContain('de bestaande installatie');
+    });
+
+    it('schrijft de teruggezette database en de momentopname alleen leesbaar voor de server', async () => {
+      // 0644 was leesbaar voor elke gebruiker op de machine; het is de hele
+      // installatie, met wachtwoordhashes en al.
+      fs.writeFileSync(tijdelijk.databasePad, nepDatabase('de bestaande installatie'), { mode: 0o644 });
+
+      await terugzetten(bouwZip({ 'database/harmonie.db': nepDatabase('meegebrachte database') }));
+
+      expect(fs.statSync(tijdelijk.databasePad).mode & 0o777).toBe(0o600);
+      const map = path.join(tijdelijk.backups, 'pre-restore');
+      const [momentopname] = fs.readdirSync(map);
+      expect(fs.statSync(path.join(map, momentopname)).mode & 0o777).toBe(0o600);
+    });
+
+    it('versleutelt de momentopname als er een eigen sleutel is', async () => {
+      const eerder = process.env.ENCRYPTION_SECRET;
+      process.env.ENCRYPTION_SECRET = 'sleutel-voor-de-momentopname-in-deze-test';
+      try {
+        fs.writeFileSync(tijdelijk.databasePad, nepDatabase('de bestaande installatie'));
+
+        await terugzetten(bouwZip({ 'database/harmonie.db': nepDatabase('meegebrachte database') }));
+
+        const map = path.join(tijdelijk.backups, 'pre-restore');
+        const [momentopname] = fs.readdirSync(map);
+        expect(momentopname).toMatch(/\.sqlite\.enc$/);
+        const inhoud = fs.readFileSync(path.join(map, momentopname));
+        expect(inhoud.toString('latin1')).not.toContain('de bestaande installatie');
+        expect(ontsleutelBuffer(inhoud).toString('utf-8')).toContain('de bestaande installatie');
+      } finally {
+        if (eerder === undefined) delete process.env.ENCRYPTION_SECRET;
+        else process.env.ENCRYPTION_SECRET = eerder;
+      }
     });
 
     it('leest de database opnieuw in nadat hij is teruggezet', async () => {

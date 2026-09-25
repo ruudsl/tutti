@@ -180,15 +180,30 @@ extra aanroep, hij doet er hooguit minder.
 Een webhook of koppeling die een gebruiker zelf instelt, is een adres waar de
 server naartoe belt op verzoek van iemand anders. Dat gaat eerst door
 `controleerUitgaandAdres` uit `utils/uitgaandAdres.ts`, en dan met
-`redirect: 'manual'`:
+`gebruikersadres: true` en `redirect: 'manual'`:
 
 ```ts
 const doel = await controleerUitgaandAdres(instellingen.webhook_url);
-await beschermdeFetch(`webhook:${doel.host}`, doel.href, { method: 'POST', body, redirect: 'manual' }, { pogingen: 1 });
+await beschermdeFetch(
+  `webhook:${doel.host}`,
+  doel.href,
+  { method: 'POST', body, redirect: 'manual' },
+  { pogingen: 1, gebruikersadres: true },
+);
 ```
 
 De controle zoekt op waar de naam heen wijst en weigert elk intern of speciaal
-adres (127/8, 10/8, 172.16/12, 192.168/16, 169.254/16 en de IPv6-tegenhangers).
+adres (127/8, 10/8, 172.16/12, 192.168/16, 169.254/16 en de IPv6-tegenhangers,
+waaronder de vormen met een IPv4-adres erin: IPv4-mapped, `::/96`, 6to4,
+NAT64 en Teredo).
+
+`gebruikersadres: true` sluit het gat tussen controleren en verbinden. Zonder
+die optie zoekt `fetch` de naam opnieuw op, en een eigen nameserver kan dan
+een ander antwoord geven dan bij de controle (DNS-rebinding). Met de optie gaat
+het verzoek via `http.request` met een eigen `lookup`: die zoekt op,
+controleert, en geeft precies dat adres aan de verbinding. Omleidingen volgt
+hij nooit. Hij kent het deel van `fetch` dat webhooks gebruiken: methode,
+koppen, een tekst- of bytelichaam en een `AbortSignal`.
 Een stroomonderbreker per host, zodat de kapotte webhook van de ene vereniging
 die van een andere niet stillegt.
 
@@ -208,3 +223,8 @@ Wil je de tijd laten verstrijken zonder te wachten, geef dan je eigen `slaap` en
 Namen worden in tests niet echt opgezocht: `setup.ts` laat elke naam naar een
 openbaar documentatieadres wijzen. Een test die het weigeren van een adres
 zelf test, geeft een eigen opzoeker mee aan `controleerUitgaandAdres`.
+
+Een verzoek met `gebruikersadres: true` gaat in tests door `fetch`, zodat een
+test die `fetch` vervangt blijft werken. De vastgepinde verbinding zelf staat
+in `__tests__/utils/uitgaand-adres-vastgepind.test.ts`, die hem met
+`stelVerbinderInVoorTests(null)` terugzet.

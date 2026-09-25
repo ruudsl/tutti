@@ -360,6 +360,7 @@
     "language": "Language",
     "changePassword": {
       "title": "Change Password",
+      "required": "You are still using the temporary password you received when your account was created. Please choose your own password first; after that you can continue.",
       "current": "Current password",
       "new": "New password",
       "confirm": "Confirm new password",
@@ -5987,13 +5988,14 @@
   },
   "shareTarget": {
     "processing": "Processing...",
-    "processingMessage": "Your shared file is being processed.",
-    "success": "Done!",
+    "processingMessage": "Your shared files are being prepared.",
     "failed": "Failed",
-    "receivedText": "Shared text received",
-    "filesUploaded": "Files uploaded",
     "noContent": "No shared content found",
-    "error": "Could not process the shared content"
+    "error": "Could not process the shared content",
+    "geenRechten": "Only an admin or the music committee can upload sheet music.",
+    "geenPdf": "Tutti only accepts PDF files.",
+    "klaargezet_one": "{{count}} shared file is ready. Choose an orchestra and a list and upload it.",
+    "klaargezet_other": "{{count}} shared files are ready. Choose an orchestra and a list and upload them."
   },
   "sync": {
     "never": "Never",

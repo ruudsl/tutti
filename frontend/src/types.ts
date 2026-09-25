@@ -19,6 +19,7 @@
  * @property associationId - ID of the association the user belongs to, null for system admins
  * @property associationName - Display name of the user's association
  * @property mfaEnabled - Whether multi-factor authentication is enabled
+ * @property mustChangePassword - Het lid heeft nog het tijdelijke wachtwoord van de aanmelding en moet eerst een eigen kiezen
  * @property lastLogin - ISO timestamp of last successful login
  * @property photoUrl - URL to the user's profile photo
  * @property instruments - List of instruments the user plays
@@ -33,6 +34,7 @@ export interface User {
   associationId: string | null;
   associationName?: string;
   mfaEnabled?: boolean;
+  mustChangePassword?: boolean;
   lastLogin?: string | null;
   photoUrl?: string | null;
   instruments?: Instrument[];
@@ -537,7 +539,7 @@ export interface SmtpConfig {
 
 /**
  * Telegram bot configuration for notifications.
- * @property tokenPreview - Partially masked bot token
+ * @property tokenPreview - Masker zonder tekens van het token; leeg als er geen is
  * @property configured - Whether bot token is set
  * @property enabled - Whether Telegram notifications are enabled
  */

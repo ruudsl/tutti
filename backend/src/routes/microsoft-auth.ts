@@ -9,6 +9,7 @@ import { validate } from '../middleware/validate';
 import config from '../config';
 import logger from '../utils/logger';
 import { graphFetch } from '../utils/m365';
+import { ontsleutelGeheim, versleutelGeheim } from '../utils/encryption';
 
 const router = Router();
 
@@ -188,7 +189,14 @@ function getMicrosoftConfig(associationId: string | null): MicrosoftConfig | nul
     logger.warn(`Microsoft-SSO uitgeschakeld voor ${associationId}: tenant is geen specifieke tenant.`);
     return null;
   }
-  return association;
+
+  // Het clientgeheim staat versleuteld opgeslagen. Is het er wel maar niet te
+  // lezen, dan kan inloggen niet slagen; dan liever geen knop dan een fout.
+  const clientSecret = ontsleutelGeheim(association.microsoft_client_secret, 'Entra-clientgeheim');
+  if (association.microsoft_client_secret && !clientSecret) {
+    return null;
+  }
+  return { ...association, microsoft_client_secret: clientSecret };
 }
 
 function getRedirectUri(): string {
@@ -459,7 +467,7 @@ router.put(
             SET microsoft_client_id = ?, microsoft_client_secret = ?, microsoft_tenant_id = ?, microsoft_enabled = ?
             WHERE id = ?
         `,
-      ).run(clientId, clientSecret, tenantId, enabled ? 1 : 0, req.user!.associationId);
+      ).run(clientId, versleutelGeheim(clientSecret), tenantId, enabled ? 1 : 0, req.user!.associationId);
     } else {
       db.prepare(
         `

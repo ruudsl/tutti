@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import logger from './logger';
 import db from '../database/connection';
 import { getPasswordResetEmail } from '../templates/emails';
+import { ontsleutelGeheim } from './encryption';
 
 const sanitizeForLog = (value: unknown): string => {
   return (
@@ -63,7 +64,9 @@ const kiesSmtp = (associationId?: string | null): SmtpKeuze | null => {
           host: rij.smtp_host,
           port: rij.smtp_port || 587,
           secure: !!rij.smtp_secure,
-          auth: rij.smtp_user ? { user: rij.smtp_user, pass: rij.smtp_pass || '' } : undefined,
+          auth: rij.smtp_user
+            ? { user: rij.smtp_user, pass: ontsleutelGeheim(rij.smtp_pass, 'SMTP-wachtwoord') || '' }
+            : undefined,
         }),
         from: rij.smtp_from || process.env.SMTP_FROM || STANDAARD_AFZENDER,
         bron: 'vereniging',

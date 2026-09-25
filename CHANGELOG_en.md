@@ -2,6 +2,51 @@
 
 All notable changes to this application are documented here.
 
+## [Unreleased]
+
+### Note when upgrading
+
+- **Set an `ENCRYPTION_SECRET` before upgrading.** Stored secrets (SMTP password, integration tokens, MFA secrets, Mollie keys, the Spond password) are now encrypted with a dedicated key instead of one derived from `JWT_SECRET`. Create one with `openssl rand -base64 48`; it must differ from `JWT_SECRET`. Without it the server does not start in production, and the migrations stop before touching anything. Docker: put it in `.env`. Render: `render.yaml` generates it for blueprint-managed services; a service created by hand needs it set in the dashboard.
+- **Keep `JWT_SECRET` unchanged for this first upgrade.** The migration needs it once to read the existing values; after that it can be rotated on its own.
+- **Keep `ENCRYPTION_SECRET` with your backups, but not on the same server.** Automatic backups and pre-restore copies are now encrypted with it as well (`.sqlite.enc`). Decrypt with `npm run backup:ontsleutel --workspace=backend -- <file>`. If the key is lost, backups cannot be restored, and admins must set up their integrations and members their MFA again.
+- **The database file and backups get mode 0600.** Your own scripts that read them must run as the server's user.
+- **Own proxy or CDN for the frontend:** the security headers (Content-Security-Policy, `Referrer-Policy: no-referrer` and others) are now also in `frontend/nginx.conf`, the Traefik labels and `vercel.json`. If you serve `frontend/dist` differently, copy them; see `docs/SELF_HOSTING.md`. If the API is on another origin, add it to `connect-src`.
+- **Traefik:** the `frameDeny` label is replaced by `customFrameOptionsValue=SAMEORIGIN`. The public calendar can no longer be shown in an iframe on another site.
+- **The nginx access log** uses its own format without query string and Referer. Tools that expect the default format (fail2ban, GoAccess) need adjusting.
+- **Members with a temporary password** from onboarding are sent to their profile to change it at their next login. Tutti no longer stores that temporary password.
+
+### Added
+
+- **Share to Tutti.** When you share a PDF with Tutti on a phone or computer (via **Share** in another app, with Tutti installed as an app), it is ready on the upload page. There you choose the orchestra and list and upload it. If you are not logged in, you log in first and come back. The share action was already in the app manifest but always ended in an error.
+
+### Changed
+
+- **Too many failed logins now lead to a wait instead of a lock.** After five attempts you wait 1, 2, 4 and at most 15 minutes per e-mail address and device; a successful login resets the counter. Accounts are no longer locked, so nobody can lock someone else out. Wrong two-step verification codes count too.
+- **Logging out also ends the session on the server.** Other devices stay logged in.
+- **Passwords are at least 8 characters everywhere.**
+- **The _Forgot password_ e-mail** goes through the queue and may arrive a few seconds later.
+- **Members of a deactivated association** can no longer get in; the calendar feed of a member who has left stops.
+
+### Fixed
+
+#### Security
+
+From our own security review in September:
+
+- **Login:** unknown and known addresses get the same response, including in how long it takes. A revoked session stays revoked for as long as the token is valid. If the session check cannot reach the database, the request is refused instead of let through.
+- **Uploads:** a zip of sheet music is limited by its unpacked size, before and during unpacking. Merging PDFs has a limit on the number of files and their size.
+- **Custom fields:** a validation pattern that would keep the server busy is stopped after a short time; an invalid pattern is refused when saved.
+- **Entered names** are displayed safely in a ticket's print window and in the HTML of e-mails.
+- **No secrets in the log:** passwords, tokens and keys are masked in nested fields too, in the log and in Sentry, and e-mail addresses are shortened. Tokens in URLs and the Referer no longer reach the request log.
+- **Security headers** now come with the frontend's pages, not just with the API.
+- **Addresses the server calls itself** (webhooks) are checked more strictly, including IPv6 forms, and the connection goes to exactly the checked address.
+- **Integration secrets** are stored encrypted, and the settings screens no longer show any characters of a token.
+
+#### GDPR
+
+- **Deleting a member** now also removes the profile photo, phone numbers, notification channels and the Google Calendar connection (which is revoked at Google). In the audit log, name and e-mail address are replaced; the entries themselves stay.
+- **A new member's temporary password** is no longer stored; it only appears in the response when the member is created. Existing stored passwords are wiped.
+
 ## [1.18.0] - 2026-09-24
 
 A month with two things the board benefits from straight away, and a lot of work under the hood. Data that still lives in Excel can now be brought over without retyping, and ticket money goes to the association's own account. On top of that: an internal security review, a queue for background work that survives a restart, and a time limit on every call to an external service. Along the way the Equipment page turned out not to work at all; it does now.

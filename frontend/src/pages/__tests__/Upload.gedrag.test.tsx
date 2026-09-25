@@ -67,6 +67,16 @@ vi.mock('../../components/FileDropzone', () => ({
 
 vi.mock('../../utils/toast', () => ({ showSuccess: vi.fn(), showError: vi.fn() }));
 
+// Bestanden die de deel-actie (ShareTarget) klaarzet, komen via de
+// navigatiestaat binnen.
+const { router } = vi.hoisted(() => ({
+  router: { staat: null as unknown, navigeer: vi.fn() },
+}));
+vi.mock('react-router-dom', () => ({
+  useLocation: () => ({ pathname: '/upload', state: router.staat }),
+  useNavigate: () => router.navigeer,
+}));
+
 const { houder, uploadMusicPieces, uploadMusicPiecesZip, maakLijst } = vi.hoisted(() => ({
   houder: {
     orkestenLaden: false,
@@ -347,5 +357,28 @@ describe('uploadpagina - zoeken op IMSLP', () => {
 
     await gebruiker.click(screen.getByRole('button', { name: 'sluit imslp' }));
     expect(screen.queryByRole('dialog', { name: 'imslp' })).not.toBeInTheDocument();
+  });
+});
+
+describe('uploadpagina - bestanden uit de deel-actie', () => {
+  beforeEach(() => {
+    router.staat = null;
+    router.navigeer.mockClear();
+  });
+
+  it('zet gedeelde PDF’s klaar in de lijst en haalt ze uit de navigatiestaat', async () => {
+    router.staat = { gedeeldeBestanden: [pdf('gedeeld.pdf')] };
+
+    await openPagina();
+
+    expect(screen.getByText('gedeeld.pdf')).toBeInTheDocument();
+    // Weg uit de staat, zodat verversen ze niet nog eens toevoegt.
+    expect(router.navigeer).toHaveBeenCalledWith('/upload', { replace: true, state: null });
+  });
+
+  it('doet niets zonder gedeelde bestanden', async () => {
+    await openPagina();
+
+    expect(router.navigeer).not.toHaveBeenCalled();
   });
 });

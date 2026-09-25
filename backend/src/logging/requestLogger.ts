@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import logger, { logRequest, logSecurity } from './logger';
+import { maskeerGeheimen } from '../utils/maskeren';
 
 /**
  * Interface for authenticated request
@@ -24,6 +25,74 @@ function generateRequestId(): string {
  */
 function sanitizeForLog(value: unknown): string {
   return String(value ?? '').replace(/[\r\n]/g, '');
+}
+
+const WEGGELATEN = '[weggelaten]';
+
+/**
+ * Parameters in de querystring die een geheim dragen.
+ *
+ * Een link uit een e-mail (wachtwoord herstellen), een agenda-abonnement en
+ * `<audio src>` zetten hun token in de URL, omdat er geen kopregel mee kan.
+ * Wie het logboek leest, mag daarmee niet kunnen inloggen of een agenda
+ * uitlezen. De namen zijn bewust ruim: een onschuldige parameter die hier
+ * onterecht op lijkt kost alleen wat leesbaarheid.
+ */
+const GEHEIME_PARAMETER =
+  /token|secret|password|wachtwoord|signature|^sig$|^code$|^key$|api[-_]?key|^auth$|authorization/i;
+
+/**
+ * Paden met een geheim als padsegment. Een uitnodiging accepteren en een
+ * kaartje opvragen gaan op een code die op zichzelf toegang geeft.
+ */
+const GEHEIM_IN_PAD: RegExp[] = [
+  /^(\/api\/multi-association\/invitations\/accept\/)[^/]+/,
+  /^(\/api\/tickets\/)(?!webhooks(?:\/|$))[^/]+(?=\/validate$|$)/,
+];
+
+/** Het pad zoals het in het logboek mag: zonder geheimen erin. */
+export function veiligPad(pad: string): string {
+  let uit = sanitizeForLog(pad);
+  for (const patroon of GEHEIM_IN_PAD) uit = uit.replace(patroon, `$1${WEGGELATEN}`);
+  return uit;
+}
+
+function maskeerParameters(waarde: unknown, diepte: number): unknown {
+  if (waarde === null || typeof waarde !== 'object') return waarde;
+  if (diepte > 4) return WEGGELATEN;
+  if (Array.isArray(waarde)) return waarde.map((item) => maskeerParameters(item, diepte + 1));
+  const uit: Record<string, unknown> = Object.create(null);
+  for (const [sleutel, item] of Object.entries(waarde as Record<string, unknown>)) {
+    uit[sanitizeForLog(sleutel)] = GEHEIME_PARAMETER.test(sleutel) ? WEGGELATEN : maskeerParameters(item, diepte + 1);
+  }
+  return uit;
+}
+
+/**
+ * De querystring als object, met de waarde van elke geheime parameter
+ * weggelaten - ook genest, want `?filter[token]=…` wordt door Express een object.
+ */
+export function veiligeQuery(query: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (Object.keys(query).length === 0) return undefined;
+  return maskeerParameters(query, 0) as Record<string, unknown>;
+}
+
+/**
+ * Alleen de herkomst uit een Referer-kop.
+ *
+ * De volledige Referer is de URL van de pagina waar het verzoek vandaan kwam,
+ * en die draagt soms een geheim: `/reset-password?token=…` roept de API aan
+ * met precies dat adres als Referer. De herkomst (schema, host, poort) is wat
+ * er te weten valt - van welke site kwam dit - zonder pad of querystring.
+ */
+export function refererHerkomst(referer: string | undefined): string | undefined {
+  if (!referer) return undefined;
+  try {
+    const herkomst = new URL(referer).origin;
+    return herkomst === 'null' ? undefined : herkomst;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -56,13 +125,13 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
   const requestBodySize = req.headers['content-length'] ? parseInt(req.headers['content-length'], 10) : 0;
 
   // Log request start in debug mode
-  logger.debug(`Request started: ${req.method} ${req.path}`, {
+  logger.debug(`Request started: ${sanitizeForLog(req.method)} ${veiligPad(req.path)}`, {
     type: 'request',
     phase: 'start',
     requestId,
     method: req.method,
-    path: req.path,
-    query: Object.keys(req.query).length > 0 ? req.query : undefined,
+    path: veiligPad(req.path),
+    query: veiligeQuery(req.query as Record<string, unknown>),
     ip: req.ip || req.socket.remoteAddress,
     userAgent: req.get('user-agent'),
     bodySize: requestBodySize,
@@ -74,7 +143,7 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
     const statusCode = res.statusCode;
     const userId = req.user?.id;
     const safeMethod = sanitizeForLog(req.method);
-    const safePath = sanitizeForLog(req.path);
+    const safePath = veiligPad(req.path);
 
     // Determine log level based on status code
     const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
@@ -97,7 +166,8 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
       userAgent: req.get('user-agent'),
       responseSize,
       cacheStatus,
-      referer: req.get('referer'),
+      // Nooit de volledige Referer: zie refererHerkomst.
+      refererOrigin: refererHerkomst(req.get('referer')),
       // Add compression info if available
       contentEncoding: res.get('content-encoding'),
     });
@@ -168,16 +238,11 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
 export function requestBodyLogger(routes: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (routes.some((route) => req.path.includes(route))) {
-      // Redact sensitive fields
-      const sanitizedBody = { ...req.body };
-      const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'creditCard'];
-      sensitiveFields.forEach((field) => {
-        if (sanitizedBody[field]) {
-          sanitizedBody[field] = '[REDACTED]';
-        }
-      });
+      // Geheimen eruit, ook genest; zie utils/maskeren.ts. De logger kort
+      // daarna ook nog de e-mailadressen af.
+      const sanitizedBody = maskeerGeheimen(req.body);
 
-      logger.debug(`Request body for ${req.method} ${req.path}`, {
+      logger.debug(`Request body for ${sanitizeForLog(req.method)} ${veiligPad(req.path)}`, {
         type: 'request',
         phase: 'body',
         requestId: req.headers['x-request-id'],
@@ -199,7 +264,7 @@ export function errorLoggerMiddleware(err: Error, req: AuthenticatedRequest, res
     type: 'error',
     requestId,
     method: req.method,
-    path: req.path,
+    path: veiligPad(req.path),
     userId: req.user?.id,
     error: {
       name: err.name,

@@ -19,7 +19,8 @@
     "test:ui": "vitest --ui",
     "test:integration": "vitest run --include='src/__tests__/integration/**/*.test.ts'",
     "import:musicxml": "tsx src/scripts/import-musicxml.ts",
-    "migrate:jskos": "tsx src/scripts/migrate-to-jskos.ts"
+    "migrate:jskos": "tsx src/scripts/migrate-to-jskos.ts",
+    "backup:ontsleutel": "tsx src/scripts/ontsleutel-backup.ts"
   },
   "dependencies": {
     "@sentry/node": "^10.75.0",

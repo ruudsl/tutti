@@ -716,7 +716,10 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
           className={`form-control ${errors.password ? 'has-error' : ''}`}
           {...register('password', {
             required: !isEditing ? t('errors.required') : false,
-            minLength: !isEditing ? { value: 8, message: t('errors.passwordTooShort', { min: 8 }) } : undefined,
+            // Ook bij bewerken: leeg laten houdt het huidige wachtwoord (een
+            // leeg veld slaat react-hook-form over), maar een nieuw wachtwoord
+            // volgt dezelfde regel als de server.
+            minLength: { value: 8, message: t('errors.passwordTooShort', { min: 8 }) },
           })}
         />
         {errors.password && (

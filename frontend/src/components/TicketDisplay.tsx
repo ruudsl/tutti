@@ -5,6 +5,20 @@ import { useQuery } from '@tanstack/react-query';
 import { getTicketByCode } from '../api';
 import type { Ticket } from '../types';
 
+/**
+ * Ontsnap een waarde voor het afdrukvenster. Dat venster wordt met
+ * document.write gevuld en deelt de herkomst van de app; een concertnaam of
+ * kopersnaam met html erin zou daar anders als opmaak of script meedraaien.
+ */
+function ontsnap(waarde: string): string {
+  return waarde
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 interface TicketDisplayProps {
   ticket?: Ticket;
   ticketCode?: string;
@@ -46,7 +60,7 @@ export default function TicketDisplay({ ticket: propTicket, ticketCode, showDown
         <html>
         <head>
           <meta charset="utf-8">
-          <title>${t('tickets.ticket')} - ${ticket.concert.name}</title>
+          <title>${ontsnap(t('tickets.ticket'))} - ${ontsnap(ticket.concert.name)}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -131,50 +145,50 @@ export default function TicketDisplay({ ticket: propTicket, ticketCode, showDown
         <body>
           <div class="ticket">
             <div class="header">
-              <h1>${ticket.concert.name}</h1>
-              <p>${new Date(ticket.concert.date).toLocaleDateString(currentLocale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              <p>${ticket.concert.location || t('tickets.locationTba')}</p>
+              <h1>${ontsnap(ticket.concert.name)}</h1>
+              <p>${ontsnap(new Date(ticket.concert.date).toLocaleDateString(currentLocale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))}</p>
+              <p>${ontsnap(ticket.concert.location || t('tickets.locationTba'))}</p>
             </div>
 
             <div class="qr-container">
-              <img src="${ticket.qrCodeDataUrl}" alt="QR Code" width="200" height="200" />
+              <img src="${ontsnap(ticket.qrCodeDataUrl ?? '')}" alt="QR Code" width="200" height="200" />
             </div>
 
-            <div class="ticket-code">${ticket.code}</div>
+            <div class="ticket-code">${ontsnap(ticket.code)}</div>
 
             <div class="details">
               <div class="detail-row">
-                <span class="detail-label">${t('tickets.ticketType')}</span>
-                <span>${ticket.ticketType}</span>
+                <span class="detail-label">${ontsnap(t('tickets.ticketType'))}</span>
+                <span>${ontsnap(ticket.ticketType)}</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">${t('tickets.buyerName')}</span>
-                <span>${ticket.buyerName}</span>
+                <span class="detail-label">${ontsnap(t('tickets.buyerName'))}</span>
+                <span>${ontsnap(ticket.buyerName)}</span>
               </div>
               ${
                 ticket.seatInfo
                   ? `
               <div class="detail-row">
-                <span class="detail-label">${t('tickets.seatInfo')}</span>
-                <span>${ticket.seatInfo}</span>
+                <span class="detail-label">${ontsnap(t('tickets.seatInfo'))}</span>
+                <span>${ontsnap(ticket.seatInfo)}</span>
               </div>
               `
                   : ''
               }
               <div class="detail-row">
-                <span class="detail-label">${t('common.status')}</span>
-                <span class="status status-${ticket.status}">${t(`tickets.status.${ticket.status}`)}</span>
+                <span class="detail-label">${ontsnap(t('common.status'))}</span>
+                <span class="status status-${ontsnap(ticket.status)}">${ontsnap(t(`tickets.status.${ticket.status}`))}</span>
               </div>
             </div>
 
             <div class="footer">
-              <p>${t('tickets.showQrAtEntrance')}</p>
+              <p>${ontsnap(t('tickets.showQrAtEntrance'))}</p>
             </div>
           </div>
 
           <div class="no-print" style="text-align: center; margin-top: 20px;">
             <button onclick="window.print()" style="padding: 12px 24px; font-size: 16px; cursor: pointer;">
-              ${t('tickets.printTicket')}
+              ${ontsnap(t('tickets.printTicket'))}
             </button>
           </div>
         </body>

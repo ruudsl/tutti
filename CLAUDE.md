@@ -91,9 +91,12 @@ Deze staan hier omdat ze in deze repository al eens zijn overtreden.
 
     **Een adres dat een gebruiker opgeeft** (webhook, koppeling) gaat vóór het
     aanroepen bovendien door `controleerUitgaandAdres(...)` uit
-    `utils/uitgaandAdres.ts`, met `redirect: 'manual'`. Anders laat iemand de
+    `utils/uitgaandAdres.ts`, en daarna door `beschermdeFetch` met
+    `gebruikersadres: true` en `redirect: 'manual'`. Anders laat iemand de
     server `http://127.0.0.1:3001/…` of het metadata-adres van de
-    hostingomgeving aanroepen - en krijgt hij het antwoord soms terug.
+    hostingomgeving aanroepen - en krijgt hij het antwoord soms terug. Zonder
+    `gebruikersadres: true` zoekt `fetch` de naam opnieuw op, en kan een eigen
+    nameserver dan alsnog een intern adres teruggeven.
 
 ### Modules
 

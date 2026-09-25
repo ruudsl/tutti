@@ -5,6 +5,7 @@ import { controleerUitgaandAdres } from '../utils/uitgaandAdres';
 import { v4 as uuidv4 } from 'uuid';
 import twilio from 'twilio';
 import { isModuleEnabled } from '../modules/service';
+import { ontsleutelGeheim } from '../utils/encryption';
 
 interface NotificationSettings {
   id: string;
@@ -74,13 +75,14 @@ function buildDefaultMessage(
 }
 
 async function sendWhatsApp(settings: NotificationSettings, message: string): Promise<boolean> {
-  if (!settings.twilio_account_sid || !settings.twilio_auth_token) {
+  const authToken = ontsleutelGeheim(settings.twilio_auth_token, 'Twilio-token');
+  if (!settings.twilio_account_sid || !authToken) {
     logger.error('Twilio credentials not configured for WhatsApp');
     return false;
   }
 
   try {
-    const client = twilio(settings.twilio_account_sid, settings.twilio_auth_token);
+    const client = twilio(settings.twilio_account_sid, authToken);
     const destinations = settings.twilio_whatsapp_to?.split(',').map((n) => n.trim()) || [];
 
     if (destinations.length === 0) {
@@ -138,7 +140,7 @@ async function sendWebhook(settings: NotificationSettings, payload: Record<strin
         body: JSON.stringify(payload),
         redirect: 'manual',
       },
-      { pogingen: 1 },
+      { pogingen: 1, gebruikersadres: true },
     );
 
     if (response.ok) {

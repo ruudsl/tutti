@@ -2,6 +2,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { ontsleutelGeheim } from '../utils/encryption';
 import { beschermd, BeschermdOpties } from '../utils/veerkracht';
 
 // WhatsApp Business API / Twilio WhatsApp configuration (env var fallback)
@@ -91,13 +92,13 @@ export function getWhatsAppConfig(associationId?: string): WhatsAppConfig | null
         | undefined;
 
       if (row && row.whatsapp_enabled) {
+        // Een onleesbaar token (ENCRYPTION_SECRET vervangen) is geen reden om
+        // op de gegevens van de installatie terug te vallen: dan niets.
         if (row.whatsapp_provider === 'meta' && row.whatsapp_phone_number_id && row.whatsapp_access_token) {
-          return {
-            provider: 'meta',
-            phoneNumberId: row.whatsapp_phone_number_id,
-            accessToken: row.whatsapp_access_token,
-            apiUrl: WHATSAPP_API_URL,
-          };
+          const accessToken = ontsleutelGeheim(row.whatsapp_access_token, 'WhatsApp-toegangstoken');
+          return accessToken
+            ? { provider: 'meta', phoneNumberId: row.whatsapp_phone_number_id, accessToken, apiUrl: WHATSAPP_API_URL }
+            : null;
         }
 
         if (
@@ -106,12 +107,15 @@ export function getWhatsAppConfig(associationId?: string): WhatsAppConfig | null
           row.twilio_auth_token &&
           row.twilio_whatsapp_from
         ) {
-          return {
-            provider: 'twilio',
-            accountSid: row.twilio_account_sid,
-            authToken: row.twilio_auth_token,
-            whatsappFrom: row.twilio_whatsapp_from,
-          };
+          const authToken = ontsleutelGeheim(row.twilio_auth_token, 'Twilio-token');
+          return authToken
+            ? {
+                provider: 'twilio',
+                accountSid: row.twilio_account_sid,
+                authToken,
+                whatsappFrom: row.twilio_whatsapp_from,
+              }
+            : null;
         }
       }
     } catch (error) {

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User, LoginResponse } from '../types';
-import { login as apiLogin, getProfile } from '../api/auth';
+import { login as apiLogin, logout as apiLogout, getProfile } from '../api/auth';
 import { clearPersistedCache } from '../lib/queryClient';
 import { clearDownloadTokenCache } from '../utils/downloadUrl';
 
@@ -103,6 +103,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    // Eerst de sessie aan de serverkant intrekken. Alleen het token in de
+    // browser weggooien liet het token zelf geldig tot het verliep: wie het
+    // had afgeluisterd of uit een gedeelde browser had gehaald, kon ermee
+    // door. Bewust zonder await, net als het opruimen hieronder: is de server
+    // onbereikbaar, dan is de gebruiker lokaal toch uitgelogd.
+    let token: string | null = null;
+    try {
+      token = localStorage.getItem('token');
+    } catch {
+      // Geen toegang tot localStorage: dan is er ook geen token om in te trekken
+    }
+    if (token) {
+      void apiLogout(token).catch((fout: unknown) => {
+        console.error('Sessie kon niet aan de serverkant worden beëindigd:', fout);
+      });
+    }
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     // Remove the persisted React Query cache so no cached data lingers after logout
@@ -155,6 +172,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     const profile = await getProfile();
     setUser(profile);
+    // Ook de bewaarde kopie bijwerken. Anders begint een herladen pagina met
+    // de oude stand - bijvoorbeeld nog met de vlag dat het wachtwoord
+    // gewijzigd moet worden - tot het profiel opnieuw is opgehaald.
+    try {
+      localStorage.setItem('user', JSON.stringify(profile));
+    } catch {
+      // Ignore localStorage write errors
+    }
   };
 
   return (

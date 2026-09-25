@@ -1,4 +1,5 @@
-import { useState, useCallback, useId } from 'react';
+import { useState, useCallback, useEffect, useId } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOrchestras } from '../hooks/useOrchestras';
@@ -96,6 +97,21 @@ export default function Upload() {
       const uniqueNew = newFileItems.filter((f) => !existingNames.has(f.file.name));
       return [...prev, ...uniqueNew];
     });
+  }, []);
+
+  // Bestanden die via de deel-actie van het besturingssysteem binnenkwamen
+  // (ShareTarget.tsx). Na het overnemen gaat de staat weg, zodat verversen of
+  // terugbladeren ze niet nog eens toevoegt.
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const gedeeld = (location.state as { gedeeldeBestanden?: unknown } | null)?.gedeeldeBestanden;
+    if (Array.isArray(gedeeld) && gedeeld.length > 0) {
+      handleFilesAccepted(gedeeld.filter((b): b is File => b instanceof File));
+      showSuccess(t('shareTarget.klaargezet', { count: gedeeld.length }));
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const removeFile = (index: number) => {

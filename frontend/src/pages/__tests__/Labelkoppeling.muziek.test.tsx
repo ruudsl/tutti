@@ -52,6 +52,11 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../hooks/useDocumentTitle', () => ({ useDocumentTitle: () => {} }));
 
+vi.mock('react-router-dom', () => ({
+  useLocation: () => ({ pathname: '/', state: null }),
+  useNavigate: () => () => {},
+}));
+
 vi.mock('../../components/Icon', () => ({
   Icon: ({ name }: { name: string }) => <span data-testid={`icon-${name}`} />,
 }));

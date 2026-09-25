@@ -2,6 +2,51 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [Unveröffentlicht]
+
+### Beim Aktualisieren beachten
+
+- **Setzen Sie vor dem Aktualisieren ein `ENCRYPTION_SECRET`.** Gespeicherte Geheimnisse (SMTP-Passwort, Tokens von Anbindungen, MFA-Geheimnisse, Mollie-Schlüssel, das Spond-Passwort) werden jetzt mit einem eigenen Schlüssel verschlüsselt statt mit einem aus `JWT_SECRET` abgeleiteten. Erzeugen Sie einen mit `openssl rand -base64 48`; er muss sich von `JWT_SECRET` unterscheiden. Ohne ihn startet der Server in Produktion nicht, und die Migrationen brechen ab, bevor sie etwas ändern. Docker: in `.env` eintragen. Render: `render.yaml` erzeugt ihn für Dienste, die über den Blueprint laufen; ein von Hand angelegter Dienst braucht ihn im Dashboard.
+- **Lassen Sie `JWT_SECRET` bei diesem ersten Update unverändert.** Die Migration braucht es einmal, um die bestehenden Werte zu lesen; danach kann es unabhängig gewechselt werden.
+- **Bewahren Sie `ENCRYPTION_SECRET` zusammen mit den Sicherungen auf, aber nicht auf demselben Server.** Automatische Sicherungen und die Kopien vor einer Wiederherstellung werden jetzt ebenfalls damit verschlüsselt (`.sqlite.enc`). Entschlüsseln mit `npm run backup:ontsleutel --workspace=backend -- <Datei>`. Geht der Schlüssel verloren, lassen sich die Sicherungen nicht wiederherstellen, und Administratoren müssen ihre Anbindungen und Mitglieder ihre MFA neu einrichten.
+- **Datenbankdatei und Sicherungen erhalten die Rechte 0600.** Eigene Skripte, die sie lesen, müssen unter demselben Benutzer laufen wie der Server.
+- **Eigener Proxy oder CDN für das Frontend:** Die Sicherheits-Header (Content-Security-Policy, `Referrer-Policy: no-referrer` und weitere) stehen jetzt auch in `frontend/nginx.conf`, den Traefik-Labels und `vercel.json`. Wer `frontend/dist` anders ausliefert, übernimmt sie; siehe `docs/SELF_HOSTING.md`. Liegt die API unter einer anderen Adresse, gehört diese in `connect-src`.
+- **Traefik:** Das Label `frameDeny` ist durch `customFrameOptionsValue=SAMEORIGIN` ersetzt. Der öffentliche Kalender lässt sich nicht mehr in einem iframe auf einer anderen Website anzeigen.
+- **Das Zugriffsprotokoll von nginx** hat ein eigenes Format ohne Query-String und ohne Referer. Werkzeuge, die das Standardformat erwarten (fail2ban, GoAccess), müssen angepasst werden.
+- **Mitglieder mit einem vorläufigen Passwort** aus der Aufnahme werden bei der nächsten Anmeldung zu ihrem Profil geleitet, um es zu ändern. Tutti speichert dieses vorläufige Passwort nicht mehr.
+
+### Hinzugefügt
+
+- **Teilen an Tutti.** Teilen Sie auf einem Telefon oder Computer ein PDF mit Tutti (über **Teilen** in einer anderen App, mit Tutti als installierter App), liegt es auf der Upload-Seite bereit. Dort wählen Sie Orchester und Liste und laden es hoch. Wer noch nicht angemeldet ist, meldet sich zuerst an und kommt danach zurück. Die Teilen-Aktion stand bereits in der App-Beschreibung, endete aber immer mit einem Fehler.
+
+### Geändert
+
+- **Nach zu vielen Fehlversuchen folgt eine Wartezeit statt einer Sperre.** Nach fünf Versuchen warten Sie pro E-Mail-Adresse und Gerät 1, 2, 4 und höchstens 15 Minuten; eine erfolgreiche Anmeldung setzt den Zähler zurück. Konten werden nicht mehr gesperrt, sodass niemand einen anderen aussperren kann. Falsche Codes der Zwei-Faktor-Authentifizierung zählen mit.
+- **Abmelden beendet die Sitzung auch auf dem Server.** Andere Geräte bleiben angemeldet.
+- **Passwörter haben überall mindestens 8 Zeichen.**
+- **Die E-Mail bei _Passwort vergessen_** läuft über die Warteschlange und kann einige Sekunden später ankommen.
+- **Mitglieder eines deaktivierten Vereins** kommen nicht mehr hinein; der Kalender-Feed eines ausgeschiedenen Mitglieds endet.
+
+### Behoben
+
+#### Sicherheit
+
+Aus der eigenen Sicherheitsprüfung im September:
+
+- **Anmeldung:** Eine unbekannte und eine bekannte Adresse erhalten dieselbe Antwort, auch in der Dauer. Eine widerrufene Sitzung bleibt widerrufen, solange das Token gültig ist. Erreicht die Sitzungsprüfung die Datenbank nicht, wird die Anfrage abgelehnt statt durchgelassen.
+- **Uploads:** Ein Zip mit Noten wird nach seiner entpackten Größe begrenzt, vor und während des Entpackens. Das Zusammenfügen von PDFs hat eine Grenze für Anzahl und Umfang der Dateien.
+- **Eigene Felder:** Ein Prüfmuster, das den Server lange beschäftigen würde, wird nach kurzer Zeit abgebrochen; ein ungültiges Muster wird beim Speichern abgelehnt.
+- **Eingegebene Namen** werden im Druckfenster eines Tickets und im HTML von E-Mails sicher dargestellt.
+- **Keine Geheimnisse im Protokoll:** Passwörter, Tokens und Schlüssel werden auch in verschachtelten Feldern maskiert, im Protokoll und in Sentry, und E-Mail-Adressen werden gekürzt. Tokens in Adressen und der Referer gelangen nicht mehr ins Anfrageprotokoll.
+- **Sicherheits-Header** kommen jetzt auch mit den Seiten des Frontends, nicht nur mit der API.
+- **Adressen, die der Server selbst aufruft** (Webhooks), werden strenger geprüft, auch in IPv6-Formen, und die Verbindung geht genau an die geprüfte Adresse.
+- **Geheimnisse von Anbindungen** werden verschlüsselt gespeichert, und die Einstellungsseiten zeigen keine Zeichen eines Tokens mehr.
+
+#### DSGVO
+
+- **Das Löschen eines Mitglieds** entfernt jetzt auch Profilfoto, Telefonnummern, Benachrichtigungskanäle und die Verbindung mit Google Kalender (die bei Google widerrufen wird). Im Audit-Protokoll werden Name und E-Mail-Adresse ersetzt; die Einträge selbst bleiben.
+- **Das vorläufige Passwort eines neuen Mitglieds** wird nicht mehr gespeichert; es erscheint nur in der Antwort beim Anlegen. Bereits gespeicherte Passwörter werden gelöscht.
+
 ## [1.18.0] - 2026-09-24
 
 Ein Monat mit zwei Dingen, von denen der Vorstand sofort etwas hat, und viel Arbeit unter der Haube. Daten, die heute noch in Excel stehen, lassen sich ohne Abtippen übernehmen, und Kartengeld landet auf dem Konto des Vereins selbst. Dazu kommen eine eigene Sicherheitsprüfung, eine Warteschlange für Hintergrundarbeit, die einen Neustart übersteht, und ein Zeitlimit für jeden Aufruf an einen externen Dienst. Unterwegs stellte sich heraus, dass die Seite Ausrüstung in keinem Punkt funktionierte; jetzt tut sie es.
