@@ -3,8 +3,6 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import net from 'net';
-import { domainToASCII } from 'url';
 import nodemailer from 'nodemailer';
 import db from '../database/connection';
 import config from '../config';
@@ -14,7 +12,8 @@ import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import logger from '../utils/logger';
 import { readFileHeader } from '../utils/fileValidation';
 import { bestandInMap } from '../utils/bestandInMap';
-import { controleerUitgaandAdres, OnveiligAdresFout } from '../utils/uitgaandAdres';
+import { OnveiligAdresFout } from '../utils/uitgaandAdres';
+import { gecontroleerdeSmtpVerbinding, SmtpVerbinding } from '../utils/smtpVerbinding';
 import { logAuditEvent } from './audit-logs';
 import { ontsleutelGeheim, versleutelGeheim } from '../utils/encryption';
 
@@ -670,35 +669,21 @@ router.delete(
  *
  * De host komt van een beheerder, en dus niet vanzelf van buiten: zonder
  * controle is de testknop een manier om vanaf de server `127.0.0.1:6379` of
- * een adres in het interne netwerk te benaderen. controleerUitgaandAdres
- * kent alleen URL's; de host gaat er daarom als https-adres in. De poort doet
- * voor die controle niet mee: het gaat om waar de naam heen wijst.
+ * een adres in het interne netwerk te benaderen. De poort doet voor die
+ * controle niet mee: het gaat om waar de naam heen wijst.
  *
- * @returns de host zoals gecontroleerd, om precies die aan te roepen.
+ * @returns `host` (het gecontroleerde IP-adres) en `tls.servername` voor
+ *   nodemailer; zie utils/smtpVerbinding.ts.
  */
-async function controleerSmtpHost(ruw: string): Promise<string> {
-  const host = ruw.trim().toLowerCase();
-  const alsUrlHost = net.isIPv6(host) ? `[${host}]` : host;
-
-  let url: URL;
+async function controleerSmtpHost(ruw: string): Promise<SmtpVerbinding> {
   try {
-    url = await controleerUitgaandAdres(`https://${alsUrlHost}/`);
+    return await gecontroleerdeSmtpVerbinding(ruw);
   } catch (error) {
     if (error instanceof OnveiligAdresFout) {
       throw new ApiError(400, `SMTP-host geweigerd: ${error.message}`);
     }
     throw error;
   }
-
-  // Een host met `/`, `@` of `:` erin leest als URL anders dan als hostnaam:
-  // dan is iets anders gecontroleerd dan wat nodemailer zou aanroepen.
-  // Een naam met bijzondere letters staat in de URL in zijn ASCII-vorm.
-  const gecontroleerd = url.hostname.replace(/^\[|\]$/g, '');
-  const verwacht = net.isIP(host) ? host : domainToASCII(host);
-  if (!verwacht || gecontroleerd !== verwacht) {
-    throw new ApiError(400, 'SMTP-host geweigerd: dit is geen geldige hostnaam.');
-  }
-  return gecontroleerd;
 }
 
 /**
@@ -723,10 +708,10 @@ router.post(
       throw new ApiError(400, 'SMTP is niet geconfigureerd. Sla eerst de instellingen op.');
     }
 
-    const host = await controleerSmtpHost(association.smtp_host);
+    const verbinding = await controleerSmtpHost(association.smtp_host);
 
     const testTransporter = nodemailer.createTransport({
-      host,
+      ...verbinding,
       port: association.smtp_port || 587,
       secure: !!association.smtp_secure,
       auth: association.smtp_user
