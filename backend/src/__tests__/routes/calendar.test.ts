@@ -301,6 +301,28 @@ describe('agenda', () => {
       expect(antwoord.status).toBe(404);
       expect(antwoord.text).not.toContain('Kerstconcert');
     });
+
+    it('sluit de feed af van een lid dat uit dienst is maar niet verwijderd', async () => {
+      // Zo neemt de uitdienstprocedure iemand uit dienst: status inactive,
+      // zonder deleted_at. Inloggen kan dan niet meer; de feed moet ook dicht.
+      maakConcert();
+      const { token, userId } = await feedUrlVanLid();
+      db.prepare("UPDATE users SET status = 'inactive' WHERE id = ?").run(userId);
+
+      const antwoord = await request(app).get(`/api/calendar/feed/${userId}?token=${token}`);
+      expect(antwoord.status).toBe(404);
+      expect(antwoord.text).not.toContain('Kerstconcert');
+    });
+
+    it('sluit de feed af als de vereniging is gedeactiveerd', async () => {
+      maakConcert();
+      const { token, userId } = await feedUrlVanLid();
+      db.prepare('UPDATE associations SET is_active = 0 WHERE id = ?').run(vereniging.id);
+
+      const antwoord = await request(app).get(`/api/calendar/feed/${userId}?token=${token}`);
+      expect(antwoord.status).toBe(404);
+      expect(antwoord.text).not.toContain('Kerstconcert');
+    });
   });
 
   describe('de publieke kalender', () => {

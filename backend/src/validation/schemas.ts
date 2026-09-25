@@ -18,6 +18,18 @@ const MAX_ARRAY_SIZES = {
   BULK: 1000,
 } as const;
 
+/**
+ * De ene wachtwoordregel, voor elke plek waar een wachtwoord wordt gezet:
+ * aanmaken, wijzigen door de gebruiker, wijzigen door een beheerder en
+ * herstellen via de link. Dat waren eerst 6 tekens op drie plekken en 8 bij
+ * herstellen. De frontend houdt dezelfde grens aan (lib/validation/schemas.ts).
+ */
+export const MIN_WACHTWOORDLENGTE = 8;
+export const wachtwoordSchema = z
+  .string()
+  .min(MIN_WACHTWOORDLENGTE, `Wachtwoord moet minimaal ${MIN_WACHTWOORDLENGTE} tekens bevatten.`)
+  .max(MAX_LENGTHS.MEDIUM_TEXT);
+
 // Auth schemas
 export const loginSchema = z.object({
   email: z.string().email('Ongeldig e-mailadres.').max(MAX_LENGTHS.EMAIL),
@@ -26,13 +38,18 @@ export const loginSchema = z.object({
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Huidig wachtwoord is verplicht.').max(MAX_LENGTHS.MEDIUM_TEXT),
-  newPassword: z.string().min(6, 'Nieuw wachtwoord moet minimaal 6 tekens zijn.').max(MAX_LENGTHS.MEDIUM_TEXT),
+  newPassword: wachtwoordSchema,
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token is verplicht.').max(MAX_LENGTHS.MEDIUM_TEXT),
+  newPassword: wachtwoordSchema,
 });
 
 // User schemas
 export const createUserSchema = z.object({
   email: z.string().email('Ongeldig e-mailadres.').max(MAX_LENGTHS.EMAIL),
-  password: z.string().min(6, 'Wachtwoord moet minimaal 6 tekens zijn.').max(MAX_LENGTHS.MEDIUM_TEXT),
+  password: wachtwoordSchema,
   firstName: z.string().min(1, 'Voornaam is verplicht.').max(MAX_LENGTHS.SHORT_TEXT),
   lastName: z.string().min(1, 'Achternaam is verplicht.').max(MAX_LENGTHS.SHORT_TEXT),
   role: z
@@ -45,7 +62,7 @@ export const createUserSchema = z.object({
 
 export const updateUserSchema = z.object({
   email: z.string().email('Ongeldig e-mailadres.').max(MAX_LENGTHS.EMAIL).optional(),
-  password: z.string().min(6, 'Wachtwoord moet minimaal 6 tekens zijn.').max(MAX_LENGTHS.MEDIUM_TEXT).optional(),
+  password: wachtwoordSchema.optional(),
   firstName: z.string().min(1, 'Voornaam is verplicht.').max(MAX_LENGTHS.SHORT_TEXT).optional(),
   lastName: z.string().min(1, 'Achternaam is verplicht.').max(MAX_LENGTHS.SHORT_TEXT).optional(),
   role: z

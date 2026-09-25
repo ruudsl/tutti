@@ -56,6 +56,7 @@ process.env.CSRF_ENABLED = 'false';
 
 import testDb from './testDb';
 import { herstelAlleStroomonderbrekers } from '../utils/veerkracht';
+import { wisAlleInlogvertragingen } from '../utils/inlogvertraging';
 import { stelOpzoekerInVoorTests } from '../utils/uitgaandAdres';
 
 // Tests gaan niet het netwerk op, ook niet voor DNS. Adressen die een gebruiker
@@ -77,6 +78,10 @@ beforeEach(async () => {
   // zou de onderbreker openzetten en elke volgende test in datzelfde bestand
   // laten falen op iets wat die test niet doet. Elke test begint dicht.
   herstelAlleStroomonderbrekers();
+
+  // Hetzelfde voor de wachttijd na mislukte inlogpogingen: die staat in het
+  // geheugen, per adres en IP-adres, en alle tests komen van hetzelfde IP.
+  wisAlleInlogvertragingen();
 });
 
 afterAll(() => {

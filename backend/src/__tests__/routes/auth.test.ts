@@ -35,6 +35,8 @@ async function verseTotpCode(secret: string): Promise<string> {
 }
 import '../setup';
 import app from '../testApp';
+import { WACHTWOORDHERSTEL_TAAK, verstuurWachtwoordHerstel } from '../../routes/auth';
+import { registreerTaak, verwerkWachtrij } from '../../taken/wachtrij';
 import testDb from '../testDb';
 import {
   createTestEnvironment,
@@ -295,10 +297,19 @@ describe('Auth Routes', () => {
       expect(response.status).toBe(400);
     });
 
+    // Het token wordt niet meer tijdens het verzoek gemaakt maar in de
+    // wachtrij, zodat de looptijd van het antwoord niet verraadt of het adres
+    // bestaat. Deze tests draaien de wachtrij daarom na het verzoek.
+    async function verwerkHerstelmails(): Promise<void> {
+      registreerTaak(WACHTWOORDHERSTEL_TAAK, { herhaalbaar: false, uitvoeren: verstuurWachtwoordHerstel });
+      await verwerkWachtrij();
+    }
+
     it('should create a password reset token', async () => {
       await request(app).post('/api/auth/forgot-password').send({
         email: memberUser.email,
       });
+      await verwerkHerstelmails();
 
       const token = testDb
         .prepare('SELECT * FROM password_reset_tokens WHERE user_id = ? AND used = 0')
@@ -313,6 +324,7 @@ describe('Auth Routes', () => {
 
       // Create second token
       await request(app).post('/api/auth/forgot-password').send({ email: memberUser.email });
+      await verwerkHerstelmails();
 
       const tokens = testDb
         .prepare('SELECT * FROM password_reset_tokens WHERE user_id = ? AND used = 0')

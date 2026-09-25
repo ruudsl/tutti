@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import db from '../database/connection';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest, verenigingGesloten } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { isModuleEnabled } from '../modules/service';
 import logger from '../utils/logger';
@@ -142,19 +142,24 @@ router.get(
     // daar uit zichzelf opgehaald, dus het verwijderen van de gebruiker moet
     // de feed afsluiten - niemand komt er later nog aan te pas om de token in
     // te trekken.
+    //
+    // Om dezelfde reden telt een lid uit dienst (status 'inactive', zonder
+    // deleted_at - zo neemt routes/onboarding.ts iemand uit dienst) en een
+    // gedeactiveerde vereniging: die komen er via inloggen ook niet meer in
+    // (routes/auth.ts, middleware/auth.ts).
     const user = db
       .prepare(
         `
         SELECT u.first_name, u.last_name, u.association_id, a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
-        WHERE u.id = ? AND u.deleted_at IS NULL
+        WHERE u.id = ? AND u.deleted_at IS NULL AND COALESCE(u.status, 'active') != 'inactive'
     `,
       )
       .get(userId) as
       { first_name: string; last_name: string; association_id: string; association_name: string } | undefined;
 
-    if (!user) {
+    if (!user || verenigingGesloten(user.association_id, userId)) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
