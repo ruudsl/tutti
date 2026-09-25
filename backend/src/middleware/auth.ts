@@ -4,7 +4,7 @@ import config from '../config';
 import db from '../database/connection';
 import logger from '../utils/logger';
 import { hashToken, findSessionByTokenHash, registerSession, updateSessionActivityByHash } from '../utils/sessionStore';
-import { verifyDownloadToken, DownloadTokenPayload } from '../utils/downloadToken';
+import { verifyDownloadToken, DownloadTokenPayload, controleerBronToken, Bronsoort } from '../utils/downloadToken';
 
 export interface UserPayload {
   id: string;
@@ -21,6 +21,22 @@ export interface AuthRequest extends Request {
 
 /** Zelfde melding als bij een lid uit dienst: een gesloten vereniging sluit haar leden buiten. */
 export const MELDING_NIET_ACTIEF = 'Dit account is niet meer actief. Neem contact op met je vereniging.';
+
+/**
+ * Vaste code in het 403-antwoord voor een lid dat eerst zijn wachtwoord moet
+ * wijzigen (users.moet_wachtwoord_wijzigen). De frontend herkent hem en
+ * stuurt het lid naar het profiel, waar het wijzigen gebeurt.
+ */
+export const CODE_WACHTWOORD_WIJZIGEN_VERPLICHT = 'WACHTWOORD_WIJZIGEN_VERPLICHT';
+const MELDING_WACHTWOORD_WIJZIGEN_VERPLICHT = 'Kies eerst een eigen wachtwoord.';
+
+/** Uitkomst van beoordeelSessie. */
+export interface Sessiebeoordeling {
+  /** null als de sessie geldig is, anders de melding voor een 401. */
+  fout: string | null;
+  /** Het lid heeft nog een wachtwoord dat een ander heeft gekozen of gezien. */
+  moetWachtwoordWijzigen: boolean;
+}
 
 /**
  * Is deze vereniging gedeactiveerd (associations.is_active = 0) voor deze
@@ -75,48 +91,96 @@ export function validateSession(
   decoded: DecodedToken,
   herkomst: { ip?: string; userAgent?: string },
 ): string | null {
-  const tokenHash = hashToken(token);
-  const session = findSessionByTokenHash(tokenHash);
+  return beoordeelSessie(token, decoded, herkomst).fout;
+}
 
-  if (session) {
-    if (session.revoked_at) {
-      return 'Sessie is beëindigd. Log opnieuw in.';
-    }
-    if (session.user_id !== decoded.id) {
-      return 'Token verlopen of ongeldig.';
-    }
-  }
-
+/**
+ * Mag dit lid nog binnen, met een token voor deze vereniging? Verwijderd, uit
+ * dienst of een gesloten vereniging: nee. Zie validateSession.
+ */
+function beoordeelLid(
+  userId: string,
+  associationId: string | null,
+): { beoordeling: Sessiebeoordeling; passwordChangedAt: string | null } {
   const user = db
-    .prepare('SELECT id, status, deleted_at, password_changed_at FROM users WHERE id = ?')
-    .get(decoded.id) as
-    { id: string; status: string | null; deleted_at: string | null; password_changed_at: string | null } | undefined;
+    .prepare('SELECT id, status, deleted_at, password_changed_at, moet_wachtwoord_wijzigen FROM users WHERE id = ?')
+    .get(userId) as
+    | {
+        id: string;
+        status: string | null;
+        deleted_at: string | null;
+        password_changed_at: string | null;
+        moet_wachtwoord_wijzigen: number | null;
+      }
+    | undefined;
+
+  const ongeldig = (fout: string) => ({
+    beoordeling: { fout, moetWachtwoordWijzigen: false },
+    passwordChangedAt: null,
+  });
 
   if (!user || user.deleted_at) {
-    return 'Token verlopen of ongeldig.';
+    return ongeldig('Token verlopen of ongeldig.');
   }
 
   if (user.status === 'inactive') {
-    return MELDING_NIET_ACTIEF;
+    return ongeldig(MELDING_NIET_ACTIEF);
   }
 
   // Een gedeactiveerde vereniging: haar leden komen er niet meer in, ook niet
   // met een token van voor het deactiveren. De vereniging uit het token telt,
   // want die bepaalt waar dit verzoek over gaat.
-  if (verenigingGesloten(decoded.associationId, user.id)) {
-    return MELDING_NIET_ACTIEF;
+  if (verenigingGesloten(associationId, user.id)) {
+    return ongeldig(MELDING_NIET_ACTIEF);
+  }
+
+  return {
+    beoordeling: { fout: null, moetWachtwoordWijzigen: Number(user.moet_wachtwoord_wijzigen) === 1 },
+    passwordChangedAt: user.password_changed_at,
+  };
+}
+
+/**
+ * validateSession, plus of het lid eerst zijn wachtwoord moet wijzigen. Die
+ * vlag maakt de sessie niet ongeldig; wat het lid ermee mag, bepaalt de
+ * aanroeper (authenticateToken, optionalAuth, de websocket).
+ */
+export function beoordeelSessie(
+  token: string,
+  decoded: DecodedToken,
+  herkomst: { ip?: string; userAgent?: string },
+): Sessiebeoordeling {
+  const ongeldig = (fout: string): Sessiebeoordeling => ({ fout, moetWachtwoordWijzigen: false });
+  const tokenHash = hashToken(token);
+  const session = findSessionByTokenHash(tokenHash);
+
+  if (session) {
+    if (session.revoked_at) {
+      return ongeldig('Sessie is beëindigd. Log opnieuw in.');
+    }
+    if (session.user_id !== decoded.id) {
+      return ongeldig('Token verlopen of ongeldig.');
+    }
+  }
+
+  const { beoordeling: geldig, passwordChangedAt: wachtwoordGewijzigd } = beoordeelLid(
+    decoded.id,
+    decoded.associationId,
+  );
+  if (geldig.fout) {
+    return geldig;
   }
 
   if (session) {
     updateSessionActivityByHash(tokenHash);
-    return null;
+    return geldig;
   }
 
   // Legacy/unknown token: no session record exists
-  if (user.password_changed_at && decoded.iat !== undefined) {
-    const passwordChangedAt = new Date(user.password_changed_at).getTime();
+  if (wachtwoordGewijzigd && decoded.iat !== undefined) {
+    const passwordChangedAt = new Date(wachtwoordGewijzigd).getTime();
     if (!isNaN(passwordChangedAt) && decoded.iat * 1000 < passwordChangedAt) {
-      return 'Token verlopen of ongeldig.';
+      return ongeldig('Token verlopen of ongeldig.');
     }
   }
 
@@ -131,10 +195,10 @@ export function validateSession(
     decoded.exp !== undefined ? new Date(decoded.exp * 1000) : undefined,
   );
 
-  return null;
+  return geldig;
 }
 
-/** Een volledig token in de URL mag alleen bij lezen: zie authenticateToken. */
+/** Een download-token in de URL mag alleen bij lezen: zie authenticateToken. */
 function isLezendVerzoek(req: Request): boolean {
   return req.method === 'GET' || req.method === 'HEAD';
 }
@@ -172,10 +236,85 @@ function handleDownloadToken(req: AuthRequest, res: Response, next: NextFunction
   return true;
 }
 
+/**
+ * Aanmelden met het sessietoken uit de Authorization-kopregel.
+ *
+ * Een lid met users.moet_wachtwoord_wijzigen = 1 krijgt hier een 403 met
+ * CODE_WACHTWOORD_WIJZIGEN_VERPLICHT: zijn wachtwoord heeft een ander gekozen
+ * of gezien. Alleen de routes die nodig zijn om een eigen wachtwoord te
+ * kiezen gebruiken authenticateTokenBijTijdelijkWachtwoord.
+ */
 export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
+  authenticeer(req, res, next, false);
+}
+
+/**
+ * Als authenticateToken, maar laat ook een lid door dat eerst zijn wachtwoord
+ * moet wijzigen. Alleen voor wat daarvoor nodig is: GET /auth/me,
+ * POST /auth/change-password en POST /auth/logout.
+ */
+export function authenticateTokenBijTijdelijkWachtwoord(req: AuthRequest, res: Response, next: NextFunction) {
+  authenticeer(req, res, next, true);
+}
+
+/**
+ * Aanmelden voor één downloadroute: met de Authorization-kopregel (zoals
+ * authenticateToken), of met een brontoken in `?token=` voor precies deze
+ * soort en dit id (routes/download-token.ts, POST /bron). Voor een adres dat
+ * geen kopregel kan meesturen, zoals <audio src>.
+ *
+ * Het brontoken is alleen geldig zolang de sessie waarmee het is aangevraagd
+ * dat is, en het lid nog binnen mag (beoordeelLid).
+ */
+export function authenticateBronDownload(soort: Bronsoort, bronUitVerzoek: (req: Request) => string) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (req.headers['authorization']) {
+      authenticeer(req, res, next, false);
+      return;
+    }
+
+    const token = req.query.token;
+    if (typeof token !== 'string' || !token) {
+      return res.status(401).json({ error: 'Toegang geweigerd. Geen token opgegeven.' });
+    }
+    if (!isLezendVerzoek(req)) {
+      return res.status(401).json({ error: 'Download-token is alleen geldig voor downloads.' });
+    }
+
+    const inhoud = controleerBronToken(token, soort, bronUitVerzoek(req));
+    if (!inhoud) {
+      return res.status(401).json({ error: 'Download-token verlopen of ongeldig.' });
+    }
+
+    try {
+      const sessie = findSessionByTokenHash(inhoud.sid);
+      if (!sessie || sessie.revoked_at || sessie.user_id !== inhoud.sub) {
+        return res.status(401).json({ error: 'Download-token verlopen of ongeldig.' });
+      }
+      const { beoordeling } = beoordeelLid(inhoud.sub, inhoud.ver);
+      if (beoordeling.fout) {
+        return res.status(401).json({ error: beoordeling.fout });
+      }
+      if (beoordeling.moetWachtwoordWijzigen) {
+        return res
+          .status(403)
+          .json({ error: MELDING_WACHTWOORD_WIJZIGEN_VERPLICHT, code: CODE_WACHTWOORD_WIJZIGEN_VERPLICHT });
+      }
+    } catch (error) {
+      logger.error('Controle van een download-token mislukt; verzoek geweigerd:', error);
+      return res.status(503).json({ error: 'De dienst is tijdelijk niet beschikbaar. Probeer het zo opnieuw.' });
+    }
+
+    req.user = { id: inhoud.sub, email: '', role: inhoud.rol, associationId: inhoud.ver };
+    next();
+  };
+}
+
+function authenticeer(req: AuthRequest, res: Response, next: NextFunction, tijdelijkWachtwoordToegestaan: boolean) {
   const authHeader = req.headers['authorization'];
   const headerToken = authHeader && authHeader.split(' ')[1];
-  // Check Authorization header first, then query parameter (for downloads)
+  // In de URL mag alleen een kortlevend download-token staan (zie
+  // handleDownloadToken); een sessietoken daar wordt hieronder geweigerd.
   const queryToken = !headerToken ? (req.query.token as string | undefined) : undefined;
   const token = headerToken || queryToken;
 
@@ -190,21 +329,11 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 
   if (queryToken) {
-    // Legacy: een volledig JWT in de querystring. De frontend doet dat nog
-    // voor <audio src> (getMp3Url in api/music.ts), dus helemaal schrappen
-    // kan niet. Maar een URL belandt in logboeken, geschiedenis en
-    // Referer-kopregels, en een verzoek dat iets wijzigt hoort zijn token in
-    // de Authorization-kopregel te hebben. Dus alleen bij lezen, net als het
-    // kortlevende download-token.
-    if (!isLezendVerzoek(req)) {
-      return res.status(401).json({ error: 'Een token in de URL is alleen geldig voor downloads.' });
-    }
-    // Zonder regeleinden: het pad komt van de client en mag geen eigen
-    // logregels kunnen toevoegen.
-    const logPad = String(req.path ?? '').replace(/[\r\n]/g, '');
-    logger.warn(
-      `Legacy full JWT accepted via query parameter (path: ${logPad}). Migrate to short-lived download tokens.`,
-    );
+    // Een sessietoken in de URL belandt in logboeken, browsergeschiedenis en
+    // Referer-kopregels, en geeft wie het daar vindt dagenlang toegang tot
+    // alles. Media en downloads gebruiken een kortlevend download-token
+    // (routes/download-token.ts); het sessietoken hoort in de kopregel.
+    return res.status(401).json({ error: 'Een sessietoken is niet geldig in de URL.' });
   }
 
   let decoded: DecodedToken;
@@ -215,9 +344,14 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 
   try {
-    const sessionError = validateSession(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] });
-    if (sessionError) {
-      return res.status(401).json({ error: sessionError });
+    const beoordeling = beoordeelSessie(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] });
+    if (beoordeling.fout) {
+      return res.status(401).json({ error: beoordeling.fout });
+    }
+    if (beoordeling.moetWachtwoordWijzigen && !tijdelijkWachtwoordToegestaan) {
+      return res
+        .status(403)
+        .json({ error: MELDING_WACHTWOORD_WIJZIGEN_VERPLICHT, code: CODE_WACHTWOORD_WIJZIGEN_VERPLICHT });
     }
   } catch (error) {
     // Kan de sessie niet worden nagekeken (databasefout), dan gaat het verzoek
@@ -367,7 +501,7 @@ export function requireSectionLeader(getInstrumentId: (req: AuthRequest) => stri
 export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
   const headerToken = authHeader && authHeader.split(' ')[1];
-  // Een token in de URL alleen bij lezen; zie authenticateToken.
+  // Een download-token in de URL alleen bij lezen; zie authenticateToken.
   const queryToken = !headerToken && isLezendVerzoek(req) ? (req.query.token as string | undefined) : undefined;
   const token = headerToken || queryToken;
 
@@ -390,6 +524,11 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
     return next();
   }
 
+  // Een sessietoken in de URL telt niet mee; zie authenticateToken.
+  if (queryToken) {
+    return next();
+  }
+
   let decoded: DecodedToken;
   try {
     decoded = jwt.verify(token, config.jwtSecret) as DecodedToken;
@@ -401,10 +540,13 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
   // Dezelfde regels als authenticateToken: geen gebruiker bij een
   // ingetrokken sessie, een lid dat weg of uit dienst is, of een gesloten
   // vereniging. Lukt de controle niet (databasefout), dan ook geen gebruiker:
-  // het verzoek gaat dan anoniem verder.
+  // het verzoek gaat dan anoniem verder. Een lid dat eerst zijn wachtwoord
+  // moet wijzigen gaat ook anoniem verder: een route die aanmelden vraagt,
+  // geeft hem daarna de 403 van authenticateToken.
   let sessieGeldig = false;
   try {
-    sessieGeldig = validateSession(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] }) === null;
+    const beoordeling = beoordeelSessie(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] });
+    sessieGeldig = beoordeling.fout === null && !beoordeling.moetWachtwoordWijzigen;
   } catch (error) {
     logger.error('Sessiecontrole bij optionele aanmelding mislukt; verzoek gaat anoniem verder:', error);
   }

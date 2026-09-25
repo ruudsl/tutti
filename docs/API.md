@@ -34,6 +34,41 @@ Response:
 }
 ```
 
+Het token hoort in de `Authorization`-kopregel. Een sessietoken in de URL
+(`?token=`) wordt nergens aangenomen.
+
+### Eerst een eigen wachtwoord
+
+Heeft een lid een wachtwoord dat een ander heeft gekozen (aanmelding via
+onboarding, `POST /api/users`, of een beheerder die met `PUT /api/users/:id`
+het wachtwoord van een ander lid zet), dan staat `mustChangePassword: true` in
+het antwoord van inloggen en van `GET /api/auth/me`. Tot het lid een eigen
+wachtwoord kiest, geeft elke andere route:
+
+```json
+{ "error": "Kies eerst een eigen wachtwoord.", "code": "WACHTWOORD_WIJZIGEN_VERPLICHT" }
+```
+
+met status 403. Wel bereikbaar: `GET /api/auth/me`,
+`POST /api/auth/change-password` en `POST /api/auth/logout`.
+
+### Download-token voor één bron
+
+Voor een adres dat geen kopregel kan meesturen, zoals `<audio src>`:
+
+```http
+POST /api/download-token/bron
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "soort": "mp3", "id": "<bestandsnaam>" }
+```
+
+Antwoord: `{ "token": "...", "expiresIn": 300 }`. Het token geldt vijf
+minuten, alleen op `GET /api/music-pieces/mp3/<bestandsnaam>?token=...`, en
+alleen zolang de sessie waarmee het is aangevraagd bestaat. Een bestand buiten
+de eigen vereniging geeft 404.
+
 ## Endpoints Overview
 
 | Group             | Path                       | Description                                            |

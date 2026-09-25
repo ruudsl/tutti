@@ -385,16 +385,17 @@ export const getPdfInfo = async (filename: string): Promise<{ filename: string; 
 };
 
 /**
- * @deprecated Use createMp3BlobUrl() instead to avoid exposing JWT tokens in URLs,
- * or a short-lived download token via withDownloadToken() from utils/downloadUrl.
- * Tokens in URLs can be logged by servers, proxies, and browser history.
- * This function is kept for backward compatibility with existing audio elements;
- * the backend logs a warning whenever this legacy full-JWT query path is used.
+ * Adres voor <audio src>, dat geen Authorization-kopregel kan meesturen.
+ *
+ * Hier stond het sessietoken in `?token=`; een adres belandt in logboeken,
+ * browsergeschiedenis en Referer-kopregels. Nu vraagt de frontend een
+ * download-token aan voor dit ene bestand (POST /download-token/bron). Dat
+ * geldt vijf minuten en alleen op het mp3-adres; zie components/Mp3Speler.
  */
-export const getMp3Url = (filename: string): string => {
+export const getMp3Url = async (filename: string): Promise<string> => {
+  const { data } = await api.post<{ token: string }>('/download-token/bron', { soort: 'mp3', id: filename });
   const baseUrl = api.defaults.baseURL || '';
-  const token = localStorage.getItem('token');
-  return `${baseUrl}/music-pieces/mp3/${filename}?token=${token}`;
+  return `${baseUrl}/music-pieces/mp3/${encodeURIComponent(filename)}?token=${encodeURIComponent(data.token)}`;
 };
 
 // Fetch MP3 as a blob with proper Authorization header (avoids token in URL)

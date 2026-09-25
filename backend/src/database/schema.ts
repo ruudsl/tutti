@@ -237,6 +237,17 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Wachttijd na mislukte inlogpogingen (utils/inlogvertraging.ts). De sleutel
+-- is een HMAC van e-mailadres + IP-adres, of van het account (tweede stap);
+-- tijden in milliseconden sinds 1970.
+CREATE TABLE IF NOT EXISTS inlogvertragingen (
+    sleutel_hash TEXT PRIMARY KEY,
+    mislukt INTEGER NOT NULL,
+    wachten_tot INTEGER NOT NULL,
+    laatste INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_inlogvertragingen_laatste ON inlogvertragingen(laatste);
+
 -- Titel metadata (YouTube, beschrijving, speelduur per titel)
 CREATE TABLE IF NOT EXISTS music_titles (
     id TEXT PRIMARY KEY,

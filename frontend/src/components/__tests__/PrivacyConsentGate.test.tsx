@@ -50,7 +50,7 @@ vi.mock('../Icon', () => ({
   Icon: ({ name }: { name: string }) => <span data-testid={`icoon-${name}`} />,
 }));
 
-const auth = vi.hoisted(() => ({ gebruiker: null as { id: string } | null }));
+const auth = vi.hoisted(() => ({ gebruiker: null as { id: string; mustChangePassword?: boolean } | null }));
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ user: auth.gebruiker }) }));
 
 const toestemmingNagaan = vi.mocked(checkConsent);
@@ -144,6 +144,18 @@ describe('PrivacyConsentGate, wie er doorgelaten wordt', () => {
 
     expect(await screen.findByText('privacy.consentTitle')).toBeInTheDocument();
     expect(screen.queryByText('de applicatie')).not.toBeInTheDocument();
+  });
+
+  it('laat een lid dat eerst een eigen wachtwoord moet kiezen door, zonder de toestemming op te vragen', async () => {
+    // De API weigert dat lid alles behalve het wijzigen van zijn wachtwoord.
+    // Zonder deze uitzondering lag de toestemmingsvraag over het formulier
+    // om het wachtwoord te wijzigen, en werkte de knop daarop niet.
+    auth.gebruiker = { id: 'lid-1', mustChangePassword: true };
+    toon();
+
+    expect(await screen.findByText('de applicatie')).toBeInTheDocument();
+    expect(screen.queryByText('privacy.consentTitle')).not.toBeInTheDocument();
+    expect(toestemmingNagaan).not.toHaveBeenCalled();
   });
 });
 
