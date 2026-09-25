@@ -27,6 +27,32 @@ cleanupOutdatedCaches();
 self.skipWaiting();
 clientsClaim();
 
+// Deel-actie van het besturingssysteem (share_target in manifest.webmanifest).
+// Het besturingssysteem stuurt de gedeelde bestanden als POST naar
+// /share-target; die bestaat alleen hier, niet op de server. De worker bewaart
+// het formulier in een cache en stuurt door naar de pagina /share-target, die
+// het daar ophaalt en de bestanden klaarzet op de uploadpagina.
+const DEELCACHE = 'share-target-cache';
+
+registerRoute(
+  ({ url }) => url.origin === self.location.origin && url.pathname === '/share-target',
+  async ({ request }) => {
+    try {
+      const cache = await caches.open(DEELCACHE);
+      await cache.put(
+        `/share-target/gedeeld-${Date.now()}`,
+        new Response(await request.arrayBuffer(), {
+          headers: { 'Content-Type': request.headers.get('Content-Type') ?? 'multipart/form-data' },
+        }),
+      );
+    } catch (fout) {
+      console.error('[SW] Gedeeld bestand niet bewaard:', fout);
+    }
+    return Response.redirect('/share-target', 303);
+  },
+  'POST',
+);
+
 // Cache-first strategy for GET API requests when offline
 // This provides better offline support by serving cached data immediately
 registerRoute(

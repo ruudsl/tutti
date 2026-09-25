@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ModulesProvider, useModules } from './context/ModulesContext';
 import { isLocationHidden } from './utils/modules';
+import { terugNaInloggen } from './utils/terugNaInloggen';
 import { useTheme } from './hooks/useTheme';
 import { queryClient, queryPersister, persistOptions } from './lib/queryClient';
 import { Toaster } from './utils/toast';
@@ -224,9 +225,11 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const location = useLocation();
 
+  // Na het inloggen terug naar de pagina die erom vroeg (zie terugNaInloggen).
   if (user) {
-    return <Navigate to="/" />;
+    return <Navigate to={terugNaInloggen(location.state)} />;
   }
 
   return <>{children}</>;

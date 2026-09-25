@@ -5987,13 +5987,14 @@
   },
   "shareTarget": {
     "processing": "Bezig met verwerken...",
-    "processingMessage": "Je gedeelde bestand wordt verwerkt.",
-    "success": "Gelukt!",
+    "processingMessage": "Je gedeelde bestanden worden klaargezet.",
     "failed": "Mislukt",
-    "receivedText": "Gedeelde tekst ontvangen",
-    "filesUploaded": "Bestanden geüpload",
     "noContent": "Geen gedeelde inhoud gevonden",
-    "error": "Verwerken van de gedeelde inhoud is niet gelukt"
+    "error": "Verwerken van de gedeelde inhoud is niet gelukt",
+    "geenRechten": "Bladmuziek uploaden kan alleen de beheerder of de muziekcommissie.",
+    "geenPdf": "Tutti neemt alleen PDF-bestanden aan.",
+    "klaargezet_one": "{{count}} gedeeld bestand staat klaar. Kies een orkest en een lijst en upload het.",
+    "klaargezet_other": "{{count}} gedeelde bestanden staan klaar. Kies een orkest en een lijst en upload ze."
   },
   "sync": {
     "never": "Nog nooit",

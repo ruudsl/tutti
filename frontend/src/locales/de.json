@@ -5987,13 +5987,14 @@
   },
   "shareTarget": {
     "processing": "Wird verarbeitet...",
-    "processingMessage": "Ihre geteilte Datei wird verarbeitet.",
-    "success": "Geschafft!",
+    "processingMessage": "Ihre geteilten Dateien werden vorbereitet.",
     "failed": "Fehlgeschlagen",
-    "receivedText": "Geteilter Text empfangen",
-    "filesUploaded": "Dateien hochgeladen",
     "noContent": "Keine geteilten Inhalte gefunden",
-    "error": "Der geteilte Inhalt konnte nicht verarbeitet werden"
+    "error": "Der geteilte Inhalt konnte nicht verarbeitet werden",
+    "geenRechten": "Noten hochladen können nur der Administrator oder der Musikausschuss.",
+    "geenPdf": "Tutti nimmt nur PDF-Dateien an.",
+    "klaargezet_one": "{{count}} geteilte Datei liegt bereit. Wählen Sie ein Orchester und eine Liste und laden Sie sie hoch.",
+    "klaargezet_other": "{{count}} geteilte Dateien liegen bereit. Wählen Sie ein Orchester und eine Liste und laden Sie sie hoch."
   },
   "sync": {
     "never": "Noch nie",

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -8,6 +8,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import SocialLoginButtons from '../components/SocialLoginButtons';
 import { LazyImage } from '../components/LazyImage';
 import api from '../api/client';
+import { terugNaInloggen } from '../utils/terugNaInloggen';
 import { getMicrosoftEnabled, getMicrosoftLoginUrl } from '../api/integrations';
 
 export default function Login() {
@@ -25,6 +26,7 @@ export default function Login() {
   });
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   // /login/:slug toont de naam en het logo van die vereniging. Zonder slug
   // beslist de backend: bij een vereniging haar huisstijl, bij meer de
   // neutrale - dan is geen enkele vereniging de juiste om te tonen.
@@ -65,7 +67,7 @@ export default function Login() {
         return;
       }
 
-      navigate('/');
+      navigate(terugNaInloggen(location.state));
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || t('auth.loginFailed');
       setError(errorMessage);
@@ -258,7 +260,7 @@ export default function Login() {
             onSuccess={(result) => {
               // Store token and navigate
               localStorage.setItem('token', result.token);
-              navigate('/');
+              navigate(terugNaInloggen(location.state));
             }}
             onError={(errorMsg) => {
               setError(errorMsg);

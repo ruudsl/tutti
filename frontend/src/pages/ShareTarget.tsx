@@ -2,119 +2,105 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { showSuccess, showError } from '../utils/toast';
-import { uploadSharedPdf } from '../api/music';
+import { showError } from '../utils/toast';
+import { useAuth } from '../context/AuthContext';
+import { ROLES } from '../utils/constants';
 
+/** Waar de service worker (sw-custom.ts) de gedeelde formulieren bewaart. */
+const DEELCACHE = 'share-target-cache';
+
+/** Wie bladmuziek mag uploaden; dezelfde rollen als de route /upload. */
+const MAG_UPLOADEN: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE];
+
+function isPdf(bestand: File): boolean {
+  return bestand.type === 'application/pdf' || bestand.name.toLowerCase().endsWith('.pdf');
+}
+
+/**
+ * Het landingspunt van de deel-actie: iemand kiest in een andere app "delen"
+ * met een of meer PDF's en kiest Tutti.
+ *
+ * De service worker heeft het formulier in de cache gezet. Deze pagina haalt
+ * de PDF's eruit, leegt de cache, en zet ze klaar op de uploadpagina. Daar
+ * kiest de gebruiker zelf het orkest en de lijst en drukt op uploaden: een
+ * gedeeld bestand verdwijnt dus niet ongezien in de bibliotheek.
+ *
+ * Niet ingelogd: eerst naar het inlogscherm, en daarna terug hierheen. De
+ * bestanden blijven zolang in de cache staan.
+ */
 export default function ShareTarget() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const { user } = useAuth();
+  const [status, setStatus] = useState<'processing' | 'error'>('processing');
   const [message, setMessage] = useState('');
 
-  // Elke afloop van deze pagina eindigt in een doorverwijzing na een paar
-  // tellen. Die tellers moeten opgeruimd worden: klikt iemand binnen die
-  // seconden zelf een menu-item aan, dan sleurde de wachtende timer hem
-  // alsnog naar /my-music of naar de startpagina - een sprong waar hij niet
-  // om gevraagd heeft, op een pagina die hij al verlaten had.
+  // Een foutmelding eindigt na een paar tellen in een doorverwijzing. Die
+  // teller wordt opgeruimd als de gebruiker de pagina zelf al verlaten heeft,
+  // anders sleurt hij hem alsnog weg van waar hij inmiddels is.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const verlatenRef = useRef(false);
 
   useEffect(() => {
-    handleSharedContent();
+    verlatenRef.current = false;
+    if (!user) {
+      navigate('/login', { replace: true, state: { terug: '/share-target' } });
+      return;
+    }
+    verwerk();
     return () => {
       verlatenRef.current = true;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
-  /**
-   * Plant een doorverwijzing.
-   *
-   * De vlag is er naast de clearTimeout omdat de laatste teller pas gezet
-   * wordt nadat het uploaden klaar is: op dat moment kan de opruiming van het
-   * effect al gedraaid hebben, en dan valt er niets meer te wissen.
-   */
-  function verwijsDoorNa(ms: number, doel: string, opties?: { state: unknown }) {
+  function mislukt(melding: string, metToast = false) {
+    setMessage(melding);
+    setStatus('error');
+    if (metToast) showError(melding);
     timerRef.current = setTimeout(() => {
-      if (verlatenRef.current) return;
-      navigate(doel, opties);
-    }, ms);
+      if (!verlatenRef.current) navigate('/', { replace: true });
+    }, 2500);
   }
 
-  async function handleSharedContent() {
+  /** Alle gedeelde bestanden uit de cache, waarna de cache leeg is. */
+  async function haalGedeeldeBestanden(): Promise<File[]> {
+    if (typeof caches === 'undefined') return [];
+    const cache = await caches.open(DEELCACHE);
+    const bestanden: File[] = [];
+    for (const verzoek of await cache.keys()) {
+      const antwoord = await cache.match(verzoek);
+      if (antwoord) {
+        const formulier = await antwoord.formData();
+        for (const waarde of formulier.getAll('files')) {
+          if (waarde instanceof File) bestanden.push(waarde);
+        }
+      }
+      await cache.delete(verzoek);
+    }
+    return bestanden;
+  }
+
+  async function verwerk() {
     try {
-      const url = new URL(window.location.href);
-      const title = url.searchParams.get('title');
-      const text = url.searchParams.get('text');
-      const sharedUrl = url.searchParams.get('url');
+      const bestanden = await haalGedeeldeBestanden();
+      if (verlatenRef.current) return;
 
-      if (title || text || sharedUrl) {
-        setMessage(t('shareTarget.receivedText', 'Gedeelde tekst ontvangen'));
-        setStatus('success');
-
-        verwijsDoorNa(1500, '/my-music', {
-          state: { sharedContent: { title, text, url: sharedUrl } },
-        });
+      if (!MAG_UPLOADEN.includes(user!.role)) {
+        mislukt(t('shareTarget.geenRechten'));
         return;
       }
-
-      if ('launchQueue' in window && 'LaunchParams' in window) {
-        (window as any).launchQueue.setConsumer(async (launchParams: any) => {
-          if (launchParams.files && launchParams.files.length > 0) {
-            const fileHandles = launchParams.files;
-            for (const handle of fileHandles) {
-              const file = await handle.getFile();
-              await uploadFile(file);
-            }
-          }
-        });
+      const pdfs = bestanden.filter(isPdf);
+      if (pdfs.length === 0) {
+        mislukt(t(bestanden.length > 0 ? 'shareTarget.geenPdf' : 'shareTarget.noContent'));
+        return;
       }
-
-      const cache = await caches.open('share-target-cache');
-      const requests = await cache.keys();
-
-      if (requests.length > 0) {
-        for (const request of requests) {
-          const response = await cache.match(request);
-          if (response) {
-            const formData = await response.formData();
-            const files = formData.getAll('files');
-
-            for (const file of files) {
-              if (file instanceof File) {
-                await uploadFile(file);
-              }
-            }
-
-            await cache.delete(request);
-          }
-        }
-
-        // De melding hoorde ook in de kaart te staan. Zonder deze regel bleef
-        // `message` leeg en las de gebruiker alleen "Gelukt!" met een lege
-        // regel eronder; wat er gelukt was stond dan uitsluitend in de toast,
-        // die na een paar tellen weg is.
-        const gelukt = t('shareTarget.filesUploaded', 'Bestanden geüpload');
-        setMessage(gelukt);
-        setStatus('success');
-        showSuccess(gelukt);
-        verwijsDoorNa(2000, '/my-music');
-      } else {
-        setMessage(t('shareTarget.noContent', 'Geen gedeelde inhoud gevonden'));
-        setStatus('error');
-        verwijsDoorNa(2000, '/');
-      }
-    } catch (error) {
-      console.error('Share target error:', error);
-      setStatus('error');
-      setMessage(t('shareTarget.error', 'Fout bij verwerken'));
-      showError(t('errors.generic'));
-      verwijsDoorNa(2000, '/');
+      navigate('/upload', { replace: true, state: { gedeeldeBestanden: pdfs } });
+    } catch (fout) {
+      console.error('Deel-actie:', fout);
+      if (!verlatenRef.current) mislukt(t('shareTarget.error'), true);
     }
-  }
-
-  async function uploadFile(file: File) {
-    return uploadSharedPdf(file);
   }
 
   return (
@@ -128,22 +114,12 @@ export default function ShareTarget() {
       }}
     >
       <div className="card" style={{ maxWidth: '400px', textAlign: 'center' }}>
-        <div className="card-body">
+        <div className="card-body" role="status">
           {status === 'processing' && (
             <>
               <div className="spinner mb-3" style={{ margin: '0 auto' }} />
-              <h2>{t('shareTarget.processing', 'Verwerken...')}</h2>
-              <p className="text-muted">{t('shareTarget.processingMessage', 'Je gedeelde bestand wordt verwerkt')}</p>
-            </>
-          )}
-
-          {status === 'success' && (
-            <>
-              <div style={{ color: 'var(--success)', marginBottom: '1rem' }}>
-                <Icon name="check" size={48} />
-              </div>
-              <h2>{t('shareTarget.success', 'Gelukt!')}</h2>
-              <p className="text-muted">{message}</p>
+              <h2>{t('shareTarget.processing')}</h2>
+              <p className="text-muted">{t('shareTarget.processingMessage')}</p>
             </>
           )}
 
@@ -152,7 +128,7 @@ export default function ShareTarget() {
               <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>
                 <Icon name="warning" size={48} />
               </div>
-              <h2>{t('shareTarget.failed', 'Mislukt')}</h2>
+              <h2>{t('shareTarget.failed')}</h2>
               <p className="text-muted">{message}</p>
             </>
           )}
