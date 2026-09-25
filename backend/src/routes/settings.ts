@@ -16,6 +16,7 @@ import { OnveiligAdresFout } from '../utils/uitgaandAdres';
 import { gecontroleerdeSmtpVerbinding, SmtpVerbinding } from '../utils/smtpVerbinding';
 import { logAuditEvent } from './audit-logs';
 import { ontsleutelGeheim, versleutelGeheim } from '../utils/encryption';
+import { opslagGebruik, opslagLimiet } from '../services/abonnementLimieten';
 
 const router = Router();
 
@@ -149,6 +150,21 @@ router.get(
       logoUrl: association.logo_path ? `/api/settings/logo/${path.basename(association.logo_path)}` : null,
       theme: association.theme_json ? JSON.parse(association.theme_json) : null,
     });
+  }),
+);
+
+/**
+ * GET /settings/opslag - Opslaggebruik van de eigen vereniging tegenover de
+ * grens (beheerder). `limiet` is `null` als er geen grens is. Live opgeteld,
+ * dus bewust zonder cache: na een upload hoort het getal meteen te kloppen.
+ */
+router.get(
+  '/opslag',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    res.json({ gebruik: opslagGebruik(associationId), limiet: opslagLimiet(associationId) });
   }),
 );
 

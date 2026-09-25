@@ -7,6 +7,7 @@ import fs from 'fs';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { bewaakOpslagVooraf, bewaakOpslagNaUpload } from '../middleware/opslagquotum';
 
 const uploadsDir = path.join(process.cwd(), 'uploads', 'wiki');
 if (!fs.existsSync(uploadsDir)) {
@@ -615,6 +616,7 @@ router.get(
 router.post(
   '/:slug/attachments',
   requireRole('admin', 'music_committee', 'board'),
+  bewaakOpslagVooraf(),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = db
@@ -627,6 +629,8 @@ router.post(
     if (!req.file) {
       throw new ApiError(400, 'No file uploaded');
     }
+
+    await bewaakOpslagNaUpload(req);
 
     const id = uuidv4();
     const now = new Date().toISOString();

@@ -8,6 +8,9 @@
  */
 
 import axios from 'axios';
+// De gedeelde i18next-instantie die i18n.ts inricht; hier alleen voor t(), zonder
+// de vertaalbestanden zelf mee te trekken.
+import i18n from 'i18next';
 
 /** Base URL for API requests, configurable via VITE_API_URL environment variable */
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -51,6 +54,14 @@ api.interceptors.request.use((config) => {
 export const CODE_WACHTWOORD_WIJZIGEN_VERPLICHT = 'WACHTWOORD_WIJZIGEN_VERPLICHT';
 export const WACHTWOORD_WIJZIGEN_PAD = '/profile';
 
+/**
+ * De vaste code die de server meestuurt als een upload de opslaggrens van de
+ * vereniging overschrijdt (413). De melding van de server is Nederlands; met
+ * de code maakt de client er de melding in de taal van de gebruiker van, op de
+ * plek waar elk scherm hem al leest: `error.response.data.error`.
+ */
+export const OPSLAGLIMIET_CODE = 'OPSLAGLIMIET_BEREIKT';
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -69,6 +80,10 @@ api.interceptors.response.use(
       // Niet opnieuw laden als het lid er al is: het profiel zelf doet ook
       // verzoeken die deze 403 krijgen.
       window.location.href = WACHTWOORD_WIJZIGEN_PAD;
+    }
+    const data = error.response?.data;
+    if (error.response?.status === 413 && data && typeof data === 'object' && data.code === OPSLAGLIMIET_CODE) {
+      data.error = i18n.t('opslag.limietBereikt');
     }
     return Promise.reject(error);
   },

@@ -22,6 +22,8 @@ All notable changes to this application are documented here.
 ### Added
 
 - **Share to Tutti.** When you share a PDF with Tutti on a phone or computer (via **Share** in another app, with Tutti installed as an app), it is ready on the upload page. There you choose the orchestra and list and upload it. If you are not logged in, you log in first and come back. The share action was already in the app manifest but always ended in an error.
+- **Storage limit per association.** With `STORAGE_QUOTA_BYTES` (and per subscription `STORAGE_QUOTA_BYTES_FREE`, `_BASIC`, `_PRO`, `_ENTERPRISE`) a limit applies to sheet music, MP3s, MusicXML, recordings and wiki and mail attachments together; a super admin can set a separate limit per association. An upload that no longer fits gets a clear message and is not stored. The administration section of the dashboard shows usage against the limit. Without a setting there is no limit.
+- **The backup download is encrypted** once `ENCRYPTION_SECRET` is set: a `.zip.enc` in the same format as the automatic backups. Restoring in the admin screen accepts both `.zip.enc` and an old `.zip`, but a `.zip.enc` only on an installation with the same key.
 
 ### Changed
 

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS associations (
     google_drive_client_id TEXT,
     google_drive_api_key TEXT,
     google_drive_enabled BOOLEAN DEFAULT 0,
+    opslag_limiet_bytes INTEGER, -- Opslaggrens van de super-admin; NULL = volgens abonnement, 0 = onbeperkt
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -130,6 +131,7 @@ CREATE TABLE IF NOT EXISTS music_pieces (
     clef TEXT, -- Muzieksleutel (sol, fa, etc.)
     file_path TEXT NOT NULL,
     original_filename TEXT NOT NULL,
+    file_size INTEGER, -- Bytes op schijf; telt mee voor het opslagquotum
     youtube_url TEXT,
     association_id TEXT NOT NULL,
     is_shared BOOLEAN DEFAULT 0, -- Toegankelijk voor andere verenigingen
@@ -259,6 +261,7 @@ CREATE TABLE IF NOT EXISTS music_titles (
     duration_seconds INTEGER DEFAULT 0,
     grade TEXT, -- Moeilijkheidsgraad (bijv. 1, 2, 3, 4, 5 of 1.5, 2+, etc.)
     mp3_file_path TEXT, -- Pad naar MP3 preview bestand
+    mp3_file_size INTEGER, -- Bytes van het MP3-bestand; telt mee voor het opslagquotum
     is_shared BOOLEAN DEFAULT 0, -- Mag gedeeld worden met andere verenigingen
     internal_notes TEXT, -- Interne notities alleen zichtbaar voor muziekcommissie
     streaming_links TEXT, -- JSON: {spotify_url, apple_music_url, youtube_music_url}

@@ -6,6 +6,7 @@ import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { instrumentenOpNaam } from '../services/catalogus';
+import { bewaakOpslag } from '../services/abonnementLimieten';
 import { withTransaction } from '../utils/database';
 import { isPdf } from '../utils/fileValidation';
 import logger from '../utils/logger';
@@ -105,7 +106,8 @@ async function downloadAndSave(
   url: string,
   accessToken: string | null,
   originalName: string,
-): Promise<{ filename: string; filePath: string }> {
+  bewaakRuimte: (bytes: number) => void,
+): Promise<{ filename: string; filePath: string; grootte: number }> {
   const headers: Record<string, string> = {};
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
@@ -131,12 +133,16 @@ async function downloadAndSave(
     throw new Error('File is not a valid PDF');
   }
 
+  // Past het niet meer in de opslag van de vereniging, dan komt het niet op
+  // schijf; de aanroeper meldt het als fout bij dit ene bestand.
+  bewaakRuimte(buffer.length);
+
   const ext = path.extname(originalName) || '.pdf';
   const filename = `${Date.now()}-${uuidv4()}${ext}`;
   const filePath = path.join(UPLOAD_DIR, filename);
   await fs.promises.writeFile(filePath, buffer);
 
-  return { filename, filePath };
+  return { filename, filePath, grootte: buffer.length };
 }
 
 async function importFiles(
@@ -167,11 +173,17 @@ async function importFiles(
 
   const uploaded: ImportResult[] = [];
   const errors: ImportError[] = [];
-  const savedFiles: { filename: string; filePath: string; originalName: string }[] = [];
+  const savedFiles: { filename: string; filePath: string; grootte: number; originalName: string }[] = [];
 
+  // Wat in deze import al op schijf staat maar nog geen rij heeft, telt voor
+  // de opslaggrens al mee.
+  let alBinnen = 0;
   for (const file of files) {
     try {
-      const saved = await downloadAndSave(file.downloadUrl, file.accessToken || null, file.name);
+      const saved = await downloadAndSave(file.downloadUrl, file.accessToken || null, file.name, (bytes) =>
+        bewaakOpslag(user.associationId, alBinnen + bytes),
+      );
+      alBinnen += saved.grootte;
       savedFiles.push({ ...saved, originalName: file.name });
     } catch (err) {
       errors.push({
@@ -195,8 +207,8 @@ async function importFiles(
           db.prepare(
             `
                         INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
-                                                 file_path, original_filename, association_id, uploaded_by)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                                 file_path, original_filename, file_size, association_id, uploaded_by)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `,
           ).run(
             pieceId,
@@ -208,6 +220,7 @@ async function importFiles(
             parsed.clef,
             saved.filename,
             saved.originalName,
+            saved.grootte,
             user.associationId,
             user.id,
           );

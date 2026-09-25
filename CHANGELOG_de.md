@@ -22,6 +22,8 @@ Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 ### Hinzugefügt
 
 - **Teilen an Tutti.** Teilen Sie auf einem Telefon oder Computer ein PDF mit Tutti (über **Teilen** in einer anderen App, mit Tutti als installierter App), liegt es auf der Upload-Seite bereit. Dort wählen Sie Orchester und Liste und laden es hoch. Wer noch nicht angemeldet ist, meldet sich zuerst an und kommt danach zurück. Die Teilen-Aktion stand bereits in der App-Beschreibung, endete aber immer mit einem Fehler.
+- **Speicherlimit pro Verein.** Mit `STORAGE_QUOTA_BYTES` (und pro Abonnement `STORAGE_QUOTA_BYTES_FREE`, `_BASIC`, `_PRO`, `_ENTERPRISE`) gilt ein Limit für Noten, MP3s, MusicXML, Aufnahmen sowie Wiki- und Mailanhänge zusammen; ein Super-Admin kann pro Verein ein eigenes Limit setzen. Ein Upload, der nicht mehr passt, erhält eine klare Meldung und wird nicht gespeichert. Der Verwaltungsbereich des Dashboards zeigt die Nutzung im Verhältnis zum Limit. Ohne Einstellung gibt es kein Limit.
+- **Der Download der Sicherung ist verschlüsselt**, sobald `ENCRYPTION_SECRET` gesetzt ist: eine `.zip.enc` im selben Format wie die automatischen Sicherungen. Die Wiederherstellung im Verwaltungsbildschirm akzeptiert sowohl `.zip.enc` als auch eine alte `.zip`, eine `.zip.enc` aber nur auf einer Installation mit demselben Schlüssel.
 
 ### Geändert
 

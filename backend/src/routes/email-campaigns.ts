@@ -6,6 +6,7 @@ import fs from 'fs';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { bewaakOpslagVooraf, bewaakOpslagNaUpload } from '../middleware/opslagquotum';
 import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
@@ -1114,6 +1115,7 @@ router.post(
   '/:id/attachments',
   authenticateToken,
   requireRole('admin', 'music_committee'),
+  bewaakOpslagVooraf(),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
@@ -1133,6 +1135,8 @@ router.post(
     if (!req.file) {
       throw new ApiError(400, 'Geen bestand geüpload.');
     }
+
+    await bewaakOpslagNaUpload(req);
 
     const attachmentId = uuidv4();
     const now = new Date().toISOString();
