@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import config from '../config';
 import logger from '../logging/logger';
+import { maskeerEmail, maskeerGeheimen, maskeerVoorLog } from '../utils/maskeren';
 
 // Extended config type for Sentry DSN
 interface SentryConfig {
@@ -9,6 +10,54 @@ interface SentryConfig {
 }
 
 const extendedConfig = config as typeof config & SentryConfig;
+
+/**
+ * Wat er naar Sentry gaat, nagekeken met dezelfde regels als het logboek
+ * (utils/maskeren.ts).
+ *
+ * Hier stond een eigen lijstje van vier veldnamen, alleen op het bovenste
+ * niveau van de aanvraag. `{ spond: { password } }`, een `clientSecret` of
+ * een token in de extra context of in een breadcrumb ging ongemoeid mee naar
+ * een externe dienst. Een aanvraag die als tekst binnenkwam en geen JSON was
+ * (een formulier) liet JSON.parse bovendien gooien, en dan ging de hele
+ * melding verloren.
+ */
+export function filterSentryGebeurtenis<T extends Sentry.ErrorEvent>(event: T): T {
+  const verzoek = event.request;
+  if (verzoek) {
+    if (verzoek.headers) verzoek.headers = maskeerGeheimen(verzoek.headers) as typeof verzoek.headers;
+    if (verzoek.cookies) verzoek.cookies = maskeerGeheimen(verzoek.cookies) as typeof verzoek.cookies;
+    if (typeof verzoek.query_string === 'object' && verzoek.query_string !== null) {
+      verzoek.query_string = maskeerVoorLog(verzoek.query_string) as typeof verzoek.query_string;
+    }
+    if (verzoek.data !== undefined) {
+      if (typeof verzoek.data === 'string') {
+        try {
+          verzoek.data = JSON.stringify(maskeerVoorLog(JSON.parse(verzoek.data)));
+        } catch {
+          // Geen JSON: dan weten we niet waar de geheimen staan. Niet meesturen.
+          verzoek.data = '[weggelaten]';
+        }
+      } else {
+        verzoek.data = maskeerVoorLog(verzoek.data);
+      }
+    }
+  }
+
+  if (event.extra) event.extra = maskeerVoorLog(event.extra) as typeof event.extra;
+  if (event.contexts) event.contexts = maskeerVoorLog(event.contexts) as typeof event.contexts;
+  if (event.breadcrumbs) {
+    event.breadcrumbs = event.breadcrumbs.map((kruimel) => ({
+      ...kruimel,
+      message: typeof kruimel.message === 'string' ? maskeerEmail(kruimel.message) : kruimel.message,
+      data: kruimel.data ? (maskeerVoorLog(kruimel.data) as typeof kruimel.data) : kruimel.data,
+    }));
+  }
+  if (event.user?.email) event.user.email = maskeerEmail(event.user.email);
+  if (typeof event.message === 'string') event.message = maskeerEmail(event.message);
+
+  return event;
+}
 
 /**
  * Initialize Sentry error monitoring
@@ -41,31 +90,8 @@ export function initSentry(): void {
       Sentry.expressIntegration(),
     ],
 
-    // Filter sensitive data
-    beforeSend(event) {
-      // Remove sensitive headers
-      if (event.request?.headers) {
-        delete event.request.headers.authorization;
-        delete event.request.headers.cookie;
-        delete event.request.headers['x-csrf-token'];
-      }
-
-      // Remove sensitive data from request body
-      if (event.request?.data) {
-        const sensitiveFields = ['password', 'token', 'secret', 'apiKey'];
-        const data = typeof event.request.data === 'string' ? JSON.parse(event.request.data) : event.request.data;
-
-        sensitiveFields.forEach((field) => {
-          if (data[field]) {
-            data[field] = '[REDACTED]';
-          }
-        });
-
-        event.request.data = typeof event.request.data === 'string' ? JSON.stringify(data) : data;
-      }
-
-      return event;
-    },
+    // Geheimen en e-mailadressen eruit voordat iets de server verlaat
+    beforeSend: (event) => filterSentryGebeurtenis(event),
 
     // Filter breadcrumbs
     beforeBreadcrumb(breadcrumb) {

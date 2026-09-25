@@ -8,6 +8,7 @@ import { ApiError } from '../middleware/errorHandler';
 import { logAuditEvent } from './audit-logs';
 import { withTransaction } from '../utils/database';
 import { wisLeden } from '../scheduler/gdpr-cleanup';
+import { pseudonimiseerAuditlog, trekGoogleKoppelingIn, verwijderProfielfoto } from '../services/avgWissen';
 
 const router = Router();
 
@@ -488,6 +489,26 @@ router.post(
       // Perform cascade delete of all user data
       logger.info(`Processing GDPR deletion for user ${userId}`, { adminId, requestId });
 
+      // Wat na de transactie nog nodig is: het pad van de profielfoto en het
+      // Google-token. Die rijen zijn daarna weg of leeg.
+      const lidVooraf = db
+        .prepare(
+          'SELECT first_name, last_name, email, private_email, email_before_delete, profile_photo_path FROM users WHERE id = ? AND association_id = ?',
+        )
+        .get(userId, associationId) as
+        | {
+            first_name: string | null;
+            last_name: string | null;
+            email: string | null;
+            private_email: string | null;
+            email_before_delete: string | null;
+            profile_photo_path: string | null;
+          }
+        | undefined;
+      const agenda = db
+        .prepare('SELECT google_refresh_token, google_access_token FROM user_calendar_settings WHERE user_id = ?')
+        .get(userId) as { google_refresh_token: string | null; google_access_token: string | null } | undefined;
+
       // Delete in order to respect foreign key constraints
       const deleteOperations = [
         'DELETE FROM user_sessions WHERE user_id = ?',
@@ -519,6 +540,14 @@ router.post(
         'DELETE FROM password_reset_tokens WHERE user_id = ?',
         // mfa_backup_codes bestond nooit; mfa_recovery_codes is de echte tabel.
         'DELETE FROM mfa_recovery_codes WHERE user_id = ?',
+        // Koppelingen met een telefoonnummer, chat-id of Google-token. Die
+        // bleven staan tot de rij van het lid zelf verdween - en bij een lid
+        // dat niet definitief te wissen is (docs/PIA.md §6) dus voorgoed.
+        'DELETE FROM user_notification_channels WHERE user_id = ?',
+        'DELETE FROM whatsapp_verifications WHERE user_id = ?',
+        'DELETE FROM telegram_link_codes WHERE user_id = ?',
+        'DELETE FROM user_calendar_settings WHERE user_id = ?',
+        'DELETE FROM oauth_states WHERE user_id = ?',
         'DELETE FROM deletion_requests WHERE user_id = ?',
       ];
 
@@ -547,6 +576,34 @@ router.post(
           }
         }
 
+        // Telefoonnummers die niet in een eigen tabel staan maar in een rij
+        // waar het lid aan meedoet. De deelname blijft (reis, vervoer), het
+        // nummer niet. Het noodcontact is een ander persoon: ook weg.
+        deletedCounts.tour_participants_telefoon = db
+          .prepare('UPDATE tour_participants SET emergency_phone = NULL, emergency_contact = NULL WHERE user_id = ?')
+          .run(userId).changes;
+        deletedCounts.event_transport_telefoon = db
+          .prepare('UPDATE event_transport SET driver_phone = NULL WHERE driver_user_id = ?')
+          .run(userId).changes;
+        // Eigen velden (telefoon, adres, ...) van het lid. custom_field_values
+        // heeft geen verwijzing naar users, dus deze bleven ook na het
+        // definitief wissen staan.
+        deletedCounts.custom_field_values = db
+          .prepare(
+            `DELETE FROM custom_field_values
+             WHERE entity_type = 'user' AND entity_id = ?
+               AND field_definition_id IN (SELECT id FROM custom_field_definitions WHERE association_id = ?)`,
+          )
+          .run(userId, associationId).changes;
+
+        // Naam en e-mailadres in het auditlogboek door een pseudoniem vervangen.
+        // De regels blijven: wat er gebeurde en wie het deed hoort aantoonbaar
+        // te blijven, wie het lid was niet.
+        deletedCounts.audit_logs_gepseudonimiseerd = pseudonimiseerAuditlog(userId, associationId, {
+          naam: lidVooraf ? `${lidVooraf.first_name ?? ''} ${lidVooraf.last_name ?? ''}` : null,
+          emails: [lidVooraf?.email, lidVooraf?.private_email, lidVooraf?.email_before_delete],
+        });
+
         // Anonymize the user record instead of deleting (preserve audit trail)
         db.prepare(
           `
@@ -560,6 +617,8 @@ router.post(
         mfa_secret = NULL,
         microsoft_id = NULL,
         private_email = NULL,
+        email_before_delete = NULL,
+        profile_photo_path = NULL,
         deleted_at = datetime('now')
       WHERE id = ?
     `,
@@ -577,7 +636,21 @@ router.post(
         ).run(adminId, requestId);
       });
 
-      logger.info(`GDPR deletion completed for user ${userId}`, { adminId, deletedCounts });
+      // Buiten de database, na de transactie: die kan een bestand of een
+      // toestemming bij Google niet terugdraaien. Mislukt een van beide, dan
+      // staat dat in het logboek; de gegevens bij ons zijn hoe dan ook weg.
+      const fotoVerwijderd = verwijderProfielfoto(lidVooraf?.profile_photo_path);
+      const googleIngetrokken = await trekGoogleKoppelingIn(
+        userId,
+        agenda?.google_refresh_token || agenda?.google_access_token,
+      );
+
+      logger.info(`GDPR deletion completed for user ${userId}`, {
+        adminId,
+        deletedCounts,
+        fotoVerwijderd,
+        googleIngetrokken,
+      });
 
       logAuditEvent(
         adminId,

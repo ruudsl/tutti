@@ -100,6 +100,8 @@ interface User {
   association_id: string | null;
   mfa_secret: string | null;
   mfa_enabled: boolean;
+  /** 1 zolang het lid nog het tijdelijke wachtwoord van de aanmelding heeft. */
+  moet_wachtwoord_wijzigen: number | null;
 }
 
 const GENERIC_LOCKOUT_MESSAGE = 'Te veel mislukte pogingen, probeer later opnieuw.';
@@ -355,6 +357,9 @@ router.post(
         role: user.role,
         associationId: user.association_id,
         mfaEnabled: Boolean(user.mfa_enabled),
+        // De frontend stuurt het lid dan eerst naar het wijzigen van zijn
+        // wachtwoord; zie users.moet_wachtwoord_wijzigen.
+        mustChangePassword: Boolean(user.moet_wachtwoord_wijzigen),
       },
     });
   }),
@@ -439,7 +444,7 @@ router.get(
       .prepare(
         `
         SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.association_id,
-               u.mfa_enabled, a.name as association_name
+               u.mfa_enabled, u.moet_wachtwoord_wijzigen, a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
         WHERE u.id = ?
@@ -484,6 +489,7 @@ router.get(
       associationId: user.association_id,
       associationName: user.association_name,
       mfaEnabled: Boolean(user.mfa_enabled),
+      mustChangePassword: Boolean(user.moet_wachtwoord_wijzigen),
       instruments,
       orchestras,
     });
@@ -537,11 +543,10 @@ router.post(
     }
 
     const newPasswordHash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password_hash = ?, password_changed_at = ? WHERE id = ?').run(
-      newPasswordHash,
-      new Date().toISOString(),
-      req.user!.id,
-    );
+    // Een zelfgekozen wachtwoord: het tijdelijke van de aanmelding is daarmee weg.
+    db.prepare(
+      'UPDATE users SET password_hash = ?, password_changed_at = ?, moet_wachtwoord_wijzigen = 0 WHERE id = ?',
+    ).run(newPasswordHash, new Date().toISOString(), req.user!.id);
 
     // Revoke all other sessions for this user; the current session stays valid
     const authHeader = req.headers.authorization;
@@ -1121,7 +1126,7 @@ router.post(
     // Update password
     db.prepare(
       `
-        UPDATE users SET password_hash = ?, password_changed_at = ?
+        UPDATE users SET password_hash = ?, password_changed_at = ?, moet_wachtwoord_wijzigen = 0
         WHERE id = ?
     `,
     ).run(passwordHash, new Date().toISOString(), resetToken.user_id);

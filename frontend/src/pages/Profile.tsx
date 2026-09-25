@@ -55,6 +55,11 @@ export default function Profile() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      // De server heeft de vlag voor het tijdelijke wachtwoord nu gewist;
+      // met het verse profiel mag het lid weer overal heen.
+      if (user?.mustChangePassword) {
+        await refreshProfile().catch(() => undefined);
+      }
     } catch (error: any) {
       setPasswordError(error.response?.data?.error || t('profile.changePassword.wrongCurrent'));
     } finally {
@@ -144,6 +149,11 @@ export default function Profile() {
             <span className="card-title">{t('profile.changePassword.title')}</span>
           </div>
           <div className="card-body">
+            {user?.mustChangePassword && (
+              <div className="alert alert-warning mb-2" role="alert">
+                {t('profile.changePassword.required')}
+              </div>
+            )}
             {passwordError && <div className="alert alert-error mb-2">{passwordError}</div>}
             {passwordSuccess && <div className="alert alert-success mb-2">{passwordSuccess}</div>}
             <form onSubmit={handlePasswordChange}>

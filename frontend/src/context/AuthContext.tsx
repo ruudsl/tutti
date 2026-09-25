@@ -172,6 +172,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     const profile = await getProfile();
     setUser(profile);
+    // Ook de bewaarde kopie bijwerken. Anders begint een herladen pagina met
+    // de oude stand - bijvoorbeeld nog met de vlag dat het wachtwoord
+    // gewijzigd moet worden - tot het profiel opnieuw is opgehaald.
+    try {
+      localStorage.setItem('user', JSON.stringify(profile));
+    } catch {
+      // Ignore localStorage write errors
+    }
   };
 
   return (

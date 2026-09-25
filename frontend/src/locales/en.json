@@ -360,6 +360,7 @@
     "language": "Language",
     "changePassword": {
       "title": "Change Password",
+      "required": "You are still using the temporary password you received when your account was created. Please choose your own password first; after that you can continue.",
       "current": "Current password",
       "new": "New password",
       "confirm": "Confirm new password",

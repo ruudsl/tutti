@@ -174,6 +174,16 @@ zestien tabellen worden direct leeggehaald. Na een instelbare termijn haalt de
 opruimtaak de rij zelf weg — dát is het moment waarop de foreign keys hun werk
 doen.
 
+Sinds 25-09-2026 gaan bij het goedkeuren ook direct weg: de profielfoto op
+schijf, de koppelingen met een telefoonnummer of chat-id (WhatsApp, Telegram),
+het noodnummer bij een reis, het nummer als chauffeur, de eigen velden van het
+lid, en de Google Agenda-koppeling — die wordt ook bij Google ingetrokken; lukt
+dat niet, dan staat het in het logboek en gaat het wissen gewoon door. In het
+auditlogboek worden naam en e-mailadres van het lid vervangen door een
+pseudoniem (`Deleted User`, `deleted_<id>@deleted.local`); de regels zelf
+blijven. Het ip-adres in de regels waar het lid zelf de handelende persoon is,
+blijft staan tot de bewaartermijn van `audit_logs` ze opruimt.
+
 `PRAGMA foreign_keys = ON` staat aan (`backend/src/database/connection.ts:67`),
 dus dat werkt. Van de 70 tabellen met een `user_id`, uit de draaiende database
 opgevraagd met `PRAGMA foreign_key_list`:

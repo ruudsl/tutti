@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import logger, { logRequest, logSecurity } from './logger';
+import { maskeerGeheimen } from '../utils/maskeren';
 
 /**
  * Interface for authenticated request
@@ -168,14 +169,9 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
 export function requestBodyLogger(routes: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (routes.some((route) => req.path.includes(route))) {
-      // Redact sensitive fields
-      const sanitizedBody = { ...req.body };
-      const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'creditCard'];
-      sensitiveFields.forEach((field) => {
-        if (sanitizedBody[field]) {
-          sanitizedBody[field] = '[REDACTED]';
-        }
-      });
+      // Geheimen eruit, ook genest; zie utils/maskeren.ts. De logger kort
+      // daarna ook nog de e-mailadressen af.
+      const sanitizedBody = maskeerGeheimen(req.body);
 
       logger.debug(`Request body for ${req.method} ${req.path}`, {
         type: 'request',

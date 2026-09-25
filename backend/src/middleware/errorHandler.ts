@@ -2,6 +2,7 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import logger from '../utils/logger';
 import { FileValidationError } from '../utils/errors';
 import { DienstFout, StroomonderbrekerOpenFout, statusIsTijdelijk } from '../utils/veerkracht';
+import { maskeerGeheimen } from '../utils/maskeren';
 
 /** Geen status (timeout, netwerk) of een tijdelijke: de dienst was er niet. */
 function isStoring(fout: DienstFout): boolean {
@@ -42,60 +43,15 @@ export function asyncHandler<T extends Request = Request>(
 }
 
 /**
- * Veldnamen waarvan de inhoud nooit in een logregel mag belanden.
+ * Het maskeren zelf staat in utils/maskeren.ts, gedeeld met de loggers en
+ * Sentry. Hier bleef het exporteren staan voor wie het vanaf deze plek
+ * importeert.
  *
- * De foutlogger schreef hieronder de volledige aanvraag weg. Bij een mislukte
+ * De foutlogger hieronder schreef de volledige aanvraag weg. Bij een mislukte
  * Spond-koppeling stond het wachtwoord van de gebruiker daardoor leesbaar in
- * de productielogs. Logs worden bewaard, doorgestuurd en door meer mensen
- * gelezen dan de aanvraag zelf, dus dit is een lek en geen ongemak.
+ * de productielogs.
  */
-const GEHEIME_VELDEN = [
-  'password',
-  'passwordConfirm',
-  'currentPassword',
-  'newPassword',
-  'token',
-  'accessToken',
-  'refreshToken',
-  'apiKey',
-  'secret',
-  'clientSecret',
-  'authorization',
-  'mfaCode',
-  'recoveryCode',
-];
-
-/** Sleutels die nooit worden overgenomen: ze raken het prototype van objecten. */
-const GEVAARLIJKE_SLEUTELS = new Set(['__proto__', 'constructor', 'prototype']);
-
-/**
- * Vervang de inhoud van gevoelige velden door een markering. Blijft werken bij
- * geneste objecten, want een aanvraag kan gegevens meesturen als { config: {
- * password } }. Arrays worden meegenomen zodat een lijst met koppelingen niet
- * alsnog alles doorlaat.
- */
-export function maskeerGeheimen(waarde: unknown, diepte = 0): unknown {
-  if (diepte > 6 || waarde === null || typeof waarde !== 'object') return waarde;
-
-  if (Array.isArray(waarde)) {
-    return waarde.map((item) => maskeerGeheimen(item, diepte + 1));
-  }
-
-  // Zonder prototype, zodat een sleutel als __proto__ uit de aanvraag hier een
-  // gewone eigenschap wordt in plaats van het prototype van dit object te
-  // verzetten. De sleutels komen immers rechtstreeks van buiten.
-  const uit: Record<string, unknown> = Object.create(null);
-  for (const [sleutel, item] of Object.entries(waarde as Record<string, unknown>)) {
-    if (GEVAARLIJKE_SLEUTELS.has(sleutel)) continue;
-
-    if (GEHEIME_VELDEN.some((veld) => veld.toLowerCase() === sleutel.toLowerCase())) {
-      uit[sleutel] = '[weggelaten]';
-    } else {
-      uit[sleutel] = maskeerGeheimen(item, diepte + 1);
-    }
-  }
-  return uit;
-}
+export { maskeerGeheimen };
 
 // Central error handling middleware
 /**

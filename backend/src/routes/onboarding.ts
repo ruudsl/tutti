@@ -650,8 +650,8 @@ router.post(
     withTransaction(() => {
       db.prepare(
         `
-            INSERT INTO users (id, email, password_hash, first_name, last_name, role, status, association_id, microsoft_id, private_email, profile_photo_path, onboarded_at)
-            VALUES (?, ?, ?, ?, ?, 'member', 'active', ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO users (id, email, password_hash, first_name, last_name, role, status, association_id, microsoft_id, private_email, profile_photo_path, onboarded_at, moet_wachtwoord_wijzigen)
+            VALUES (?, ?, ?, ?, ?, 'member', 'active', ?, ?, ?, ?, CURRENT_TIMESTAMP, 1)
         `,
       ).run(
         userId,
@@ -700,6 +700,12 @@ router.post(
       ).run(uuidv4(), userId, req.user!.associationId, email.toLowerCase(), `${firstName} ${lastName}`);
 
       // Log onboarding tasks
+      //
+      // Het tijdelijke wachtwoord ging hier als metadata mee met de taak
+      // harmonie_create, leesbaar voor elke beheerder via GET /tasks/:userId
+      // en in elke reservekopie. Het staat nu alleen in het antwoord hieronder,
+      // één keer, en het lid moet het bij de eerste keer inloggen wijzigen
+      // (users.moet_wachtwoord_wijzigen).
       const taskTypes = ['harmonie_create'];
       if (createM365Account) taskTypes.push(m365Created ? 'm365_create' : 'm365_create_failed');
       taskTypes.push('spond_link_pending');
@@ -716,7 +722,7 @@ router.post(
           req.user!.associationId,
           taskType,
           taskType.includes('pending') || taskType.includes('failed') ? 'pending' : 'completed',
-          taskType === 'harmonie_create' ? JSON.stringify({ tempPassword }) : null,
+          null,
           taskType.includes('pending') || taskType.includes('failed') ? null : new Date().toISOString(),
         );
       }
@@ -752,7 +758,7 @@ router.post(
       }
     });
 
-    logger.info(`User onboarded: ${email}`, {
+    logger.info(`User onboarded: ${userId}`, {
       userId,
       m365Created,
       licenseAssigned,
@@ -774,7 +780,9 @@ router.post(
     );
 
     // Build instructions based on what happened
-    const instructions: string[] = ['Deel het tijdelijke wachtwoord met het nieuwe lid.'];
+    const instructions: string[] = [
+      'Deel het tijdelijke wachtwoord met het nieuwe lid. Het wordt niet bewaard en is hierna niet meer op te vragen; het lid moet het bij de eerste keer inloggen wijzigen.',
+    ];
 
     if (m365Created) {
       let m365Status = 'Het M365 account is aangemaakt.';
@@ -829,6 +837,9 @@ router.post(
       'Nodig het lid uit in de Spond app. De koppeling wordt automatisch gemaakt bij de volgende sync.',
     );
 
+    // Het enige moment waarop het tijdelijke wachtwoord de server verlaat.
+    // Niet in een cache laten hangen.
+    res.set('Cache-Control', 'no-store');
     res.status(201).json({
       success: true,
       userId,
@@ -836,6 +847,7 @@ router.post(
       firstName,
       lastName,
       tempPassword,
+      mustChangePassword: true,
       m365Created,
       m365Error,
       licenseAssigned,

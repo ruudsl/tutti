@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { verwijderProfielfoto } from '../services/avgWissen';
 
 // Default cleanup hour (3 AM)
 const DEFAULT_CLEANUP_HOUR = 3;
@@ -41,12 +42,19 @@ interface CleanupResult {
  * wissen van alle anderen tegen, op de hele installatie, en stond dat alleen
  * in het logboek. Nu blijft alleen dat ene lid staan, en zegt het logboek
  * welk lid.
+ *
+ * De profielfoto gaat in beide gevallen van schijf. Alleen het pad stond in de
+ * database; de opruimtaak via `deleted_users` wiste de rij en liet het bestand
+ * staan, en bij een lid dat niet te wissen is bleef de foto voorgoed.
  */
 export function wisLeden(ids: string[]): { gewist: string[]; geblokkeerd: string[] } {
   const gewist: string[] = [];
   const geblokkeerd: string[] = [];
+  const foto = db.prepare('SELECT profile_photo_path FROM users WHERE id = ?');
   const wis = db.prepare('DELETE FROM users WHERE id = ?');
+  const vergeetFoto = db.prepare('UPDATE users SET profile_photo_path = NULL WHERE id = ?');
   for (const id of ids) {
+    const fotoPad = (foto.get(id) as { profile_photo_path: string | null } | undefined)?.profile_photo_path;
     try {
       if (wis.run(id).changes > 0) gewist.push(id);
     } catch (error) {
@@ -55,7 +63,9 @@ export function wisLeden(ids: string[]): { gewist: string[]; geblokkeerd: string
         userId: id,
         error: (error as Error).message,
       });
+      if (fotoPad) vergeetFoto.run(id);
     }
+    if (fotoPad) verwijderProfielfoto(fotoPad);
   }
   return { gewist, geblokkeerd };
 }
@@ -248,12 +258,8 @@ export function purgeSoftDeleted(): CleanupResult[] {
       .all(cutoff) as { id: string; profile_photo_path: string | null }[];
 
     if (users.length > 0) {
+      // wisLeden haalt ook de profielfoto's weg.
       const gewist = new Set(wisLeden(users.map(({ id }) => id)).gewist);
-      for (const user of users) {
-        if (gewist.has(user.id) && user.profile_photo_path) {
-          removeFileSafely(path.resolve(user.profile_photo_path));
-        }
-      }
       if (gewist.size > 0) {
         results.push({ association_id: 'global', data_type: 'purged_users', deleted_count: gewist.size });
       }

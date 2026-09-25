@@ -2,6 +2,7 @@ import fs from 'fs';
 import winston from 'winston';
 import path from 'path';
 import config from '../config';
+import { maskeerFormaat } from '../logging/maskeerFormaat';
 
 const logDir = path.join(__dirname, '../../logs');
 
@@ -25,6 +26,8 @@ const fileFormat = winston.format.combine(
 // Create logger instance
 const logger = winston.createLogger({
   level: config.isDevelopment ? 'debug' : 'info',
+  // Geheimen en e-mailadressen eruit, voor elk transport: zie maskeerFormaat.
+  format: maskeerFormaat(),
   defaultMeta: { service: 'harmonie-api' },
   transports: [
     // Console transport (always enabled)

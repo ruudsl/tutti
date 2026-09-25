@@ -13,7 +13,8 @@ import logger from '../utils/logger';
 import config from '../config';
 import db from '../database/connection';
 import { logAuditEvent } from './audit-logs';
-import { getBackupDir } from '../scheduler/backup';
+import { getPreRestoreDir, schrijfDatabasekopie } from '../scheduler/backup';
+import { schrijfPriveBestand } from '../utils/priveBestand';
 
 const router = Router();
 
@@ -412,14 +413,20 @@ router.post(
       db.flush();
 
       // Create a pre-restore snapshot of the current database so the restore can be undone
+      //
+      // Net als de automatische back-up: versleuteld als er een eigen sleutel
+      // is, alleen leesbaar voor het serverproces, en opgeruimd door de
+      // back-uptaak (BACKUP_PRE_RESTORE_RETENTION_DAYS).
       if (fs.existsSync(DB_PATH)) {
-        const preRestoreDir = path.join(getBackupDir(), 'pre-restore');
+        const preRestoreDir = getPreRestoreDir();
         if (!fs.existsSync(preRestoreDir)) {
           fs.mkdirSync(preRestoreDir, { recursive: true });
         }
         const snapshotTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        preRestoreSnapshot = path.join(preRestoreDir, `pre-restore-${snapshotTimestamp}.sqlite`);
-        fs.copyFileSync(DB_PATH, preRestoreSnapshot);
+        preRestoreSnapshot = schrijfDatabasekopie(
+          path.join(preRestoreDir, `pre-restore-${snapshotTimestamp}.sqlite`),
+          fs.readFileSync(DB_PATH),
+        );
         logger.info(`Created pre-restore snapshot: ${preRestoreSnapshot}`);
       }
 
@@ -483,7 +490,7 @@ router.post(
           if (!fs.existsSync(dbDir)) {
             fs.mkdirSync(dbDir, { recursive: true });
           }
-          fs.writeFileSync(DB_PATH, entry.getData());
+          schrijfPriveBestand(DB_PATH, entry.getData());
           restoredDb = true;
           logger.info('Restored database from backup');
         } else if (entryName === 'manifest.json') {
