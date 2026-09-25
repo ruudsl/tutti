@@ -160,3 +160,52 @@ describe('koppen van Express', () => {
     }
   });
 });
+
+/**
+ * Het toegangslogboek van Traefik.
+ *
+ * Met alleen `--accesslog=true` schrijft Traefik elke regel als
+ * `"GET /reset-password?token=… HTTP/2.0"`: het volledige adres, met de
+ * querystring en de tokens erin, in een logboek dat langer bewaard wordt en
+ * breder leesbaar is dan de database. Traefik kan de querystring niet van het
+ * pad afhalen; RequestPath en RequestLine (die het pad ook bevat) moeten er
+ * dus helemaal uit. Dat gaat met een lijst van wat erin mag, zodat een veld
+ * dat Traefik later toevoegt niet vanzelf meekomt.
+ *
+ * Nagegaan met Traefik 3.0: de regel wordt dan `"GET - HTTP/1.1" 200 …`.
+ */
+describe('toegangslogboek van Traefik', () => {
+  function traefikVlaggen(): string[] {
+    const tekst = lees('docker-compose.prod.yml');
+    return [...tekst.matchAll(/^\s*- '(--[^']*)'\s*$/gm)].map(([, vlag]) => vlag);
+  }
+  const accesslog = () => traefikVlaggen().filter((vlag) => vlag.startsWith('--accesslog'));
+  const waarde = (naam: string) =>
+    accesslog()
+      .find((vlag) => vlag.toLowerCase().startsWith(`${naam.toLowerCase()}=`))
+      ?.split('=')[1];
+
+  it('draait een Traefik-versie waarvoor deze veldnamen gelden', () => {
+    // RequestPath, RequestLine en fields.defaultmode bestaan in v2 en v3.
+    expect(lees('docker-compose.prod.yml')).toMatch(/image:\s*traefik:v[23]\./);
+  });
+
+  it('laat standaard elk veld en elke kop weg', () => {
+    expect(waarde('--accesslog')).toBe('true');
+    expect(waarde('--accesslog.fields.defaultmode')).toBe('drop');
+    expect(waarde('--accesslog.fields.headers.defaultmode')).toBe('drop');
+  });
+
+  it('schrijft het pad met querystring en de Referer niet weg', () => {
+    const bewaard = accesslog()
+      .map((vlag) => /^--accesslog\.fields\.(?:headers\.)?names\.([^=]+)=(\w+)$/i.exec(vlag))
+      .filter((treffer): treffer is RegExpExecArray => !!treffer && treffer[2].toLowerCase() !== 'drop')
+      .map(([, veld]) => veld.toLowerCase());
+
+    for (const veld of ['requestpath', 'requestline', 'referer', 'cookie', 'authorization']) {
+      expect(bewaard).not.toContain(veld);
+    }
+    // Wat er wel in staat is genoeg om een storing terug te vinden.
+    expect(bewaard).toEqual(expect.arrayContaining(['requestmethod', 'downstreamstatus', 'routername', 'duration']));
+  });
+});
