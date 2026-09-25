@@ -1706,7 +1706,8 @@
     "restoring": "Restoring...",
     "restored": "Backup successfully restored. The page will reload.",
     "errorRestore": "Error restoring backup",
-    "confirmRestore": "Are you sure you want to restore the backup? This will overwrite all current data!"
+    "confirmRestore": "Are you sure you want to restore the backup? This will overwrite all current data!",
+    "encryptedDownload": "The download is encrypted (.zip.enc). It can only be restored on an installation with the same key (ENCRYPTION_SECRET). Keep that key somewhere other than on the server."
   },
   "settings": {
     "title": "Settings",

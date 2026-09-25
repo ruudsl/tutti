@@ -1724,7 +1724,8 @@
     "restoring": "Wird wiederhergestellt...",
     "restored": "Backup erfolgreich wiederhergestellt. Die Seite wird neu geladen.",
     "errorRestore": "Fehler beim Wiederherstellen des Backups",
-    "confirmRestore": "Sind Sie sicher, dass Sie das Backup wiederherstellen möchten? Dies überschreibt alle aktuellen Daten!"
+    "confirmRestore": "Sind Sie sicher, dass Sie das Backup wiederherstellen möchten? Dies überschreibt alle aktuellen Daten!",
+    "encryptedDownload": "Der Download ist verschlüsselt (.zip.enc). Er kann nur auf einer Installation mit demselben Schlüssel (ENCRYPTION_SECRET) wiederhergestellt werden. Bewahren Sie diesen Schlüssel an einem anderen Ort als auf dem Server auf."
   },
   "settings": {
     "title": "Einstellungen",

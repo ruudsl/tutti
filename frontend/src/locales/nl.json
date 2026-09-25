@@ -1678,7 +1678,8 @@
     "restoring": "Bezig met herstellen...",
     "restored": "Backup succesvol hersteld. De pagina wordt herladen.",
     "errorRestore": "Fout bij herstellen backup",
-    "confirmRestore": "Weet je zeker dat je de backup wilt herstellen? Dit overschrijft alle huidige data!"
+    "confirmRestore": "Weet je zeker dat je de backup wilt herstellen? Dit overschrijft alle huidige data!",
+    "encryptedDownload": "De download is versleuteld (.zip.enc). Je kunt hem alleen terugzetten op een installatie met dezelfde sleutel (ENCRYPTION_SECRET). Bewaar die sleutel ergens anders dan op de server."
   },
   "settings": {
     "title": "Instellingen",
