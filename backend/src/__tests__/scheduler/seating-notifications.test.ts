@@ -18,6 +18,8 @@ import testDb from '../testDb';
 import { createTestAssociation, TestAssociation } from '../testUtils';
 import { runNotificationRound } from '../../scheduler/seating-notifications';
 import { clearModuleCache } from '../../modules/service';
+import { encrypt } from '../../utils/encryption';
+import twilio from 'twilio';
 
 const whatsappVersturen = vi.hoisted(() => vi.fn());
 
@@ -213,6 +215,22 @@ describe('Melding met de opstelling', () => {
         'whatsapp:+31698765432',
       ]);
       expect(webhookAanroepen).not.toHaveBeenCalled();
+      expect(logRegels(repetitie)[0].status).toBe('sent');
+    });
+  });
+
+  describe('opgeslagen Twilio-token', () => {
+    it('geeft Twilio het ontsleutelde token, niet de opgeslagen cijfertekst', async () => {
+      const id = maakInstellingen(orkest, { type: 'whatsapp' });
+      testDb
+        .prepare('UPDATE seating_notification_settings SET twilio_auth_token = ? WHERE id = ?')
+        .run(encrypt('twilio-token-klaar'), id);
+      const repetitie = maakRepetitie(vereniging.id, orkest);
+      maakStoel(repetitie, 'Anna', 1, 0);
+
+      await runNotificationRound();
+
+      expect(vi.mocked(twilio)).toHaveBeenLastCalledWith('AC-test-sid', 'twilio-token-klaar');
       expect(logRegels(repetitie)[0].status).toBe('sent');
     });
   });

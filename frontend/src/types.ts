@@ -537,7 +537,7 @@ export interface SmtpConfig {
 
 /**
  * Telegram bot configuration for notifications.
- * @property tokenPreview - Partially masked bot token
+ * @property tokenPreview - Masker zonder tekens van het token; leeg als er geen is
  * @property configured - Whether bot token is set
  * @property enabled - Whether Telegram notifications are enabled
  */

@@ -20,6 +20,8 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import '../setup';
 import testDb from '../testDb';
+import twilio from 'twilio';
+import { decrypt, encrypt } from '../../utils/encryption';
 import seatingNotificationRoutes from '../../routes/seating-notifications';
 import { errorHandler } from '../../middleware/errorHandler';
 import {
@@ -300,7 +302,9 @@ describe('meldingen rond de opstelling - instellingen en verzending', () => {
       const rij = testDb
         .prepare('SELECT twilio_auth_token FROM seating_notification_settings WHERE orchestra_id = ?')
         .get(orkest.id) as { twilio_auth_token: string };
-      expect(rij.twilio_auth_token).toBe('nieuw-token');
+      // Versleuteld opgeslagen, en terug te lezen als de nieuwe waarde.
+      expect(rij.twilio_auth_token).not.toContain('nieuw-token');
+      expect(decrypt(rij.twilio_auth_token)).toBe('nieuw-token');
     });
 
     it('geeft het opgeslagen token nooit onvermomd terug', async () => {
@@ -531,6 +535,15 @@ describe('meldingen rond de opstelling - instellingen en verzending', () => {
         'whatsapp:+31698765432',
       ]);
       expect(webhookAanroepen).not.toHaveBeenCalled();
+    });
+
+    it('geeft Twilio het ontsleutelde token, niet de opgeslagen cijfertekst', async () => {
+      const repetitie = klaarVoorVerzending({ type: 'whatsapp', token: encrypt('twilio-token-klaar') });
+
+      const antwoord = await als(beheerderToken, 'post', `/send/${repetitie}`);
+
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+      expect(vi.mocked(twilio)).toHaveBeenLastCalledWith('AC-test-sid', 'twilio-token-klaar');
     });
 
     it('legt een mislukte WhatsApp-verzending vast', async () => {

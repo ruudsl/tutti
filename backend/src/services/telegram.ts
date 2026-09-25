@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { ontsleutelGeheim } from '../utils/encryption';
 import { beschermd, BeschermdOpties } from '../utils/veerkracht';
 
 // Telegram Bot API configuration (env var fallback)
@@ -149,8 +150,10 @@ export function getTelegramConfig(associationId?: string): { botToken: string; a
         .get(associationId) as { telegram_bot_token: string | null; telegram_enabled: number } | undefined;
 
       if (row && row.telegram_enabled && row.telegram_bot_token) {
-        const botToken = row.telegram_bot_token;
-        return { botToken, apiUrl: `https://api.telegram.org/bot${botToken}` };
+        // Niet terugvallen op het token van de installatie als dat van de
+        // vereniging onleesbaar is: dan gingen haar berichten via een andere bot.
+        const botToken = ontsleutelGeheim(row.telegram_bot_token, 'Telegram-bottoken');
+        return botToken ? { botToken, apiUrl: `https://api.telegram.org/bot${botToken}` } : null;
       }
     } catch (error) {
       logger.debug('getTelegramConfig: DB lookup failed, falling back to env', error);

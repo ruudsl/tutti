@@ -23,6 +23,7 @@ const productie = {
   // Een eentonig geheim als 'x'.repeat(32) start in productie niet meer (zie
   // jwt-geheim-productie.test.ts); daarom een willekeurig geheim.
   JWT_SECRET: crypto.randomBytes(48).toString('base64'),
+  ENCRYPTION_SECRET: crypto.randomBytes(48).toString('base64'),
   FRONTEND_URL: 'https://tutti.example.org',
 };
 

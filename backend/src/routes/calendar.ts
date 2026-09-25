@@ -7,6 +7,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { isModuleEnabled } from '../modules/service';
 import logger from '../utils/logger';
 import config from '../config';
+import { ontsleutelGeheim, versleutelGeheim } from '../utils/encryption';
 import {
   generateEventIcs,
   generateCalendarFeed,
@@ -475,7 +476,7 @@ router.get(
       const tokens = await exchangeGoogleCode(
         code,
         association.google_calendar_client_id,
-        association.google_calendar_client_secret,
+        ontsleutelGeheim(association.google_calendar_client_secret, 'Google-clientgeheim') || '',
         redirectUri,
       );
 
@@ -489,7 +490,12 @@ router.get(
                 google_calendar_id = 'primary'
             WHERE user_id = ?
         `,
-      ).run(tokens.accessToken, tokens.refreshToken, tokens.expiresAt.toISOString(), oauthState.user_id);
+      ).run(
+        versleutelGeheim(tokens.accessToken),
+        versleutelGeheim(tokens.refreshToken),
+        tokens.expiresAt.toISOString(),
+        oauthState.user_id,
+      );
 
       logger.info('Google Calendar connected', { userId: oauthState.user_id });
 
@@ -548,7 +554,10 @@ router.post(
       )
       .get(req.user!.id) as CalendarSettings | undefined;
 
-    if (!settings?.google_refresh_token) {
+    // Beide tokens staan versleuteld opgeslagen. Een onleesbaar vernieuwtoken
+    // is hetzelfde als geen koppeling: opnieuw koppelen lost het op.
+    const refreshToken = settings && ontsleutelGeheim(settings.google_refresh_token, 'Google-vernieuwtoken');
+    if (!settings || !refreshToken) {
       throw new ApiError(400, 'Google Calendar is niet gekoppeld.');
     }
 
@@ -568,16 +577,16 @@ router.post(
     }
 
     // Check if token needs refresh
-    let accessToken = settings.google_access_token!;
+    let accessToken = ontsleutelGeheim(settings.google_access_token, 'Google-toegangstoken') || '';
     if (settings.google_token_expires_at) {
       const expiresAt = new Date(settings.google_token_expires_at);
       if (expiresAt <= new Date()) {
         // Refresh token
         try {
           const newTokens = await refreshGoogleToken(
-            settings.google_refresh_token,
+            refreshToken,
             association.google_calendar_client_id,
-            association.google_calendar_client_secret,
+            ontsleutelGeheim(association.google_calendar_client_secret, 'Google-clientgeheim') || '',
           );
           accessToken = newTokens.accessToken;
 
@@ -587,7 +596,7 @@ router.post(
                     SET google_access_token = ?, google_token_expires_at = ?
                     WHERE user_id = ?
                 `,
-          ).run(accessToken, newTokens.expiresAt.toISOString(), req.user!.id);
+          ).run(versleutelGeheim(accessToken), newTokens.expiresAt.toISOString(), req.user!.id);
         } catch (err: any) {
           logger.error('Failed to refresh Google token', { error: err.message, userId: req.user!.id });
           throw new ApiError(401, 'Google authenticatie verlopen. Koppel opnieuw.');

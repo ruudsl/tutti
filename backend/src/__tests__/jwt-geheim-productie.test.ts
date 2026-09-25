@@ -23,6 +23,8 @@ async function laadConfig(omgeving: Record<string, string | undefined>) {
 const productie = (geheim: string | undefined) => ({
   NODE_ENV: 'production',
   JWT_SECRET: geheim,
+  // Ook verplicht in productie; zie versleutelgeheim-productie.test.ts.
+  ENCRYPTION_SECRET: crypto.randomBytes(48).toString('base64'),
   FRONTEND_URL: 'https://tutti.example.org',
 });
 

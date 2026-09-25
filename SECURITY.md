@@ -105,8 +105,10 @@ Wij vragen je om:
 ### Configuratie
 
 ```bash
-# Genereer een sterk JWT-geheim
+# Genereer een sterk JWT-geheim, en een ander geheim voor opgeslagen
+# wachtwoorden en tokens van koppelingen
 JWT_SECRET=$(openssl rand -base64 64)
+ENCRYPTION_SECRET=$(openssl rand -base64 64)
 
 # Stel rate limiting in
 RATE_LIMIT_MAX_REQUESTS=100
