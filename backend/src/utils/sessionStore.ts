@@ -7,6 +7,7 @@
  */
 
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import logger from './logger';
@@ -46,8 +47,14 @@ export function findSessionByTokenHash(tokenHash: string): SessionRecord | undef
  * and lazily from the auth middleware for tokens issued before session
  * tracking existed).
  *
- * @param expiresAt Optional explicit expiry (e.g. derived from the JWT `exp`).
- *                  Falls back to `expiresInDays` from now.
+ * De sessierij moet minstens zo lang bestaan als het token geldig is. Een
+ * ingetrokken sessie is alleen ingetrokken zolang haar rij er staat: is die
+ * opgeruimd, dan ziet de middleware een onbekend token en registreert het
+ * opnieuw - als geldig. Met een vaste zeven dagen gebeurde dat zodra
+ * JWT_EXPIRES_IN langer was. Daarom volgt de vervaldatum de `exp` van het
+ * token zelf, en is `expiresInDays` alleen een terugval voor een token zonder.
+ *
+ * @param expiresAt Optional explicit expiry. Defaults to the JWT `exp`.
  */
 export function registerSession(
   userId: string,
@@ -60,7 +67,7 @@ export function registerSession(
   const id = uuidv4();
   const tokenHash = hashToken(token);
 
-  let expiry = expiresAt;
+  let expiry = expiresAt ?? vervaldatumVanToken(token);
   if (!expiry) {
     expiry = new Date();
     expiry.setDate(expiry.getDate() + expiresInDays);
@@ -80,6 +87,15 @@ export function registerSession(
   rememberActivityWrite(tokenHash);
 
   return id;
+}
+
+/** De `exp` uit een JWT als datum, of undefined als het token er geen heeft. */
+function vervaldatumVanToken(token: string): Date | undefined {
+  const inhoud = jwt.decode(token);
+  if (inhoud && typeof inhoud === 'object' && typeof inhoud.exp === 'number') {
+    return new Date(inhoud.exp * 1000);
+  }
+  return undefined;
 }
 
 /**

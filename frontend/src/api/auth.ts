@@ -6,6 +6,17 @@ export const login = async (email: string, password: string, mfaCode?: string): 
   return data;
 };
 
+/**
+ * Trek de sessie van dit token aan de serverkant in.
+ *
+ * Het token gaat expliciet mee: de aanroeper wist het direct daarna uit
+ * localStorage, en de interceptor in client.ts leest het pas op het moment dat
+ * het verzoek echt vertrekt.
+ */
+export const logout = async (token: string): Promise<void> => {
+  await api.post('/auth/logout', undefined, { headers: { Authorization: `Bearer ${token}` } });
+};
+
 export const getProfile = async (): Promise<User> => {
   const { data } = await api.get('/auth/me');
   return data;

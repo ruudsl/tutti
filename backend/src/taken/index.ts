@@ -21,6 +21,7 @@ import { opschoonUur, runCleanup } from '../scheduler/gdpr-cleanup';
 import { getIntervalHours, isBackupEnabled, runBackup } from '../scheduler/backup';
 import { cleanupOldThumbnails } from '../routes/thumbnails';
 import { cleanupTempFiles } from '../routes/pdf-tools';
+import { WACHTWOORDHERSTEL_TAAK, verstuurWachtwoordHerstel } from '../routes/auth';
 
 const MINUUT = 60 * 1000;
 
@@ -30,6 +31,16 @@ export function tijdvak(soort: string, intervalMs: number) {
 }
 
 export function registreerStandaardTaken(): void {
+  // Een herstellink maken en mailen na 'wachtwoord vergeten'. Buiten het
+  // verzoek, zodat de looptijd van het antwoord niet verraadt of het adres
+  // bestaat. Versturen, dus niet herhaalbaar: wie geen mail krijgt, vraagt
+  // opnieuw.
+  registreerTaak<{ userId: string }>(WACHTWOORDHERSTEL_TAAK, {
+    herhaalbaar: false,
+    looptijdMs: 5 * MINUUT,
+    uitvoeren: (gegevens) => verstuurWachtwoordHerstel(gegevens),
+  });
+
   // Opstellingsmeldingen voor repetities: WhatsApp of webhook, vlak voor de
   // repetitie. Versturen, dus niet herhaalbaar.
   registreerTaak('opstelling-meldingen', {

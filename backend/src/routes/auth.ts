@@ -6,10 +6,25 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { generateSecret, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
 import db from '../database/connection';
-import { generateToken, authenticateToken, AuthRequest } from '../middleware/auth';
+import {
+  generateToken,
+  authenticateToken,
+  AuthRequest,
+  verenigingGesloten,
+  MELDING_NIET_ACTIEF,
+} from '../middleware/auth';
 import { registerSession, revokeUserSessions, hashToken } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
-import { loginSchema, changePasswordSchema } from '../validation/schemas';
+import { validate } from '../middleware/validate';
+import { loginSchema, changePasswordSchema, resetPasswordSchema } from '../validation/schemas';
+import {
+  inlogSleutel,
+  mfaSleutel,
+  registreerMislukking,
+  resterendeWachttijd,
+  wisMislukkingen,
+} from '../utils/inlogvertraging';
+import { plaatsTaak } from '../taken/wachtrij';
 import { sendPasswordResetEmail } from '../utils/email';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
@@ -29,7 +44,8 @@ const loginRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // Only failed attempts count toward the IP limit: brute force is covered
-  // by the per-account lockout, and a whole association behind one NAT
+  // by the progressive delay per address (utils/inlogvertraging.ts), and a
+  // whole association behind one NAT
   // would otherwise hit the limit after 5 successful logins.
   skipSuccessfulRequests: true,
   // The limiter's in-memory store persists across tests within a file,
@@ -84,16 +100,18 @@ interface User {
   association_id: string | null;
   mfa_secret: string | null;
   mfa_enabled: boolean;
-  failed_login_attempts: number | null;
-  locked_until: string | null;
 }
 
-// Account lockout: from this many failed attempts on, the account is locked
-const LOCKOUT_THRESHOLD = 5;
-const LOCKOUT_BASE_MINUTES = 15;
-const LOCKOUT_MAX_MINUTES = 24 * 60; // 24 hours
-
 const GENERIC_LOCKOUT_MESSAGE = 'Te veel mislukte pogingen, probeer later opnieuw.';
+const ONGELDIGE_INLOG = 'Ongeldige inloggegevens.';
+
+/**
+ * Een hash om tegen te vergelijken als het adres onbekend is, met dezelfde
+ * kosten (10) als echte wachtwoordhashes. Zonder die vergelijking antwoordde
+ * een onbekend adres merkbaar sneller dan een bekend adres met een verkeerd
+ * wachtwoord, en was aan de looptijd af te lezen welke adressen bestaan.
+ */
+const VERGELIJKHASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10);
 
 /**
  * Verify a TOTP code. verifySync can throw on malformed input (e.g. a
@@ -112,31 +130,37 @@ function hashResetToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-function isAccountLocked(user: User): boolean {
-  if (!user.locked_until) return false;
-  const lockedUntil = new Date(user.locked_until).getTime();
-  return !isNaN(lockedUntil) && lockedUntil > Date.now();
+/**
+ * Weiger met 429 zolang voor een van deze sleutels een wachttijd loopt. Het
+ * antwoord hangt alleen af van de sleutel (adres + IP, of het account bij de
+ * tweede stap), nooit van of het adres bestaat.
+ */
+function weigerTijdensWachttijd(res: Response, ...sleutels: string[]): void {
+  const wachttijdMs = Math.max(0, ...sleutels.map((sleutel) => resterendeWachttijd(sleutel)));
+  if (wachttijdMs > 0) {
+    res.set('Retry-After', String(Math.ceil(wachttijdMs / 1000)));
+    throw new ApiError(429, GENERIC_LOCKOUT_MESSAGE);
+  }
 }
 
 /**
- * Record a failed login attempt. From LOCKOUT_THRESHOLD attempts on, the
- * account is locked exponentially: 5 attempts -> 15 min, each subsequent
- * failed attempt doubles the lock, capped at 24 hours.
+ * Leg een mislukte poging vast (wachtwoord of tweede stap) voor een bestaand
+ * account: tellen voor de wachttijd, en in het auditlogboek.
  */
-function recordFailedLoginAttempt(user: User, ipAddress?: string, userAgent?: string): void {
-  const attempts = (user.failed_login_attempts || 0) + 1;
-
-  let lockedUntil: string | null = null;
-  if (attempts >= LOCKOUT_THRESHOLD) {
-    const lockMinutes = Math.min(LOCKOUT_BASE_MINUTES * Math.pow(2, attempts - LOCKOUT_THRESHOLD), LOCKOUT_MAX_MINUTES);
-    lockedUntil = new Date(Date.now() + lockMinutes * 60 * 1000).toISOString();
+function recordFailedLoginAttempt(
+  user: User,
+  sleutels: string[],
+  stap: 'password' | 'mfa',
+  ipAddress?: string,
+  userAgent?: string,
+): void {
+  let failedAttempts = 0;
+  let wachttijdMs = 0;
+  for (const sleutel of sleutels) {
+    const stand = registreerMislukking(sleutel);
+    failedAttempts = Math.max(failedAttempts, stand.mislukt);
+    wachttijdMs = Math.max(wachttijdMs, stand.wachttijdMs);
   }
-
-  db.prepare('UPDATE users SET failed_login_attempts = ?, locked_until = ? WHERE id = ?').run(
-    attempts,
-    lockedUntil,
-    user.id,
-  );
 
   logAuditEvent(
     user.id,
@@ -144,7 +168,7 @@ function recordFailedLoginAttempt(user: User, ipAddress?: string, userAgent?: st
     'user',
     user.id,
     `${user.first_name} ${user.last_name}`,
-    { failedAttempts: attempts, lockedUntil },
+    { step: stap, failedAttempts, delaySeconds: Math.ceil(wachttijdMs / 1000) },
     ipAddress,
     userAgent,
   );
@@ -184,38 +208,34 @@ router.post(
   '/login',
   loginRateLimiter,
   asyncHandler(async (req, res) => {
-    const { email, password, mfaCode } = req.body;
+    const { email, password } = req.body;
+    // Alleen tekst telt als code; iets anders is geen poging maar ontbreekt.
+    const mfaCode: string | undefined =
+      typeof req.body.mfaCode === 'string' && req.body.mfaCode !== '' ? req.body.mfaCode : undefined;
 
     // Validate basic login credentials
     loginSchema.parse({ email, password });
+
+    // Wachttijd na eerdere mislukkingen, per opgegeven adres en IP-adres.
+    // Vóór het opzoeken van de gebruiker: een onbekend adres krijgt precies
+    // hetzelfde antwoord als een bekend.
+    const sleutel = inlogSleutel(email, req.ip);
+    weigerTijdensWachttijd(res, sleutel);
 
     const user = db.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL').get(email) as
       User | undefined;
 
     if (!user) {
-      throw new ApiError(401, 'Ongeldige inloggegevens.');
-    }
-
-    // Account lockout check BEFORE password verification, with a generic
-    // message that doesn't reveal whether the password was correct.
-    if (isAccountLocked(user)) {
-      logAuditEvent(
-        user.id,
-        'login_blocked',
-        'user',
-        user.id,
-        `${user.first_name} ${user.last_name}`,
-        { reason: 'account_locked', lockedUntil: user.locked_until },
-        req.ip,
-        req.get('user-agent'),
-      );
-      throw new ApiError(429, GENERIC_LOCKOUT_MESSAGE);
+      // Evenveel werk als bij een bestaand adres, en dezelfde telling.
+      bcrypt.compareSync(password, VERGELIJKHASH);
+      registreerMislukking(sleutel);
+      throw new ApiError(401, ONGELDIGE_INLOG);
     }
 
     const validPassword = bcrypt.compareSync(password, user.password_hash);
     if (!validPassword) {
-      recordFailedLoginAttempt(user, req.ip, req.get('user-agent'));
-      throw new ApiError(401, 'Ongeldige inloggegevens.');
+      recordFailedLoginAttempt(user, [sleutel], 'password', req.ip, req.get('user-agent'));
+      throw new ApiError(401, ONGELDIGE_INLOG);
     }
 
     // `role` regelt wat je mag, `status` of je binnenkomt - en die tweede helft
@@ -229,18 +249,22 @@ router.post(
     // 'pending' blijft toegestaan: een gepromoveerd contact (routes/contacts.ts)
     // krijgt die status met een wachtwoord dat niemand kent, en komt alleen
     // binnen via 'wachtwoord vergeten'. Dat pad moet open blijven.
-    if (user.status === 'inactive') {
+    //
+    // Hetzelfde voor een gedeactiveerde vereniging (associations.is_active = 0):
+    // haar leden komen er niet in, een superbeheerder wel.
+    const verenigingDicht = user.status !== 'inactive' && verenigingGesloten(user.association_id, user.id);
+    if (user.status === 'inactive' || verenigingDicht) {
       logAuditEvent(
         user.id,
         'login_blocked',
         'user',
         user.id,
         `${user.first_name} ${user.last_name}`,
-        { reason: 'account_inactive' },
+        { reason: verenigingDicht ? 'association_inactive' : 'account_inactive' },
         req.ip,
         req.get('user-agent'),
       );
-      throw new ApiError(403, 'Dit account is niet meer actief. Neem contact op met je vereniging.');
+      throw new ApiError(403, MELDING_NIET_ACTIEF);
     }
 
     // Check if MFA is enabled
@@ -254,6 +278,12 @@ router.post(
         });
       }
 
+      // De tweede stap heeft naast de teller per adres en IP-adres ook een
+      // teller per account. Zes cijfers zijn anders met genoeg IP-adressen te
+      // raden; en alleen wie het wachtwoord al heeft, komt hier.
+      const accountSleutel = mfaSleutel(user.id);
+      weigerTijdensWachttijd(res, sleutel, accountSleutel);
+
       // The secret is stored encrypted; legacy installs may still hold plaintext
       const { secret: mfaSecret, wasPlaintext } = revealMfaSecret(user.mfa_secret);
 
@@ -263,6 +293,7 @@ router.post(
       if (!totpValid) {
         const recoveryCodeUsed = consumeRecoveryCode(user.id, mfaCode);
         if (!recoveryCodeUsed) {
+          recordFailedLoginAttempt(user, [sleutel, accountSleutel], 'mfa', req.ip, req.get('user-agent'));
           throw new ApiError(401, 'Ongeldige MFA code.');
         }
 
@@ -287,14 +318,14 @@ router.post(
           db.prepare('UPDATE users SET mfa_secret = ? WHERE id = ?').run(protectedSecret, user.id);
         }
       }
+
+      wisMislukkingen(accountSleutel);
     }
 
-    // Successful login (password + optional MFA verified):
-    // update last login timestamp and reset the failed-attempts counter
-    db.prepare('UPDATE users SET last_login = ?, failed_login_attempts = 0, locked_until = NULL WHERE id = ?').run(
-      new Date().toISOString(),
-      user.id,
-    );
+    // Successful login (password + optional MFA verified): the delay for this
+    // address and IP starts over, and the last login is recorded.
+    wisMislukkingen(sleutel);
+    db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(new Date().toISOString(), user.id);
 
     // Generate token and return user data
     const token = generateToken(user);
@@ -326,6 +357,59 @@ router.post(
         mfaEnabled: Boolean(user.mfa_enabled),
       },
     });
+  }),
+);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Log out and revoke the current session
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Session revoked
+ *       401:
+ *         description: Not authenticated
+ */
+router.post(
+  '/logout',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Uitloggen wiste alleen het token in de browser. Het token zelf bleef
+    // geldig tot het verliep: wie het had afgeluisterd of uit een gedeelde
+    // browser had gehaald, kon ermee door. Nu wordt de sessie aan de
+    // serverkant ingetrokken, zoals bij een wachtwoordwijziging - alleen deze
+    // ene, niet de andere apparaten van de gebruiker.
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined;
+    if (!token) {
+      // Alleen de Authorization-kopregel: een token uit de URL is alleen
+      // geldig bij lezen (zie authenticateToken), en dit is geen lezen.
+      throw new ApiError(400, 'Geen geldig token.');
+    }
+
+    const result = db
+      .prepare(
+        `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
+          WHERE token_hash = ? AND user_id = ? AND revoked_at IS NULL`,
+      )
+      .run(hashToken(token), req.user!.id);
+
+    logAuditEvent(
+      req.user!.id,
+      'logout',
+      'user',
+      req.user!.id,
+      'Uitgelogd',
+      { revokedCount: result.changes },
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({ message: 'Uitgelogd.' });
   }),
 );
 
@@ -898,9 +982,8 @@ router.post(
     const successMessage =
       'Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een e-mail met instructies.';
 
-    const user = db
-      .prepare('SELECT id, first_name, last_name, association_id FROM users WHERE email = ? AND deleted_at IS NULL')
-      .get(email) as { id: string; first_name: string; last_name: string; association_id: string | null } | undefined;
+    const user = db.prepare('SELECT id FROM users WHERE email = ? AND deleted_at IS NULL').get(email) as
+      { id: string } | undefined;
 
     if (!user) {
       // Don't reveal that email doesn't exist
@@ -908,39 +991,66 @@ router.post(
       return res.json({ message: successMessage });
     }
 
-    // Invalidate any existing tokens for this user
-    db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE user_id = ? AND used = 0').run(user.id);
-
-    // Generate secure token
-    const token = crypto.randomBytes(32).toString('hex');
-    const tokenId = uuidv4();
-
-    // Token expires in 1 hour
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1);
-
-    // Store only the SHA-256 hash of the token; the plaintext token exists
-    // solely in the e-mail sent to the user.
-    db.prepare(
-      `
-        INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
-        VALUES (?, ?, ?, ?)
-    `,
-    ).run(tokenId, user.id, hashResetToken(token), expiresAt.toISOString());
-
-    // Send email
-    const userName = `${user.first_name} ${user.last_name}`;
-    const emailSent = await sendPasswordResetEmail(email, token, userName, user.association_id);
-
-    if (!emailSent) {
-      logger.error(`Failed to send password reset email for user ${user.id}`);
-    }
-
-    logger.info(`Password reset token generated for user ${user.id}`);
+    // Het token maken en de mail versturen gebeurt in de wachtrij, niet
+    // tijdens dit verzoek. Wachten op de mailserver maakte het antwoord voor
+    // een bestaand adres merkbaar trager dan voor een onbekend, en zo was aan
+    // de looptijd af te lezen welke adressen bestaan. In de taak staat alleen
+    // het id; het token zelf ontstaat pas bij het versturen, zodat het nergens
+    // leesbaar wordt opgeslagen.
+    plaatsTaak(WACHTWOORDHERSTEL_TAAK, { userId: user.id });
 
     res.json({ message: successMessage });
   }),
 );
+
+/** De soort van de taak die een herstellink maakt en verstuurt (taken/index.ts). */
+export const WACHTWOORDHERSTEL_TAAK = 'wachtwoordherstel-mail';
+
+/**
+ * Maak een herstellink voor deze gebruiker en verstuur hem. Draait in de
+ * wachtrij; versturen is niet herhaalbaar, dus een mislukte mail gooit en
+ * staat daarna als mislukt in de wachtrij.
+ */
+export async function verstuurWachtwoordHerstel(gegevens: { userId: string }): Promise<void> {
+  const user = db
+    .prepare('SELECT id, email, first_name, last_name, association_id FROM users WHERE id = ? AND deleted_at IS NULL')
+    .get(gegevens.userId) as
+    { id: string; email: string; first_name: string; last_name: string; association_id: string | null } | undefined;
+
+  if (!user) {
+    // Intussen verwijderd: niets te versturen.
+    return;
+  }
+
+  // Invalidate any existing tokens for this user
+  db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE user_id = ? AND used = 0').run(user.id);
+
+  // Generate secure token
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenId = uuidv4();
+
+  // Token expires in 1 hour
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + 1);
+
+  // Store only the SHA-256 hash of the token; the plaintext token exists
+  // solely in the e-mail sent to the user.
+  db.prepare(
+    `
+      INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
+      VALUES (?, ?, ?, ?)
+  `,
+  ).run(tokenId, user.id, hashResetToken(token), expiresAt.toISOString());
+
+  const userName = `${user.first_name} ${user.last_name}`;
+  const emailSent = await sendPasswordResetEmail(user.email, token, userName, user.association_id);
+
+  if (!emailSent) {
+    throw new Error(`Herstelmail kon niet worden verstuurd voor gebruiker ${user.id}`);
+  }
+
+  logger.info(`Password reset token generated for user ${user.id}`);
+}
 
 /**
  * @swagger
@@ -976,16 +1086,9 @@ router.post(
  */
 router.post(
   '/reset-password',
+  validate(resetPasswordSchema),
   asyncHandler(async (req, res) => {
-    const { token, newPassword } = req.body;
-
-    if (!token || !newPassword) {
-      throw new ApiError(400, 'Token en nieuw wachtwoord zijn verplicht.');
-    }
-
-    if (newPassword.length < 8) {
-      throw new ApiError(400, 'Wachtwoord moet minimaal 8 tekens bevatten.');
-    }
+    const { token, newPassword } = req.body as { token: string; newPassword: string };
 
     // Find valid token. Only hashes are stored, so the supplied token is
     // hashed for the lookup; legacy plaintext rows simply never match.
@@ -1015,11 +1118,10 @@ router.post(
     // Hash new password
     const passwordHash = bcrypt.hashSync(newPassword, 10);
 
-    // Update password. Also reset the failed-login lockout: the user has
-    // proven ownership of the e-mail address.
+    // Update password
     db.prepare(
       `
-        UPDATE users SET password_hash = ?, password_changed_at = ?, failed_login_attempts = 0, locked_until = NULL
+        UPDATE users SET password_hash = ?, password_changed_at = ?
         WHERE id = ?
     `,
     ).run(passwordHash, new Date().toISOString(), resetToken.user_id);

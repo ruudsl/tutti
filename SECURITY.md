@@ -58,7 +58,8 @@ Wij vragen je om:
 - **TOTP MFA** — Optionele tweefactorauthenticatie via authenticator-app
 - **Microsoft SSO** — Azure Entra ID integratie voor enterprise-omgevingen
 - **Rolgebaseerde toegang** — Fijnmazige permissies per gebruikersrol
-- **Sessie-beheer** — Actieve sessies kunnen worden bekeken en ingetrokken
+- **Sessie-beheer** — Actieve sessies kunnen worden bekeken en ingetrokken; uitloggen trekt de sessie ook aan de serverkant in
+- **Wachtwoordbeleid** — Minimaal 8 tekens, overal waar een wachtwoord wordt gezet
 
 ### Invoervalidatie & Bescherming
 
@@ -72,6 +73,7 @@ Wij vragen je om:
 
 - **Per-IP en per-gebruiker limieten** — Bescherming tegen brute-force aanvallen
 - **Authenticatie-specifieke limieten** — Stricter voor login-endpoints
+- **Oplopende wachttijd bij inloggen** — Mislukte pogingen (wachtwoord en MFA-code) leiden tot een wachttijd per e-mailadres en IP-adres, met een bovengrens; geen accountslot dat een derde kan veroorzaken, en hetzelfde antwoord voor bekende en onbekende adressen
 - **Configureerbaar** — Aanpasbaar via omgevingsvariabelen
 
 ### Bestandsuploads

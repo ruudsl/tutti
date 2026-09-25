@@ -76,8 +76,14 @@ Geregistreerd in `backend/src/taken/index.ts`; het werk zelf staat nog onder
 | `database-back-up`        | Elke `BACKUP_INTERVAL_HOURS` (standaard 24 u) | ja, 3×      |
 | `miniaturen-opruimen`     | Eén keer per dag                              | ja, 3×      |
 | `pdf-tijdelijk-opruimen`  | Elk uur                                       | ja, 3×      |
+| `wachtwoordherstel-mail`  | Na elke aanvraag bij 'wachtwoord vergeten'    | nee         |
 
 De back-up wordt niet ingepland als `BACKUP_ENABLED=false`.
+
+`wachtwoordherstel-mail` is geen periodieke taak: `POST /auth/forgot-password`
+zet hem klaar voor een bestaand adres. Het token ontstaat pas in de taak, zodat
+het nergens leesbaar in de wachtrij staat, en het verzoek zelf wacht niet op de
+mailserver - anders verraadt de looptijd welke adressen bestaan.
 
 De twee opruimtaken stonden eerst als `setInterval` in `routes/thumbnails.ts`
 en `routes/pdf-tools.ts`, en begonnen al te lopen zodra die bestanden werden

@@ -19,6 +19,27 @@ export interface AuthRequest extends Request {
   user?: UserPayload;
 }
 
+/** Zelfde melding als bij een lid uit dienst: een gesloten vereniging sluit haar leden buiten. */
+export const MELDING_NIET_ACTIEF = 'Dit account is niet meer actief. Neem contact op met je vereniging.';
+
+/**
+ * Is deze vereniging gedeactiveerd (associations.is_active = 0) voor deze
+ * gebruiker?
+ *
+ * Een superbeheerder is uitgezonderd: die moet een gesloten vereniging kunnen
+ * bekijken en weer openzetten. Zonder vereniging (null) is er niets te sluiten.
+ */
+export function verenigingGesloten(associationId: string | null | undefined, userId: string): boolean {
+  if (!associationId) return false;
+  const vereniging = db.prepare('SELECT is_active FROM associations WHERE id = ?').get(associationId) as
+    { is_active: number | null } | undefined;
+  if (!vereniging || vereniging.is_active === null || Number(vereniging.is_active) !== 0) {
+    return false;
+  }
+  const superbeheerder = db.prepare('SELECT 1 FROM super_admins WHERE user_id = ?').get(userId);
+  return !superbeheerder;
+}
+
 /**
  * Controleer een token tegen user_sessions én tegen de gebruiker zelf.
  *
@@ -30,6 +51,8 @@ export interface AuthRequest extends Request {
  *   de routes om uit dienst ging (of waarbij het intrekken mislukte) hield
  *   daardoor zijn token tot het verliep. 'pending' blijft toegestaan, net als
  *   bij het inloggen (routes/auth.ts).
+ * - Een token voor een gedeactiveerde vereniging -> ongeldig, behalve voor
+ *   een superbeheerder (verenigingGesloten).
  * - Een bekende sessie -> geldig (last_active wordt bijgewerkt, gedoseerd).
  * - Geen sessierij (token van voor de sessieregistratie): alleen geldig als
  *   het token na de laatste wachtwoordwijziging is uitgegeven; dan wordt het
@@ -74,7 +97,14 @@ export function validateSession(
   }
 
   if (user.status === 'inactive') {
-    return 'Dit account is niet meer actief. Neem contact op met je vereniging.';
+    return MELDING_NIET_ACTIEF;
+  }
+
+  // Een gedeactiveerde vereniging: haar leden komen er niet meer in, ook niet
+  // met een token van voor het deactiveren. De vereniging uit het token telt,
+  // want die bepaalt waar dit verzoek over gaat.
+  if (verenigingGesloten(decoded.associationId, user.id)) {
+    return MELDING_NIET_ACTIEF;
   }
 
   if (session) {
@@ -185,17 +215,17 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 
   try {
-    // De kopregel rechtstreeks lezen en niet via req.get(): dat is een aanroep
-    // die kan gooien, en een fout hier valt in de catch hieronder - die de
-    // sessiecontrole overslaat. Een ingetrokken sessie zou dan doorkomen.
     const sessionError = validateSession(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] });
     if (sessionError) {
       return res.status(401).json({ error: sessionError });
     }
   } catch (error) {
-    // Infrastructure error (e.g. database not initialized yet): don't lock
-    // everyone out, but log it. Explicit revocations are handled above.
-    logger.warn('Session validation skipped due to error:', error);
+    // Kan de sessie niet worden nagekeken (databasefout), dan gaat het verzoek
+    // niet door. Doorlaten zou betekenen dat een ingetrokken sessie, een lid
+    // uit dienst of een gesloten vereniging juist dan binnenkomt. 503 en geen
+    // 401: de gebruiker is niet afgemeld, de dienst is even niet beschikbaar.
+    logger.error('Sessiecontrole mislukt; verzoek geweigerd:', error);
+    return res.status(503).json({ error: 'De dienst is tijdelijk niet beschikbaar. Probeer het zo opnieuw.' });
   }
 
   // Rol en vereniging komen uit het token. Wie een rol, wachtwoord of
@@ -360,33 +390,32 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
     return next();
   }
 
+  let decoded: DecodedToken;
   try {
-    const decoded = jwt.verify(token, config.jwtSecret) as DecodedToken;
+    decoded = jwt.verify(token, config.jwtSecret) as DecodedToken;
+  } catch {
+    // Ignore invalid tokens in optional auth
+    return next();
+  }
 
-    // Don't attach a user for an explicitly revoked session, or for a user
-    // who is deleted or inactive (zelfde regel als validateSession).
-    try {
-      const session = findSessionByTokenHash(hashToken(token));
-      if (session?.revoked_at) {
-        return next();
-      }
-      const gebruiker = db.prepare('SELECT status, deleted_at FROM users WHERE id = ?').get(decoded.id) as
-        { status: string | null; deleted_at: string | null } | undefined;
-      if (!gebruiker || gebruiker.deleted_at || gebruiker.status === 'inactive') {
-        return next();
-      }
-    } catch (error) {
-      logger.warn('Optional auth session check skipped due to error:', error);
-    }
+  // Dezelfde regels als authenticateToken: geen gebruiker bij een
+  // ingetrokken sessie, een lid dat weg of uit dienst is, of een gesloten
+  // vereniging. Lukt de controle niet (databasefout), dan ook geen gebruiker:
+  // het verzoek gaat dan anoniem verder.
+  let sessieGeldig = false;
+  try {
+    sessieGeldig = validateSession(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] }) === null;
+  } catch (error) {
+    logger.error('Sessiecontrole bij optionele aanmelding mislukt; verzoek gaat anoniem verder:', error);
+  }
 
+  if (sessieGeldig) {
     req.user = {
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
       associationId: decoded.associationId,
     };
-  } catch {
-    // Ignore invalid tokens in optional auth
   }
 
   next();
