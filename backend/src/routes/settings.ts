@@ -587,6 +587,10 @@ router.put(
       throw new ApiError(400, 'Poort moet tussen 1 en 65535 liggen.');
     }
 
+    // Een host die naar een intern adres wijst, weigert het versturen later
+    // toch; zonder deze controle ging daarna elke mail stil verloren.
+    await controleerSmtpHost(host);
+
     // Check if there's an existing password stored
     const existing = db.prepare('SELECT smtp_pass FROM associations WHERE id = ?').get(req.user!.associationId) as any;
 
