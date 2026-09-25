@@ -14,6 +14,10 @@ Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 - **Traefik:** Das Label `frameDeny` ist durch `customFrameOptionsValue=SAMEORIGIN` ersetzt. Der öffentliche Kalender lässt sich nicht mehr in einem iframe auf einer anderen Website anzeigen.
 - **Das Zugriffsprotokoll von nginx** hat ein eigenes Format ohne Query-String und ohne Referer. Werkzeuge, die das Standardformat erwarten (fail2ban, GoAccess), müssen angepasst werden.
 - **Mitglieder mit einem vorläufigen Passwort** aus der Aufnahme werden bei der nächsten Anmeldung zu ihrem Profil geleitet, um es zu ändern. Tutti speichert dieses vorläufige Passwort nicht mehr.
+- **Ein Anmeldetoken in einer Adresse funktioniert nirgends mehr**, auch nicht bei Downloads (in 1.18.0 ging das bei GET noch). Eigene Skripte senden das Token im Header `Authorization`. Die Kalender-Feeds funktionieren unverändert.
+- **Ein eigener SMTP-Server eines Vereins unter einer internen Adresse** (zum Beispiel ein Relay im Docker-Netzwerk) wird abgelehnt, beim Speichern und beim Versenden. Der SMTP-Server der Installation (`SMTP_*`) ist davon nicht betroffen.
+- **Google Kalender verbinden** braucht `GOOGLE_CALENDAR_CLIENT_ID` und `GOOGLE_CALENDAR_CLIENT_SECRET` in der Umgebung der Installation sowie `<FRONTEND_URL>/api/calendar/google/callback` als Redirect-URI bei Google.
+- **Das Zugriffsprotokoll von Traefik** speichert den Pfad nicht mehr.
 
 ### Hinzugefügt
 
@@ -26,6 +30,8 @@ Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 - **Passwörter haben überall mindestens 8 Zeichen.**
 - **Die E-Mail bei _Passwort vergessen_** läuft über die Warteschlange und kann einige Sekunden später ankommen.
 - **Mitglieder eines deaktivierten Vereins** kommen nicht mehr hinein; der Kalender-Feed eines ausgeschiedenen Mitglieds endet.
+- **Wer ein vorläufiges Passwort hat** (aus der Aufnahme oder von einem Administrator, der das Mitglied anlegt oder ein Passwort für es setzt), wählt bei der nächsten Anmeldung ein eigenes Passwort und kann bis dahin nur sein Profil nutzen.
+- **Google Kalender verbinden funktioniert**, wenn die Installation es eingerichtet hat (siehe _Beim Aktualisieren beachten_). Vorher meldete die Schaltfläche immer, es sei nicht eingerichtet.
 
 ### Behoben
 
@@ -41,6 +47,11 @@ Aus der eigenen Sicherheitsprüfung im September:
 - **Sicherheits-Header** kommen jetzt auch mit den Seiten des Frontends, nicht nur mit der API.
 - **Adressen, die der Server selbst aufruft** (Webhooks), werden strenger geprüft, auch in IPv6-Formen, und die Verbindung geht genau an die geprüfte Adresse.
 - **Geheimnisse von Anbindungen** werden verschlüsselt gespeichert, und die Einstellungsseiten zeigen keine Zeichen eines Tokens mehr.
+- **MP3s** werden mit einem kurzlebigen Token abgespielt, das nur für diese eine Datei gilt, statt mit dem Anmeldetoken in der Adresse.
+- **Die Wartezeit nach Fehlversuchen** übersteht einen Neustart. Dafür wird keine E-Mail- oder IP-Adresse lesbar gespeichert.
+- **Der SMTP-Server eines Vereins** wird genau unter der geprüften Adresse verbunden.
+- **Die Webhook-Adresse der Aufstellungsbenachrichtigungen** wird verschlüsselt gespeichert und nicht mehr an den Browser gesendet.
+- **Namen und Text in Benachrichtigungs-E-Mails, Umfrage-Erinnerungen, Workflows und E-Mail-Kampagnen** werden sicher ins HTML gesetzt.
 
 #### DSGVO
 

@@ -14,6 +14,10 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 - **Traefik:** het label `frameDeny` is vervangen door `customFrameOptionsValue=SAMEORIGIN`. De openbare agenda is niet meer in een iframe op een andere site te tonen.
 - **Het toegangslogboek van nginx** gebruikt een eigen formaat zonder querystring en zonder Referer. Hulpmiddelen die het standaardformaat verwachten (fail2ban, GoAccess) moeten worden aangepast.
 - **Leden met een tijdelijk wachtwoord** van de aanmelding worden bij de volgende keer inloggen naar hun profiel gestuurd om het te wijzigen. Tutti bewaart dat tijdelijke wachtwoord niet meer.
+- **Een inlogtoken in een adres werkt nergens meer**, ook niet bij downloads (in 1.18.0 kon dat nog bij GET). Eigen scripts zetten het token in de kopregel `Authorization`. De agendafeeds werken ongewijzigd.
+- **Een eigen SMTP-server van een vereniging op een intern adres** (bijvoorbeeld een relay in het Docker-netwerk) wordt geweigerd, bij het opslaan en bij het versturen. De SMTP-server van de installatie (`SMTP_*`) valt hier niet onder.
+- **Google Agenda koppelen** vraagt `GOOGLE_CALENDAR_CLIENT_ID` en `GOOGLE_CALENDAR_CLIENT_SECRET` in de omgeving van de installatie, en `<FRONTEND_URL>/api/calendar/google/callback` als redirect-URI bij Google.
+- **Het toegangslogboek van Traefik** bewaart het pad niet meer.
 
 ### Toegevoegd
 
@@ -26,6 +30,8 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 - **Wachtwoorden zijn overal minstens 8 tekens.**
 - **De mail bij _Wachtwoord vergeten_** gaat via de wachtrij en kan een paar tellen later aankomen.
 - **Leden van een gedeactiveerde vereniging** komen er niet meer in; de agendafeed van een lid dat uit dienst is, stopt.
+- **Wie een tijdelijk wachtwoord heeft** (van de aanmelding, van een beheerder die het lid aanmaakt of een wachtwoord voor hem instelt) kiest bij de volgende keer inloggen een eigen wachtwoord, en kan tot dan alleen zijn profiel gebruiken.
+- **Google Agenda koppelen werkt**, als de installatie het heeft ingesteld (zie _Let op bij bijwerken_). Eerder meldde de knop altijd dat het niet was ingesteld.
 
 ### Opgelost
 
@@ -41,6 +47,11 @@ Uit de eigen beveiligingsreview van september:
 - **Beveiligingskoppen** komen nu ook mee met de pagina's van de frontend, niet alleen met de API.
 - **Adressen die de server zelf aanroept** (webhooks) worden strenger gecontroleerd, ook op IPv6-vormen, en de verbinding gaat naar precies het gecontroleerde adres.
 - **Koppelingsgeheimen** staan versleuteld in de database, en de instellingenschermen tonen geen tekens van een token meer.
+- **Mp3's** worden afgespeeld met een kortlevend token dat alleen voor dat ene bestand geldt, in plaats van met het inlogtoken in het adres.
+- **De wachttijd na foute inlogpogingen** overleeft een herstart. Er wordt geen e-mailadres of IP-adres leesbaar voor bewaard.
+- **De SMTP-server van een vereniging** krijgt de verbinding op precies het gecontroleerde adres.
+- **Het webhook-adres van de opstellingsmeldingen** staat versleuteld opgeslagen en gaat niet meer naar de browser.
+- **Namen en tekst in meldingsmails, peilingherinneringen, workflows en e-mailcampagnes** worden veilig in de HTML gezet.
 
 #### AVG
 

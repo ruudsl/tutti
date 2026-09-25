@@ -14,6 +14,10 @@ All notable changes to this application are documented here.
 - **Traefik:** the `frameDeny` label is replaced by `customFrameOptionsValue=SAMEORIGIN`. The public calendar can no longer be shown in an iframe on another site.
 - **The nginx access log** uses its own format without query string and Referer. Tools that expect the default format (fail2ban, GoAccess) need adjusting.
 - **Members with a temporary password** from onboarding are sent to their profile to change it at their next login. Tutti no longer stores that temporary password.
+- **A login token in a URL no longer works anywhere**, not even for downloads (1.18.0 still allowed it for GET). Your own scripts send the token in the `Authorization` header. Calendar feeds are unchanged.
+- **An association's own SMTP server on an internal address** (for example a relay on the Docker network) is refused, when saving and when sending. The installation's SMTP server (`SMTP_*`) is not affected.
+- **Connecting Google Calendar** needs `GOOGLE_CALENDAR_CLIENT_ID` and `GOOGLE_CALENDAR_CLIENT_SECRET` in the installation's environment, and `<FRONTEND_URL>/api/calendar/google/callback` as redirect URI at Google.
+- **The Traefik access log** no longer stores the path.
 
 ### Added
 
@@ -26,6 +30,8 @@ All notable changes to this application are documented here.
 - **Passwords are at least 8 characters everywhere.**
 - **The _Forgot password_ e-mail** goes through the queue and may arrive a few seconds later.
 - **Members of a deactivated association** can no longer get in; the calendar feed of a member who has left stops.
+- **Anyone with a temporary password** (from onboarding, or from an admin who creates the member or sets a password for them) chooses their own password at the next login, and can only use their profile until then.
+- **Connecting Google Calendar works** if the installation has set it up (see _Note when upgrading_). Before, the button always said it was not configured.
 
 ### Fixed
 
@@ -41,6 +47,11 @@ From our own security review in September:
 - **Security headers** now come with the frontend's pages, not just with the API.
 - **Addresses the server calls itself** (webhooks) are checked more strictly, including IPv6 forms, and the connection goes to exactly the checked address.
 - **Integration secrets** are stored encrypted, and the settings screens no longer show any characters of a token.
+- **MP3s** are played with a short-lived token that is valid for that one file only, instead of the login token in the URL.
+- **The wait after failed logins** survives a restart. No e-mail or IP address is stored readably for it.
+- **An association's SMTP server** is connected at exactly the checked address.
+- **The webhook address of the seating notifications** is stored encrypted and no longer sent to the browser.
+- **Names and text in notification e-mails, poll reminders, workflows and e-mail campaigns** are placed safely in the HTML.
 
 #### GDPR
 
