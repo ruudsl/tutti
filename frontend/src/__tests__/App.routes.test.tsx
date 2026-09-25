@@ -26,10 +26,11 @@ import { ROLES } from '../utils/constants';
  * omdat vi.mock-fabrieken boven de imports uit worden getild.
  */
 const { stand, maakPagina } = vi.hoisted(() => {
-  const stand: { rol: string | null; modules: string[]; modulesGeladen: boolean } = {
+  const stand: { rol: string | null; modules: string[]; modulesGeladen: boolean; moetWachtwoordWijzigen: boolean } = {
     rol: null,
     modules: [],
     modulesGeladen: true,
+    moetWachtwoordWijzigen: false,
   };
 
   /** Vervangt een pagina door een blokje met een merkteken. */
@@ -135,7 +136,10 @@ vi.mock('../context/AuthContext', () => {
   return {
     AuthProvider: ({ children }: { children: ReactNode }) => children,
     useAuth: () => ({
-      user: stand.rol === null ? null : { id: 1, role: stand.rol, name: 'Testlid' },
+      user:
+        stand.rol === null
+          ? null
+          : { id: 1, role: stand.rol, name: 'Testlid', mustChangePassword: stand.moetWachtwoordWijzigen },
       login: vi.fn(),
       loginWithToken: vi.fn(),
       logout: vi.fn(),
@@ -269,6 +273,7 @@ beforeEach(() => {
   stand.rol = null;
   stand.modules = [...ALLE_MODULES];
   stand.modulesGeladen = true;
+  stand.moetWachtwoordWijzigen = false;
 });
 
 afterEach(() => {
@@ -474,6 +479,38 @@ describe('App - de dirigent en de concertenlijst', () => {
     bezoek('/concerts/12/stage');
 
     expect(await zichtbarePagina()).toBe('ConcertStageSetup');
+  });
+});
+
+describe('App - eerst een eigen wachtwoord', () => {
+  // Een nieuw lid krijgt bij de aanmelding een tijdelijk wachtwoord dat de
+  // beheerder heeft gezien. Tot het lid een eigen wachtwoord heeft gekozen,
+  // komt het nergens anders dan op het profiel, waar dat kan.
+  it.each(['/', '/my-music', '/users', '/rehearsals'])(
+    'stuurt een lid met een tijdelijk wachtwoord van %s naar het profiel',
+    async (pad) => {
+      stand.rol = ROLES.ADMIN;
+      stand.moetWachtwoordWijzigen = true;
+      bezoek(pad);
+
+      expect(await zichtbarePagina()).toBe('Profile');
+      expect(window.location.pathname).toBe('/profile');
+    },
+  );
+
+  it('laat het profiel zelf gewoon zien', async () => {
+    stand.rol = ROLES.MEMBER;
+    stand.moetWachtwoordWijzigen = true;
+    bezoek('/profile');
+
+    expect(await zichtbarePagina()).toBe('Profile');
+  });
+
+  it('laat een lid met een eigen wachtwoord gewoon door', async () => {
+    stand.rol = ROLES.MEMBER;
+    bezoek('/my-music');
+
+    expect(await zichtbarePagina()).toBe('MyMusic');
   });
 });
 

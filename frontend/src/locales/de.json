@@ -360,6 +360,7 @@
     "language": "Sprache",
     "changePassword": {
       "title": "Passwort ändern",
+      "required": "Sie verwenden noch das vorläufige Passwort, das Sie bei der Anmeldung erhalten haben. Wählen Sie zuerst ein eigenes Passwort; danach können Sie weitermachen.",
       "current": "Aktuelles Passwort",
       "new": "Neues Passwort",
       "confirm": "Neues Passwort bestätigen",

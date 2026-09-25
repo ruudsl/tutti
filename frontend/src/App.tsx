@@ -198,6 +198,9 @@ function RouteLoadingFallback() {
   );
 }
 
+/** Waar het scherm staat om het wachtwoord te wijzigen. */
+const WACHTWOORD_WIJZIGEN_PAD = '/profile';
+
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user } = useAuth();
   const { enabled, loaded } = useModules();
@@ -205,6 +208,14 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  // Nog het tijdelijke wachtwoord van de aanmelding: eerst een eigen kiezen.
+  // Dat wachtwoord heeft iemand anders gezien (de beheerder die het lid
+  // aanmeldde), dus verder dan het profiel, waar het gewijzigd wordt, gaat
+  // het lid niet.
+  if (user.mustChangePassword && location.pathname !== WACHTWOORD_WIJZIGEN_PAD) {
+    return <Navigate to={WACHTWOORD_WIJZIGEN_PAD} replace />;
   }
 
   if (roles && !roles.includes(user.role)) {

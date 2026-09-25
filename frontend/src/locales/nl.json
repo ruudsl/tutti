@@ -360,6 +360,7 @@
     "language": "Taal",
     "changePassword": {
       "title": "Wachtwoord wijzigen",
+      "required": "Je gebruikt nog het tijdelijke wachtwoord dat je bij je aanmelding kreeg. Kies eerst een eigen wachtwoord; daarna kun je verder.",
       "current": "Huidig wachtwoord",
       "new": "Nieuw wachtwoord",
       "confirm": "Bevestig nieuw wachtwoord",

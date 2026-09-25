@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS users (
     locked_until TEXT, -- Account gelockt tot dit tijdstip (NULL = niet gelockt)
     deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     email_before_delete TEXT DEFAULT NULL, -- Origineel e-mailadres vóór soft delete (voor herstel)
+    moet_wachtwoord_wijzigen INTEGER NOT NULL DEFAULT 0, -- 1 = tijdelijk wachtwoord, eerst wijzigen na inloggen
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
 );
