@@ -768,12 +768,16 @@ describe('mp3 en miniaturen', () => {
     expect(geefVrij).toHaveBeenCalledWith('blob:opname');
   });
 
-  it('getMp3Url zet het token in de queryreeks (verouderd pad)', () => {
+  it('getMp3Url zet een download-token voor dit bestand in de queryreeks, niet het sessietoken', async () => {
     localStorage.setItem('token', 'nep-token');
+    antwoordMet({ token: 'bron-token', expiresIn: 300 });
 
-    const url = getMp3Url('123-abc.mp3');
+    const url = await getMp3Url('123-abc.mp3');
 
-    expect(url).toBe('/api/music-pieces/mp3/123-abc.mp3?token=nep-token');
+    expect(laatsteVerzoek().pad).toBe('/download-token/bron');
+    expect(laatsteVerzoek().body).toEqual({ soort: 'mp3', id: '123-abc.mp3' });
+    expect(url).toBe('/api/music-pieces/mp3/123-abc.mp3?token=bron-token');
+    expect(url).not.toContain('nep-token');
     localStorage.removeItem('token');
   });
 

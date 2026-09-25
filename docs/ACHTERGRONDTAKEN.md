@@ -68,15 +68,16 @@ periodieke taak één keer per tijdvak, ook na een herstart binnen dat tijdvak.
 Geregistreerd in `backend/src/taken/index.ts`; het werk zelf staat nog onder
 `backend/src/scheduler/`.
 
-| Soort                     | Wanneer                                       | Herhaalbaar |
-| ------------------------- | --------------------------------------------- | ----------- |
-| `opstelling-meldingen`    | Elke minuut                                   | nee         |
-| `mail-doorsturen-opnieuw` | Elke twee minuten                             | nee         |
-| `avg-opschonen`           | Eén keer per dag, in `GDPR_CLEANUP_HOUR`      | ja, 3×      |
-| `database-back-up`        | Elke `BACKUP_INTERVAL_HOURS` (standaard 24 u) | ja, 3×      |
-| `miniaturen-opruimen`     | Eén keer per dag                              | ja, 3×      |
-| `pdf-tijdelijk-opruimen`  | Elk uur                                       | ja, 3×      |
-| `wachtwoordherstel-mail`  | Na elke aanvraag bij 'wachtwoord vergeten'    | nee         |
+| Soort                      | Wanneer                                       | Herhaalbaar |
+| -------------------------- | --------------------------------------------- | ----------- |
+| `opstelling-meldingen`     | Elke minuut                                   | nee         |
+| `mail-doorsturen-opnieuw`  | Elke twee minuten                             | nee         |
+| `avg-opschonen`            | Eén keer per dag, in `GDPR_CLEANUP_HOUR`      | ja, 3×      |
+| `database-back-up`         | Elke `BACKUP_INTERVAL_HOURS` (standaard 24 u) | ja, 3×      |
+| `miniaturen-opruimen`      | Eén keer per dag                              | ja, 3×      |
+| `pdf-tijdelijk-opruimen`   | Elk uur                                       | ja, 3×      |
+| `inlogvertraging-opruimen` | Elk uur                                       | ja, 3×      |
+| `wachtwoordherstel-mail`   | Na elke aanvraag bij 'wachtwoord vergeten'    | nee         |
 
 De back-up wordt niet ingepland als `BACKUP_ENABLED=false`.
 

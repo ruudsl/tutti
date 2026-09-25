@@ -3,7 +3,7 @@ import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import config from '../config';
 import db from '../database/connection';
-import { validateSession, DecodedToken } from '../middleware/auth';
+import { beoordeelSessie, DecodedToken } from '../middleware/auth';
 import logger from '../utils/logger';
 
 export interface AuthenticatedSocket extends Socket {
@@ -40,12 +40,17 @@ export function authenticeerSocket(socket: AuthenticatedSocket, next: (fout?: Er
       return next(new Error('Invalid token'));
     }
 
-    const sessieFout = validateSession(token, decoded, {
+    const beoordeling = beoordeelSessie(token, decoded, {
       ip: socket.handshake.address,
       userAgent: socket.handshake.headers['user-agent'],
     });
-    if (sessieFout) {
+    if (beoordeling.fout) {
       return next(new Error('Invalid token'));
+    }
+    // Net als bij de API (authenticateToken): wie eerst een eigen wachtwoord
+    // moet kiezen, krijgt geen chat of meldingen.
+    if (beoordeling.moetWachtwoordWijzigen) {
+      return next(new Error('Password change required'));
     }
 
     socket.userId = decoded.id;

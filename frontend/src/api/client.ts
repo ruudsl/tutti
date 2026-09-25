@@ -43,6 +43,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Code in het 403-antwoord van de backend voor een lid dat eerst een eigen
+ * wachtwoord moet kiezen (middleware/auth.ts). Het wijzigen gebeurt op het
+ * profiel.
+ */
+export const CODE_WACHTWOORD_WIJZIGEN_VERPLICHT = 'WACHTWOORD_WIJZIGEN_VERPLICHT';
+export const WACHTWOORD_WIJZIGEN_PAD = '/profile';
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -53,6 +61,14 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+    } else if (
+      error.response?.status === 403 &&
+      error.response?.data?.code === CODE_WACHTWOORD_WIJZIGEN_VERPLICHT &&
+      window.location.pathname !== WACHTWOORD_WIJZIGEN_PAD
+    ) {
+      // Niet opnieuw laden als het lid er al is: het profiel zelf doet ook
+      // verzoeken die deze 403 krijgen.
+      window.location.href = WACHTWOORD_WIJZIGEN_PAD;
     }
     return Promise.reject(error);
   },

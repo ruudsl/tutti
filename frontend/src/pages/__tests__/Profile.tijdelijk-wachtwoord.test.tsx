@@ -63,6 +63,21 @@ describe('profielpagina - tijdelijk wachtwoord', () => {
     expect(screen.queryByText('profile.changePassword.required')).not.toBeInTheDocument();
   });
 
+  it('toont alleen wat nodig is om het wachtwoord te wijzigen', () => {
+    // De API weigert dit lid de rest; die onderdelen gaven alleen foutmeldingen.
+    render(<Profile />);
+
+    expect(screen.getByLabelText('profile.changePassword.new')).toBeInTheDocument();
+    expect(screen.queryByText('profile.mfa.title')).not.toBeInTheDocument();
+  });
+
+  it('toont de rest van het profiel weer met een eigen wachtwoord', () => {
+    houder.gebruiker = { ...houder.gebruiker, mustChangePassword: false };
+    render(<Profile />);
+
+    expect(screen.getByText('profile.mfa.title')).toBeInTheDocument();
+  });
+
   it('haalt na het wijzigen het profiel opnieuw op', async () => {
     const gebruiker = userEvent.setup();
     render(<Profile />);

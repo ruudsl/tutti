@@ -56,7 +56,6 @@ process.env.CSRF_ENABLED = 'false';
 
 import testDb from './testDb';
 import { herstelAlleStroomonderbrekers } from '../utils/veerkracht';
-import { wisAlleInlogvertragingen } from '../utils/inlogvertraging';
 import { stelOpzoekerInVoorTests, stelVerbinderInVoorTests } from '../utils/uitgaandAdres';
 
 // Tests gaan niet het netwerk op, ook niet voor DNS. Adressen die een gebruiker
@@ -85,9 +84,12 @@ beforeEach(async () => {
   // laten falen op iets wat die test niet doet. Elke test begint dicht.
   herstelAlleStroomonderbrekers();
 
-  // Hetzelfde voor de wachttijd na mislukte inlogpogingen: die staat in het
-  // geheugen, per adres en IP-adres, en alle tests komen van hetzelfde IP.
-  wisAlleInlogvertragingen();
+  // Hetzelfde voor de wachttijd na mislukte inlogpogingen: die telt per adres
+  // en IP-adres, en alle tests komen van hetzelfde IP. De standen staan in de
+  // tabel inlogvertragingen (utils/inlogvertraging.ts). Die wordt hier
+  // rechtstreeks geleegd: de module zelf laadt config, en dat weigert in
+  // testbestanden die een productieomgeving nabootsen.
+  testDb.prepare('DELETE FROM inlogvertragingen').run();
 });
 
 afterAll(() => {

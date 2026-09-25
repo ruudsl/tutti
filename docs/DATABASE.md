@@ -1506,6 +1506,26 @@ Active login sessions.
 
 ---
 
+#### inlogvertragingen
+
+Wachttijd na mislukte inlogpogingen (`backend/src/utils/inlogvertraging.ts`).
+Eén rij per combinatie van opgegeven e-mailadres en IP-adres (wachtwoordstap),
+of per account (tweede stap). Er staat geen e-mailadres, IP-adres of
+account-id leesbaar in: de sleutel is een HMAC-SHA256 met een sleutel die van
+`JWT_SECRET` is afgeleid. De taak `inlogvertraging-opruimen` verwijdert elk uur
+rijen zonder mislukking in de afgelopen dag.
+
+| Column       | Type    | Description                                   |
+| ------------ | ------- | --------------------------------------------- |
+| sleutel_hash | TEXT    | Primary key, HMAC-SHA256 (hex) van de sleutel |
+| mislukt      | INTEGER | Aantal mislukkingen                           |
+| wachten_tot  | INTEGER | Tot wanneer geweigerd wordt (ms sinds 1970)   |
+| laatste      | INTEGER | Tijdstip van de laatste mislukking (ms)       |
+
+**Indexes:** `idx_inlogvertragingen_laatste`
+
+---
+
 #### audit_logs
 
 Administrative action logging.

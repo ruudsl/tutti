@@ -7,7 +7,7 @@ import zlib from 'zlib';
 import { promisify } from 'util';
 import AdmZip from 'adm-zip';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { authenticateToken, authenticateBronDownload, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { eisBruikbaar, instrumentenOpNaam } from '../services/catalogus';
 import { FileValidationError } from '../utils/errors';
@@ -1109,7 +1109,9 @@ router.delete(
  */
 router.get(
   '/mp3/:filename',
-  authenticateToken,
+  // <audio src> kan geen kopregel meesturen: dan een download-token voor dit
+  // ene bestand (POST /api/download-token/bron), nooit het sessietoken.
+  authenticateBronDownload('mp3', (req) => req.params.filename),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { filename } = req.params;
 
