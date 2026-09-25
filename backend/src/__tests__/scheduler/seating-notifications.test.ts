@@ -18,6 +18,7 @@ import testDb from '../testDb';
 import { createTestAssociation, TestAssociation } from '../testUtils';
 import { runNotificationRound } from '../../scheduler/seating-notifications';
 import { clearModuleCache } from '../../modules/service';
+import { stelVerbinderInVoorTests, Verbinder } from '../../utils/uitgaandAdres';
 
 const whatsappVersturen = vi.hoisted(() => vi.fn());
 
@@ -162,6 +163,26 @@ describe('Melding met de opstelling', () => {
       expect(bericht.seating.totalConductors).toBe(1);
 
       expect(logRegels(repetitie)).toEqual([{ status: 'sent', error_message: null }]);
+    });
+
+    it('belt het adres van de gebruiker via de vastgepinde verbinding', async () => {
+      // Die zoekt de naam op bij het verbinden en verbindt met precies het
+      // gecontroleerde adres; gewone fetch zou opnieuw opzoeken (DNS-rebinding).
+      const verbinder = vi.fn<Verbinder>(async () => new Response('ok', { status: 200 }));
+      stelVerbinderInVoorTests(verbinder);
+      try {
+        maakInstellingen(orkest);
+        const repetitie = maakRepetitie(vereniging.id, orkest);
+        maakStoel(repetitie, 'Anna', 1, 0);
+
+        await runNotificationRound();
+
+        expect(verbinder).toHaveBeenCalledOnce();
+        expect(String(verbinder.mock.calls[0][0])).toBe('https://webhook.test/opstelling');
+        expect(webhookAanroepen).not.toHaveBeenCalled();
+      } finally {
+        stelVerbinderInVoorTests((url, init) => fetch(url.href, init));
+      }
     });
 
     it('noemt de afgemelde leden in het bericht', async () => {

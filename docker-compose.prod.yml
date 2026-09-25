@@ -117,8 +117,17 @@ services:
       - 'traefik.http.routers.frontend.entrypoints=websecure'
       - 'traefik.http.routers.frontend.tls.certresolver=letsencrypt'
       - 'traefik.http.services.frontend.loadbalancer.server.port=80'
-      # Security headers
-      - 'traefik.http.middlewares.frontend-headers.headers.frameDeny=true'
+      # Beveiligingskoppen voor de pagina. nginx in de frontend-container zet
+      # ze ook; hier staan ze voor wie die container door iets anders
+      # vervangt. De CSP is die van backend/src/middleware/beveiligingskoppen.ts
+      # (cspVoorHosting('traefik')), met upgrade-insecure-requests omdat hier
+      # alles over https loopt.
+      # backend/src/__tests__/beveiligingskoppen-hosting.test.ts vergelijkt ze.
+      - "traefik.http.middlewares.frontend-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://alcdn.msauth.net https://apis.google.com https://accounts.google.com https://hcaptcha.com https://*.hcaptcha.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://docs.google.com https://login.microsoftonline.com https://hcaptcha.com https://*.hcaptcha.com; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://www.googleapis.com https://accounts.google.com https://hcaptcha.com https://*.hcaptcha.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+      - 'traefik.http.middlewares.frontend-headers.headers.referrerPolicy=no-referrer'
+      - 'traefik.http.middlewares.frontend-headers.headers.permissionsPolicy=camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), serial=(), hid=(), midi=(), display-capture=()'
+      # SAMEORIGIN, zoals frame-ancestors 'self' en helmet op de API.
+      - 'traefik.http.middlewares.frontend-headers.headers.customFrameOptionsValue=SAMEORIGIN'
       - 'traefik.http.middlewares.frontend-headers.headers.contentTypeNosniff=true'
       - 'traefik.http.middlewares.frontend-headers.headers.browserXssFilter=true'
       - 'traefik.http.middlewares.frontend-headers.headers.stsSeconds=31536000'

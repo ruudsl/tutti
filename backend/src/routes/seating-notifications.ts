@@ -384,7 +384,7 @@ async function sendWebhook(
         body: JSON.stringify(payload),
         redirect: 'manual',
       },
-      { pogingen: 1 },
+      { pogingen: 1, gebruikersadres: true },
     );
 
     const responseText = await response.text();

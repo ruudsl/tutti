@@ -231,6 +231,30 @@ van buitenaf rechtstreeks op de backend uitkomt, slaat de proxy over en mag dan
 zelf het adres opgeven dat de backend gelooft. Zet die poort dus niet open naar
 buiten; alles loopt via nginx of Traefik.
 
+### Beveiligingskoppen bij een eigen proxy
+
+De pagina van de applicatie komt van de frontend-server, niet van de backend.
+De Content-Security-Policy, `Referrer-Policy`, `Permissions-Policy`,
+`X-Content-Type-Options` en `X-Frame-Options` staan daarom in
+`frontend/nginx.conf`, in de Traefik-labels van `docker-compose.prod.yml` en in
+`frontend/vercel.json`. Serveer je `frontend/dist` met iets anders (Caddy, een
+eigen nginx, Apache, een CDN), neem die koppen dan over; de tekst van het
+beleid staat in `backend/src/middleware/beveiligingskoppen.ts`
+(`cspVoorHosting`).
+
+- **`Referrer-Policy: no-referrer`** is de belangrijkste: zonder die kop gaat
+  een link als `/reset-password?token=…` als Referer mee naar de API en naar
+  externe diensten.
+- **Staat de API op een andere host** (een eigen `VITE_API_URL` met een ander
+  domein), zet die host dan bij `connect-src`, met `https://` en `wss://`.
+  Anders weigert de browser elke API-aanroep en de websocket. Zo doet
+  `vercel.json` het ook, met `https: wss:`.
+- **`upgrade-insecure-requests`** alleen als de pagina via https binnenkomt.
+  Over gewoon http (een thuisnetwerk zonder TLS) laat het de pagina leeg.
+- Laat je toegangslogboek geen querystring en geen Referer wegschrijven: ook
+  daar staan tokens in. `frontend/nginx.conf` heeft daarvoor een eigen
+  `log_format`.
+
 ### Data Storage
 
 Tutti stores data in Docker volumes:

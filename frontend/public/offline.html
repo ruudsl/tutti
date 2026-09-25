@@ -222,8 +222,8 @@
       </div>
 
       <div class="actions">
-        <button class="primary-btn" onclick="tryReconnect()">Opnieuw proberen</button>
-        <button class="secondary-btn" onclick="goBack()">Terug naar app</button>
+        <button class="primary-btn" id="opnieuw-proberen" type="button">Opnieuw proberen</button>
+        <button class="secondary-btn" id="terug-naar-app" type="button">Terug naar app</button>
       </div>
 
       <div class="info">
@@ -245,61 +245,10 @@
       </div>
     </div>
 
-    <script>
-      // Update connection status
-      function updateStatus() {
-        const statusEl = document.getElementById('connection-status');
-        const textEl = document.getElementById('status-text');
-
-        if (navigator.onLine) {
-          statusEl.classList.add('online');
-          textEl.textContent = 'Verbonden';
-          // Auto-redirect after a short delay when back online
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 1000);
-        } else {
-          statusEl.classList.remove('online');
-          textEl.textContent = 'Geen verbinding';
-        }
-      }
-
-      // Try to reconnect
-      function tryReconnect() {
-        updateStatus();
-        if (navigator.onLine) {
-          window.location.href = '/';
-        } else {
-          // Show brief feedback
-          const btn = event.target;
-          btn.textContent = 'Verbinden...';
-          setTimeout(() => {
-            btn.textContent = 'Opnieuw proberen';
-            updateStatus();
-          }, 1500);
-        }
-      }
-
-      // Go back to the app (will use cached content)
-      function goBack() {
-        if (window.history.length > 1) {
-          window.history.back();
-        } else {
-          window.location.href = '/';
-        }
-      }
-
-      // Listen for online/offline events
-      window.addEventListener('online', updateStatus);
-      window.addEventListener('offline', updateStatus);
-
-      // Initial status check
-      updateStatus();
-
-      // Register for push notifications when online
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        // Service worker is available
-      }
-    </script>
+    <!--
+      Een los script, niet inline: de Content-Security-Policy staat alleen
+      scripts van de eigen herkomst toe, en geen onclick="…".
+    -->
+    <script src="/offline.js"></script>
   </body>
 </html>

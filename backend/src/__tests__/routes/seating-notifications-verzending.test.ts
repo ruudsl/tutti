@@ -22,6 +22,7 @@ import '../setup';
 import testDb from '../testDb';
 import seatingNotificationRoutes from '../../routes/seating-notifications';
 import { errorHandler } from '../../middleware/errorHandler';
+import { stelVerbinderInVoorTests, Verbinder } from '../../utils/uitgaandAdres';
 import {
   createTestEnvironment,
   createTestAssociation,
@@ -411,6 +412,24 @@ describe('meldingen rond de opstelling - instellingen en verzending', () => {
       expect(webhookAanroepen).toHaveBeenCalledTimes(1);
       expect(webhookAanroepen.mock.calls[0][0]).toBe('https://webhook.test/opstelling');
       expect(logRegels(repetitie)).toEqual([{ status: 'sent', error_message: null }]);
+    });
+
+    it('belt het adres van de gebruiker via de vastgepinde verbinding', async () => {
+      // Die zoekt de naam op bij het verbinden en verbindt met precies het
+      // gecontroleerde adres; gewone fetch zou opnieuw opzoeken (DNS-rebinding).
+      const verbinder = vi.fn<Verbinder>(async () => new Response('ontvangen', { status: 200 }));
+      stelVerbinderInVoorTests(verbinder);
+      try {
+        const repetitie = klaarVoorVerzending();
+
+        await als(beheerderToken, 'post', `/send/${repetitie}`);
+
+        expect(verbinder).toHaveBeenCalledOnce();
+        expect(String(verbinder.mock.calls[0][0])).toBe('https://webhook.test/opstelling');
+        expect(webhookAanroepen).not.toHaveBeenCalled();
+      } finally {
+        stelVerbinderInVoorTests((url, init) => fetch(url.href, init));
+      }
     });
 
     it('zet de rijen en de aantallen in de payload', async () => {
