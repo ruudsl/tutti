@@ -44,6 +44,52 @@ The manifest file maps internal filenames to archive names, enabling proper rest
 3. Files are added with human-readable names (handling duplicates with suffixes)
 4. A manifest is created to map stored filenames to archive names
 
+## Automatische back-ups op de server
+
+Los van de ZIP-download maakt de server zelf een kopie van de database (taak
+`database-back-up`, zie [ACHTERGRONDTAKEN.md](ACHTERGRONDTAKEN.md)), en bij
+elke terugzetting via de webinterface eerst een kopie van de huidige database
+in `pre-restore/`.
+
+| Instelling                          | Standaard                    | Wat                                                 |
+| ----------------------------------- | ---------------------------- | --------------------------------------------------- |
+| `BACKUP_DIR`                        | `backups/` naast de database | Waar de kopieën staan                               |
+| `BACKUP_RETENTION_DAYS`             | 14                           | Hoe lang `tutti-backup-*.sqlite[.enc]` blijft staan |
+| `BACKUP_PRE_RESTORE_RETENTION_DAYS` | 30                           | Hoe lang `pre-restore/pre-restore-*` blijft staan   |
+| `ENCRYPTION_SECRET`                 | niet ingesteld               | Als ingesteld: alle kopieën worden versleuteld      |
+
+**Versleuteling.** Staat `ENCRYPTION_SECRET` ingesteld, dan worden de
+automatische back-up en de pre-restore-kopie versleuteld (AES-256-GCM, dezelfde
+sleutel als voor de geheimen in de database) en eindigen ze op `.sqlite.enc`.
+Zonder die instelling blijven ze leesbaar en staat er bij elke kopie een
+waarschuwing in het logboek. De terugval op `JWT_SECRET` die elders geldt,
+telt hier bewust niet: wie het JWT-geheim vervangt, zou anders geen enkele oude
+back-up meer kunnen openen.
+
+Bewaar `ENCRYPTION_SECRET` en `ENCRYPTION_SALT` (als die is ingesteld) ergens
+anders dan op de server. Zonder die twee is een versleutelde back-up niet terug
+te zetten — en ze zijn ook nodig om de versleutelde geheimen in de database
+zelf te kunnen lezen.
+
+**Terugzetten van een versleutelde back-up:**
+
+```bash
+# Met dezelfde ENCRYPTION_SECRET en ENCRYPTION_SALT als de server die hem maakte
+npm run backup:ontsleutel --workspace=backend -- backups/tutti-backup-2026-09-25-0300.sqlite.enc
+# of in een productie-image zonder tsx:
+node dist/scripts/ontsleutel-backup.js backups/tutti-backup-2026-09-25-0300.sqlite.enc
+
+# Daarna zoals altijd: applicatie stoppen, bestand op DB_PATH zetten, starten
+systemctl stop harmonie
+cp backups/tutti-backup-2026-09-25-0300.sqlite "$DB_PATH"
+chmod 600 "$DB_PATH"
+systemctl start harmonie
+```
+
+**Rechten.** De database en alle kopieën worden geschreven met modus `0600`:
+alleen de gebruiker waaronder de server draait kan ze lezen. Een bestaand
+databasebestand krijgt die modus bij de eerstvolgende keer opslaan.
+
 ## Manual Backup Procedures
 
 ### Via the Web Interface

@@ -8,7 +8,18 @@
  * - BACKUP_ENABLED:         'false' disables the backup job (default: true)
  * - BACKUP_INTERVAL_HOURS:  hours between backups (default: 24)
  * - BACKUP_RETENTION_DAYS:  days to keep old backups (default: 14)
+ * - BACKUP_PRE_RESTORE_RETENTION_DAYS: dagen dat de kopie van vóór een
+ *                           terugzetting (pre-restore/) blijft staan (standaard: 30)
  * - BACKUP_DIR:             backup directory (default: 'backups/' next to the database)
+ *
+ * Versleuteling: staat ENCRYPTION_SECRET ingesteld, dan wordt elke kopie met
+ * die sleutel versleuteld (AES-256-GCM, utils/encryption.ts) en krijgt hij de
+ * extensie .sqlite.enc. Ontsleutelen voor een terugzetting:
+ * `npm run backup:ontsleutel --workspace=backend -- <bestand>`. Zonder
+ * ENCRYPTION_SECRET blijft de kopie leesbaar en staat er een waarschuwing in
+ * het logboek; zie heeftEigenSleutel voor waarom JWT_SECRET hier niet telt.
+ *
+ * Alle kopieën worden geschreven met modus 0600: alleen het serverproces.
  */
 
 import path from 'path';
@@ -16,11 +27,15 @@ import fs from 'fs';
 import db from '../database/connection';
 import logger from '../utils/logger';
 import config from '../config';
+import { heeftEigenSleutel, versleutelBuffer } from '../utils/encryption';
+import { schrijfPriveBestand } from '../utils/priveBestand';
 
 const DEFAULT_INTERVAL_HOURS = 24;
 const DEFAULT_RETENTION_DAYS = 14;
+const DEFAULT_PRE_RESTORE_RETENTION_DAYS = 30;
 
-const BACKUP_FILE_PATTERN = /^tutti-backup-\d{4}-\d{2}-\d{2}-\d{4}\.sqlite$/;
+const BACKUP_FILE_PATTERN = /^tutti-backup-\d{4}-\d{2}-\d{2}-\d{4}\.sqlite(\.enc)?$/;
+const PRE_RESTORE_FILE_PATTERN = /^pre-restore-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.sqlite(\.enc)?$/;
 
 /**
  * Resolve the backup directory: BACKUP_DIR env var, or 'backups/' next to the database file.
@@ -43,6 +58,38 @@ function getRetentionDays(): number {
   return parsed > 0 ? parsed : DEFAULT_RETENTION_DAYS;
 }
 
+function getPreRestoreRetentionDays(): number {
+  const parsed = parseFloat(process.env.BACKUP_PRE_RESTORE_RETENTION_DAYS || '');
+  return parsed > 0 ? parsed : DEFAULT_PRE_RESTORE_RETENTION_DAYS;
+}
+
+/** Waar de kopie van vóór een terugzetting staat (routes/backup.ts). */
+export function getPreRestoreDir(): string {
+  return path.join(getBackupDir(), 'pre-restore');
+}
+
+/**
+ * Schrijf een kopie van de database: versleuteld als er een eigen sleutel is,
+ * en in elk geval alleen leesbaar voor het serverproces.
+ *
+ * @param basisPad - het pad zonder de extensie .enc; die komt erachter als de
+ *   kopie versleuteld wordt.
+ * @returns het pad van het geschreven bestand.
+ */
+export function schrijfDatabasekopie(basisPad: string, inhoud: Buffer): string {
+  if (heeftEigenSleutel()) {
+    const doel = `${basisPad}.enc`;
+    schrijfPriveBestand(doel, versleutelBuffer(inhoud));
+    return doel;
+  }
+  logger.warn(
+    'Kopie van de database is niet versleuteld: stel ENCRYPTION_SECRET in om reservekopieën te versleutelen',
+    { bestand: path.basename(basisPad) },
+  );
+  schrijfPriveBestand(basisPad, inhoud);
+  return basisPad;
+}
+
 /**
  * Build a backup filename like tutti-backup-2026-07-05-0300.sqlite (local time).
  */
@@ -60,15 +107,18 @@ function buildBackupFilename(date: Date = new Date()): string {
  * Delete backups older than the retention period.
  * Only touches files matching the backup filename pattern.
  */
-function cleanupOldBackups(backupDir: string): number {
-  const retentionDays = getRetentionDays();
+function cleanupOldBackups(
+  backupDir: string,
+  patroon = BACKUP_FILE_PATTERN,
+  retentionDays = getRetentionDays(),
+): number {
   const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
   let removed = 0;
 
   try {
     if (!fs.existsSync(backupDir)) return 0;
 
-    const files = fs.readdirSync(backupDir).filter((f) => BACKUP_FILE_PATTERN.test(f));
+    const files = fs.readdirSync(backupDir).filter((f) => patroon.test(f));
     for (const file of files) {
       const filePath = path.join(backupDir, file);
       try {
@@ -109,12 +159,18 @@ export function runBackup(): { file: string | null; removed: number } {
       return { file: null, removed: 0 };
     }
 
+    // Lezen en zelf schrijven in plaats van copyFileSync: die neemt de modus
+    // van het bronbestand over, en de kopie moet versleuteld kunnen worden.
     const filename = buildBackupFilename();
-    const targetPath = path.join(backupDir, filename);
-    fs.copyFileSync(config.dbPath, targetPath);
+    const targetPath = schrijfDatabasekopie(path.join(backupDir, filename), fs.readFileSync(config.dbPath));
     logger.info(`Database backup created: ${targetPath}`);
 
-    const removed = cleanupOldBackups(backupDir);
+    // Oude back-ups, en de kopieën van vóór een terugzetting. Die laatste
+    // werden nooit opgeruimd en stapelden zich op: elke terugzetting een
+    // volledige database erbij.
+    const removed =
+      cleanupOldBackups(backupDir) +
+      cleanupOldBackups(getPreRestoreDir(), PRE_RESTORE_FILE_PATTERN, getPreRestoreRetentionDays());
 
     return { file: targetPath, removed };
   } catch (err) {

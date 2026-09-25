@@ -84,3 +84,54 @@ export function migrateFromBase64(base64Value: string): string {
     return encrypt(base64Value);
   }
 }
+
+/**
+ * Kop van een versleuteld bestand (reservekopie van de database). Zo is een
+ * versleuteld bestand te herkennen en niet te verwarren met een SQLite-bestand,
+ * dat met "SQLite format 3" begint.
+ */
+const BESTANDSKOP = Buffer.from('TUTTI-ENC1');
+const TAG_LENGTH = 16;
+
+/**
+ * Is er een eigen sleutel voor versleuteling ingesteld?
+ *
+ * `encrypt` valt terug op JWT_SECRET. Voor een reservekopie is dat te
+ * kwetsbaar: wie het JWT-geheim vervangt - een gewone veiligheidsmaatregel -
+ * kan daarna geen enkele oude reservekopie meer openen. Bestanden worden
+ * daarom alleen versleuteld als ENCRYPTION_SECRET er zelf staat.
+ */
+export function heeftEigenSleutel(): boolean {
+  return Boolean(process.env.ENCRYPTION_SECRET);
+}
+
+/** Versleutel een bestand (AES-256-GCM, zelfde sleutel als `encrypt`). */
+export function versleutelBuffer(inhoud: Buffer): Buffer {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const versleuteld = Buffer.concat([cipher.update(inhoud), cipher.final()]);
+  return Buffer.concat([BESTANDSKOP, iv, cipher.getAuthTag(), versleuteld]);
+}
+
+/** Is dit een met `versleutelBuffer` versleuteld bestand? */
+export function isVersleuteldBestand(inhoud: Buffer): boolean {
+  return inhoud.length >= BESTANDSKOP.length && inhoud.subarray(0, BESTANDSKOP.length).equals(BESTANDSKOP);
+}
+
+/**
+ * Ontsleutel een bestand van `versleutelBuffer`. Gooit bij een verkeerde
+ * sleutel of een aangepast bestand: GCM controleert beide.
+ */
+export function ontsleutelBuffer(inhoud: Buffer): Buffer {
+  if (!isVersleuteldBestand(inhoud)) {
+    throw new Error('Geen versleuteld Tutti-bestand');
+  }
+  const key = getEncryptionKey();
+  const ivStart = BESTANDSKOP.length;
+  const tagStart = ivStart + IV_LENGTH;
+  const dataStart = tagStart + TAG_LENGTH;
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, inhoud.subarray(ivStart, tagStart));
+  decipher.setAuthTag(inhoud.subarray(tagStart, dataStart));
+  return Buffer.concat([decipher.update(inhoud.subarray(dataStart)), decipher.final()]);
+}

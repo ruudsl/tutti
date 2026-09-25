@@ -16,6 +16,7 @@ import fs from 'fs';
 import { schema } from './schema';
 import { splitSchemaStatements } from './splitSchemaStatements';
 import { runMigrations } from './migrations';
+import { schrijfPriveBestand } from '../utils/priveBestand';
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/harmonie.db');
 
@@ -137,7 +138,9 @@ class DatabaseWrapper {
     const data = this.db.export();
     const buffer = Buffer.from(data);
     const tmpPath = `${this.dbPath}.tmp`;
-    fs.writeFileSync(tmpPath, buffer);
+    // Alleen voor het serverproces (0600); na de rename geldt dat ook voor
+    // het databasebestand zelf. Zie utils/priveBestand.ts.
+    schrijfPriveBestand(tmpPath, buffer);
     fs.renameSync(tmpPath, this.dbPath);
     this.dirty = false;
   }
