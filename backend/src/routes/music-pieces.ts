@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import zlib from 'zlib';
+import { promisify } from 'util';
 import AdmZip from 'adm-zip';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
@@ -251,20 +253,59 @@ function pakPadInUploadmap(bestandsnaam: string): string {
 }
 
 /**
- * Pak één bestand uit een zip zonder de event loop vast te houden: het
- * uitpakken gebeurt door zlib buiten de JavaScript-thread. Een beschadigd item
- * (verkeerde controlesom) wordt een afwijzing.
+ * Grenzen voor wat een zip uitgepakt mag worden. Een kleine zip kan uitgepakt
+ * een veelvoud van zijn eigen grootte zijn, en dat kwam eerst in het geheugen
+ * en daarna op schijf. Per bestand dezelfde grens als
+ * bij een losse upload; in totaal ruim wat een zip van 200 MB met gewone pdf's
+ * (die nauwelijks verder inpakken) oplevert.
  */
-function pakUit(entry: AdmZip.IZipEntry): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    // Bij een opgeslagen (niet gecomprimeerd) item met een foute controlesom
-    // roept adm-zip eerst de callback aan en gooit daarna alsnog; de executor
-    // van de Promise vangt dat af.
-    // De typen zeggen dat de fout een string is; adm-zip geeft een Error.
-    entry.getDataAsync((data, fout: unknown) =>
-      fout ? reject(fout instanceof Error ? fout : new Error(String(fout))) : resolve(data),
-    );
-  });
+export const ZIP_MAX_PER_BESTAND = 50 * 1024 * 1024;
+export const ZIP_MAX_TOTAAL = 500 * 1024 * 1024;
+
+const inflateRaw = promisify(zlib.inflateRaw);
+
+function zipTeGroot(): ApiError {
+  return new ApiError(
+    413,
+    `De ZIP is uitgepakt te groot: hooguit ${ZIP_MAX_PER_BESTAND / 1024 / 1024} MB per bestand en ${ZIP_MAX_TOTAAL / 1024 / 1024} MB in totaal.`,
+  );
+}
+
+/**
+ * Pak één bestand uit een zip, hooguit `grens` bytes. De grootte in de kop
+ * van de zip is vooraf al gecontroleerd, maar die kop kan liegen; daarom telt
+ * zlib hier zelf mee en stopt bij de grens (`maxOutputLength`), zodat de
+ * uitgepakte data nooit groter in het geheugen komt dan toegestaan. Het
+ * uitpakken gebeurt buiten de JavaScript-thread. Een beschadigd item (verkeerde
+ * controlesom) wordt een gewone fout; te groot wordt een 413.
+ *
+ * Bewust zlib zelf en niet getDataAsync van adm-zip: die begrenst alleen op de
+ * opgegeven grootte, en of en hoe hij dat doet verschilt per versie.
+ */
+async function pakUit(entry: AdmZip.IZipEntry, grens: number): Promise<Buffer> {
+  const { method, crc, encrypted } = entry.header;
+  if (encrypted) {
+    throw new Error('Versleutelde bestanden worden niet ondersteund.');
+  }
+  const ingepakt = entry.getCompressedData();
+  let data: Buffer;
+  if (method === 0) {
+    if (ingepakt.length > grens) throw zipTeGroot();
+    data = ingepakt;
+  } else if (method === 8) {
+    try {
+      data = await inflateRaw(ingepakt, { maxOutputLength: Math.max(grens, 1) });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ERR_BUFFER_TOO_LARGE') throw zipTeGroot();
+      throw err;
+    }
+  } else {
+    throw new Error('Onbekende compressiemethode.');
+  }
+  if (zlib.crc32(data) !== crc) {
+    throw new Error('Bestand in de ZIP is beschadigd (controlesom klopt niet).');
+  }
+  return data;
 }
 
 // Delete file safely (async)
@@ -2248,6 +2289,13 @@ router.post(
         throw new ApiError(400, 'Maximaal 200 PDF bestanden per ZIP toegestaan.');
       }
 
+      // Eerst de opgegeven groottes, zodat een zip die zegt te groot te zijn
+      // niet eens wordt uitgepakt. Tijdens het uitpakken telt pakUit opnieuw.
+      const opgegevenTotaal = pdfEntries.reduce((som, entry) => som + entry.header.size, 0);
+      if (pdfEntries.some((entry) => entry.header.size > ZIP_MAX_PER_BESTAND) || opgegevenTotaal > ZIP_MAX_TOTAAL) {
+        throw zipTeGroot();
+      }
+
       // Load instruments + aliases once instead of querying per entry
       const instrumentMap = instrumentenOpNaam(req.user!.associationId);
 
@@ -2255,26 +2303,35 @@ router.post(
       // één uitgepakt bestand tegelijk in het geheugen staat. De transactie
       // hieronder blijft synchroon: daar mag niets tussen komen.
       const weggeschreven: { originalFilename: string; newFilename: string }[] = [];
-      for (const entry of pdfEntries) {
-        const originalFilename = path.basename(entry.entryName);
-        try {
-          // De extensie .pdf in de zip zegt niets over de inhoud: kijk naar de
-          // eerste bytes.
-          const content = await pakUit(entry);
-          if (!isPdf(content)) {
-            errors.push({
-              filename: originalFilename,
-              error: 'Bestand is geen geldige PDF.',
-            });
-            continue;
-          }
+      let uitgepakt = 0;
+      try {
+        for (const entry of pdfEntries) {
+          const originalFilename = path.basename(entry.entryName);
+          try {
+            // De extensie .pdf in de zip zegt niets over de inhoud: kijk naar de
+            // eerste bytes.
+            const content = await pakUit(entry, Math.min(ZIP_MAX_PER_BESTAND, ZIP_MAX_TOTAAL - uitgepakt));
+            uitgepakt += content.length;
+            if (!isPdf(content)) {
+              errors.push({
+                filename: originalFilename,
+                error: 'Bestand is geen geldige PDF.',
+              });
+              continue;
+            }
 
-          const newFilename = `${Date.now()}-${uuidv4()}.pdf`;
-          await fs.promises.writeFile(path.join(UPLOAD_DIR, newFilename), content);
-          weggeschreven.push({ originalFilename, newFilename });
-        } catch (err) {
-          errors.push({ filename: originalFilename, error: (err as Error).message });
+            const newFilename = `${Date.now()}-${uuidv4()}.pdf`;
+            await fs.promises.writeFile(path.join(UPLOAD_DIR, newFilename), content);
+            weggeschreven.push({ originalFilename, newFilename });
+          } catch (err) {
+            // Te groot geldt voor de hele zip, niet voor dit ene bestand.
+            if (err instanceof ApiError) throw err;
+            errors.push({ filename: originalFilename, error: (err as Error).message });
+          }
         }
+      } catch (err) {
+        await Promise.all(weggeschreven.map(({ newFilename }) => deleteFile(path.join(UPLOAD_DIR, newFilename))));
+        throw err;
       }
 
       // Dan de rijen. Een bestand zonder rij is voor niemand vindbaar en wordt

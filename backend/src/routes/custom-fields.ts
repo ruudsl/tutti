@@ -7,6 +7,7 @@ import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+import { controleerPatroon, toetsPatroon } from '../utils/veiligeRegex';
 import { z } from 'zod';
 
 const router = Router();
@@ -59,7 +60,15 @@ const createFieldDefinitionSchema = z.object({
   description: z.string().optional(),
   placeholder: z.string().optional(),
   defaultValue: z.string().optional(),
-  validationRegex: z.string().optional(),
+  // Zie utils/veiligeRegex.ts: bij het opslaan alleen geldig en niet te lang;
+  // de echte bescherming is het tijdsbudget bij het toetsen.
+  validationRegex: z
+    .string()
+    .optional()
+    .superRefine((patroon, ctx) => {
+      const fout = patroon ? controleerPatroon(patroon) : null;
+      if (fout) ctx.addIssue({ code: 'custom', message: fout });
+    }),
 });
 
 const updateFieldDefinitionSchema = createFieldDefinitionSchema.partial().omit({ entityType: true, fieldKey: true });
@@ -547,8 +556,12 @@ router.post(
         }
 
         if (def.validation_regex && value && typeof value === 'string') {
-          const regex = new RegExp(def.validation_regex);
-          if (!regex.test(value)) {
+          const uitkomst = toetsPatroon(def.validation_regex, value);
+          if (uitkomst === 'onbeslist') {
+            logger.warn('Patroon van eigen veld is ongeldig of te traag', { definitionId: def.id });
+            throw new ApiError(400, `Veld "${def.field_key}" kon niet worden gecontroleerd.`);
+          }
+          if (uitkomst === 'past-niet') {
             throw new ApiError(400, `Veld "${def.field_key}" voldoet niet aan de validatie.`);
           }
         }

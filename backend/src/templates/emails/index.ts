@@ -57,6 +57,8 @@ import { getAccountVerificationEmailContent as accountVerificationNl } from './a
 import { getAccountVerificationEmailContent as accountVerificationEn } from './account-verification.en';
 import { getAccountVerificationEmailContent as accountVerificationDe } from './account-verification.de';
 
+import { renderVeilig } from './htmlVeilig';
+
 // Re-export types so callers only need one import path
 export * from './types';
 
@@ -77,7 +79,7 @@ function renderTemplate<TData>(
   data: TData,
   language?: string | null,
 ): EmailContent {
-  return variants[resolveEmailLanguage(language)](data);
+  return renderVeilig(variants[resolveEmailLanguage(language)], data);
 }
 
 export function getPasswordResetEmail(data: PasswordResetEmailData, language?: string | null): EmailContent {

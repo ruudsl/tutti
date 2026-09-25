@@ -6,6 +6,7 @@ import logger from '../utils/logger';
 import { getTicketEmailContent as getTicketEmailContentNL } from '../templates/emails/ticket-confirmation.nl';
 import { getTicketEmailContent as getTicketEmailContentEN } from '../templates/emails/ticket-confirmation.en';
 import { getTicketEmailContent as getTicketEmailContentDE } from '../templates/emails/ticket-confirmation.de';
+import { renderVeilig } from '../templates/emails/htmlVeilig';
 
 export type SupportedLanguage = 'nl' | 'en' | 'de';
 
@@ -138,7 +139,7 @@ export async function sendTicketConfirmationEmail(
   language: SupportedLanguage = 'nl',
 ): Promise<boolean> {
   const getEmailContent = getEmailContentGenerator(language);
-  const { subject, text, html } = getEmailContent(data);
+  const { subject, text, html } = renderVeilig(getEmailContent, data);
 
   return sendEmail({
     to: data.buyerEmail,
