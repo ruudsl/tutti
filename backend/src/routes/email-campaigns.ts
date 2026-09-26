@@ -1136,7 +1136,7 @@ router.post(
       throw new ApiError(400, 'Geen bestand geüpload.');
     }
 
-    await bewaakOpslagNaUpload(req);
+    await bewaakOpslagNaUpload(req, uploadsDir);
 
     const attachmentId = uuidv4();
     const now = new Date().toISOString();

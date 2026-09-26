@@ -1015,7 +1015,7 @@ router.post(
     }
 
     // De nieuwe mp3 vervangt de oude, dus die ruimte komt vrij.
-    await bewaakOpslagNaUpload(req, undefined, title.mp3_file_size ?? 0);
+    await bewaakOpslagNaUpload(req, MP3_UPLOAD_DIR, undefined, title.mp3_file_size ?? 0);
 
     // Delete old MP3 file if exists
     if (title.mp3_file_path) {
@@ -1248,7 +1248,12 @@ router.post(
     }
 
     // De inhoud komt in music_metadata.musicxml_raw en vervangt wat daar stond.
-    await bewaakOpslagNaUpload(req, undefined, huidigeMusicxmlGrootte(titleId, req.user!.associationId));
+    await bewaakOpslagNaUpload(
+      req,
+      MUSICXML_UPLOAD_DIR,
+      undefined,
+      huidigeMusicxmlGrootte(titleId, req.user!.associationId),
+    );
 
     // Read and parse MusicXML
     const xmlContent = await fs.promises.readFile(req.file.path, 'utf-8');
@@ -2141,7 +2146,7 @@ router.post(
 
     // Past het in de opslag van de vereniging? Anders gaan ook de geldige
     // bestanden weer van schijf.
-    await bewaakOpslagNaUpload(req, validFiles);
+    await bewaakOpslagNaUpload(req, UPLOAD_DIR, validFiles);
 
     // Load instruments + aliases once instead of querying per file
     const instrumentMap = instrumentenOpNaam(req.user!.associationId);

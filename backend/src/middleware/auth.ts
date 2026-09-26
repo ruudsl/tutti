@@ -268,49 +268,60 @@ export function authenticateTokenBijTijdelijkWachtwoord(req: AuthRequest, res: R
  */
 export function authenticateBronDownload(soort: Bronsoort, bronUitVerzoek: (req: Request) => string) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (req.headers['authorization']) {
-      authenticeer(req, res, next, false);
-      return;
-    }
-
-    const token = req.query.token;
-    if (typeof token !== 'string' || !token) {
-      return res.status(401).json({ error: 'Toegang geweigerd. Geen token opgegeven.' });
-    }
-    if (!isLezendVerzoek(req)) {
-      return res.status(401).json({ error: 'Download-token is alleen geldig voor downloads.' });
-    }
-
-    const inhoud = controleerBronToken(token, soort, bronUitVerzoek(req));
-    if (!inhoud) {
-      return res.status(401).json({ error: 'Download-token verlopen of ongeldig.' });
-    }
-
-    try {
-      const sessie = findSessionByTokenHash(inhoud.sid);
-      if (!sessie || sessie.revoked_at || sessie.user_id !== inhoud.sub) {
-        return res.status(401).json({ error: 'Download-token verlopen of ongeldig.' });
-      }
-      const { beoordeling } = beoordeelLid(inhoud.sub, inhoud.ver);
-      if (beoordeling.fout) {
-        return res.status(401).json({ error: beoordeling.fout });
-      }
-      if (beoordeling.moetWachtwoordWijzigen) {
-        return res
-          .status(403)
-          .json({ error: MELDING_WACHTWOORD_WIJZIGEN_VERPLICHT, code: CODE_WACHTWOORD_WIJZIGEN_VERPLICHT });
-      }
-    } catch (error) {
-      logger.error('Controle van een download-token mislukt; verzoek geweigerd:', error);
-      return res.status(503).json({ error: 'De dienst is tijdelijk niet beschikbaar. Probeer het zo opnieuw.' });
-    }
-
-    req.user = { id: inhoud.sub, email: '', role: inhoud.rol, associationId: inhoud.ver };
-    next();
+    authenticeer(req, res, next, false, { soort, id: bronUitVerzoek(req) });
   };
 }
 
-function authenticeer(req: AuthRequest, res: Response, next: NextFunction, tijdelijkWachtwoordToegestaan: boolean) {
+/** De bron die een downloadroute aanbiedt, voor een brontoken in de URL. */
+interface GevraagdeBron {
+  soort: Bronsoort;
+  id: string;
+}
+
+/**
+ * Een brontoken uit de URL: geldig voor precies deze soort en dit id, zolang
+ * de sessie waarmee het is aangevraagd bestaat en het lid nog binnen mag.
+ */
+function handelBronTokenAf(req: AuthRequest, res: Response, next: NextFunction, token: string, bron: GevraagdeBron) {
+  if (!isLezendVerzoek(req)) {
+    return res.status(401).json({ error: 'Download-token is alleen geldig voor downloads.' });
+  }
+
+  const inhoud = controleerBronToken(token, bron.soort, bron.id);
+  if (!inhoud) {
+    return res.status(401).json({ error: 'Download-token verlopen of ongeldig.' });
+  }
+
+  try {
+    const sessie = findSessionByTokenHash(inhoud.sid);
+    if (!sessie || sessie.revoked_at || sessie.user_id !== inhoud.sub) {
+      return res.status(401).json({ error: 'Download-token verlopen of ongeldig.' });
+    }
+    const { beoordeling } = beoordeelLid(inhoud.sub, inhoud.ver);
+    if (beoordeling.fout) {
+      return res.status(401).json({ error: beoordeling.fout });
+    }
+    if (beoordeling.moetWachtwoordWijzigen) {
+      return res
+        .status(403)
+        .json({ error: MELDING_WACHTWOORD_WIJZIGEN_VERPLICHT, code: CODE_WACHTWOORD_WIJZIGEN_VERPLICHT });
+    }
+  } catch (error) {
+    logger.error('Controle van een download-token mislukt; verzoek geweigerd:', error);
+    return res.status(503).json({ error: 'De dienst is tijdelijk niet beschikbaar. Probeer het zo opnieuw.' });
+  }
+
+  req.user = { id: inhoud.sub, email: '', role: inhoud.rol, associationId: inhoud.ver };
+  next();
+}
+
+function authenticeer(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+  tijdelijkWachtwoordToegestaan: boolean,
+  bron?: GevraagdeBron,
+) {
   const authHeader = req.headers['authorization'];
   const headerToken = authHeader && authHeader.split(' ')[1];
   // In de URL mag alleen een kortlevend download-token staan (zie
@@ -320,6 +331,12 @@ function authenticeer(req: AuthRequest, res: Response, next: NextFunction, tijde
 
   if (!token) {
     return res.status(401).json({ error: 'Toegang geweigerd. Geen token opgegeven.' });
+  }
+
+  // Een downloadroute voor één bron (authenticateBronDownload) neemt in de URL
+  // alleen het brontoken voor die bron aan.
+  if (bron && typeof queryToken === 'string') {
+    return handelBronTokenAf(req, res, next, queryToken, bron);
   }
 
   // Short-lived download token (purpose: 'download'): no session record

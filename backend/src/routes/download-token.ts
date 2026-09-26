@@ -48,14 +48,18 @@ const bronTokenSchema = z.object({
  * Bestaat deze bron in de vereniging van de aanvrager? Per soort de vraag die
  * ook de downloadroute zelf stelt.
  */
-const BRON_BESTAAT: Record<Bronsoort, (id: string, associationId: string | null) => boolean> = {
-  mp3: (id, associationId) =>
-    Boolean(
-      db
-        .prepare('SELECT 1 FROM music_titles WHERE mp3_file_path = ? AND association_id = ? AND deleted_at IS NULL')
-        .get(id, associationId),
-    ),
-};
+function bronBestaat(soort: Bronsoort, id: string, associationId: string | null): boolean {
+  switch (soort) {
+    case 'mp3':
+      return Boolean(
+        db
+          .prepare('SELECT 1 FROM music_titles WHERE mp3_file_path = ? AND association_id = ? AND deleted_at IS NULL')
+          .get(id, associationId),
+      );
+    default:
+      return false;
+  }
+}
 
 /**
  * POST /api/download-token/bron  { soort: 'mp3', id: '<bestandsnaam>' }
@@ -81,7 +85,7 @@ router.post(
       throw new ApiError(401, 'Een download-token vraagt een sessie.');
     }
 
-    if (!BRON_BESTAAT[soort](id, user.associationId)) {
+    if (!bronBestaat(soort, id, user.associationId)) {
       throw new ApiError(404, 'Niet gevonden.');
     }
 

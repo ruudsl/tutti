@@ -300,7 +300,7 @@ router.post(
       );
       eisBruikbaar('instrument', sectionInstrumentId, req.user!.associationId);
 
-      await bewaakOpslagNaUpload(req);
+      await bewaakOpslagNaUpload(req, path.join(process.cwd(), 'uploads', 'recordings'));
     } catch (fout) {
       try {
         fs.unlinkSync(req.file.path);

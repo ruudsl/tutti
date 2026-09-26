@@ -630,7 +630,7 @@ router.post(
       throw new ApiError(400, 'No file uploaded');
     }
 
-    await bewaakOpslagNaUpload(req);
+    await bewaakOpslagNaUpload(req, uploadsDir);
 
     const id = uuidv4();
     const now = new Date().toISOString();

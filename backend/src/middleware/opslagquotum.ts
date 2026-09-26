@@ -13,10 +13,12 @@
  */
 
 import fs from 'fs';
+import path from 'path';
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth';
 import { bewaakOpslag } from '../services/abonnementLimieten';
 import logger from '../utils/logger';
+import { bestandInMap } from '../utils/bestandInMap';
 
 /**
  * Ruimte voor de multipart-omhulling om de bestanden heen: grenzen, kopregels
@@ -63,11 +65,15 @@ export function geuploadeBestanden(req: AuthRequest): Express.Multer.File[] {
  * Na multer: weiger met 413 als de werkelijke bestanden niet passen, en haal
  * ze dan eerst weer van schijf.
  *
+ * @param map de map waar multer voor deze route naartoe schrijft. Alleen
+ *   bestanden daarin worden weggehaald: het pad in `req.file` komt via het
+ *   verzoek binnen, dus van dat pad telt hier alleen de bestandsnaam.
  * @param bestanden standaard alles wat multer voor dit verzoek schreef.
  * @param vrijkomend wat deze upload vervangt.
  */
 export async function bewaakOpslagNaUpload(
   req: AuthRequest,
+  map: string,
   bestanden: Express.Multer.File[] = geuploadeBestanden(req),
   vrijkomend = 0,
 ): Promise<void> {
@@ -78,11 +84,14 @@ export async function bewaakOpslagNaUpload(
     await Promise.all(
       bestanden
         .filter((bestand) => bestand.path)
-        .map((bestand) =>
-          fs.promises.unlink(bestand.path).catch((err: Error) => {
-            logger.error(`Geweigerde upload niet op te ruimen: ${bestand.path}`, { error: err.message });
-          }),
-        ),
+        .map(async (bestand) => {
+          const naam = path.basename(bestand.path).replace(/[\r\n]/g, '');
+          try {
+            await fs.promises.unlink(bestandInMap(map, naam));
+          } catch (err) {
+            logger.error('Geweigerde upload niet op te ruimen', { bestand: naam, error: (err as Error).message });
+          }
+        }),
     );
     throw fout;
   }
