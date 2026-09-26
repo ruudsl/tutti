@@ -116,9 +116,10 @@ describe('authenticateToken', () => {
     expect(req.user!.id).toBe('user-1');
   });
 
-  it('accepts token from query parameter', () => {
+  it('weigert een sessietoken in de queryparameter, ook bij GET', () => {
     const token = jwt.sign(testUser, 'test-secret-key');
-    // Een volledig token in de URL geldt alleen bij GET/HEAD.
+    // Een sessietoken in de URL belandt in logboeken en geschiedenis. Media
+    // gebruiken een download-token voor één bron (routes/download-token.ts).
     const req = mockRequest({
       method: 'GET',
       query: { token } as any,
@@ -127,8 +128,9 @@ describe('authenticateToken', () => {
     const next = vi.fn();
 
     authenticateToken(req, res, next);
-    expect(next).toHaveBeenCalled();
-    expect(req.user).toBeDefined();
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+    expect(req.user).toBeUndefined();
   });
 
   it('rejects invalid token', () => {
@@ -364,21 +366,22 @@ describe('optionalAuth', () => {
     expect(req.user?.id).toBe(testUser.id);
   });
 
-  it('accepts a token passed as a query parameter', () => {
+  it('negeert een sessietoken in de queryparameter, ook bij GET', () => {
     const token = generateToken({
       id: testUser.id,
       email: testUser.email,
       role: testUser.role,
       association_id: testUser.associationId,
     });
-    // Een volledig token in de URL geldt alleen bij GET/HEAD.
+    // Een sessietoken in de URL telt niet: zie authenticateToken.
     const req = mockRequest({ method: 'GET', query: { token } });
     const res = mockResponse();
     const next = vi.fn();
 
     optionalAuth(req, res, next);
 
-    expect(req.user?.id).toBe(testUser.id);
+    expect(next).toHaveBeenCalled();
+    expect(req.user).toBeUndefined();
   });
 
   it('ignores an invalid token instead of failing the request', () => {

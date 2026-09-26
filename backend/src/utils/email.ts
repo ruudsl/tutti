@@ -3,6 +3,8 @@ import logger from './logger';
 import db from '../database/connection';
 import { getPasswordResetEmail } from '../templates/emails';
 import { ontsleutelGeheim } from './encryption';
+import { gecontroleerdeSmtpVerbinding } from './smtpVerbinding';
+import { OnveiligAdresFout } from './uitgaandAdres';
 
 const sanitizeForLog = (value: unknown): string => {
   return (
@@ -44,8 +46,14 @@ const STANDAARD_AFZENDER = '"Harmonie App" <noreply@harmonie.app>';
  * bijvoorbeeld de wachtwoordherstellinks van vereniging B via het
  * mailaccount en met de afzender van vereniging A. Die kan ze dan lezen, en
  * de ontvanger ziet een afzender die niets met zijn vereniging te maken heeft.
+ *
+ * De host van een vereniging wordt bij elke verzending opgezocht en
+ * gecontroleerd; nodemailer verbindt met het gecontroleerde IP-adres (zie
+ * utils/smtpVerbinding.ts). Wijst hij naar een eigen of intern adres, dan
+ * gooit dit een OnveiligAdresFout en gaat er niets de deur uit - ook niet via
+ * de installatie-SMTP, want de vereniging heeft voor haar eigen server gekozen.
  */
-const kiesSmtp = (associationId?: string | null): SmtpKeuze | null => {
+const kiesSmtp = async (associationId?: string | null): Promise<SmtpKeuze | null> => {
   if (associationId) {
     let rij: SmtpRij | undefined;
     try {
@@ -59,9 +67,10 @@ const kiesSmtp = (associationId?: string | null): SmtpKeuze | null => {
     }
 
     if (rij?.smtp_host) {
+      const verbinding = await gecontroleerdeSmtpVerbinding(rij.smtp_host);
       return {
         transporter: nodemailer.createTransport({
-          host: rij.smtp_host,
+          ...verbinding,
           port: rij.smtp_port || 587,
           secure: !!rij.smtp_secure,
           auth: rij.smtp_user
@@ -118,7 +127,19 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     `Sending email to ${sanitizeForLog(to)}: ${sanitizeForLog(subject)}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`,
   );
 
-  const smtp = kiesSmtp(associationId);
+  let smtp: SmtpKeuze | null;
+  try {
+    smtp = await kiesSmtp(associationId);
+  } catch (error) {
+    if (error instanceof OnveiligAdresFout) {
+      logger.error(
+        `E-mail niet verstuurd: de SMTP-host van vereniging ${sanitizeForLog(associationId)} is geweigerd: ${error.message}`,
+      );
+    } else {
+      logger.error('E-mail niet verstuurd: SMTP-instellingen konden niet worden gelezen', error);
+    }
+    return false;
+  }
 
   if (!smtp) {
     // Log metadata only when no SMTP is configured (avoid logging user-controlled body content)

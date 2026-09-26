@@ -194,115 +194,121 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Custom Fields */}
-      {user?.id && <CustomFieldsSection entityType="user" entityId={user.id} editable={true} className="mt-3" />}
+      {/* De rest van het profiel pas na een eigen wachtwoord: tot dan geeft de
+          API het lid alleen wat nodig is om het te wijzigen (middleware/auth.ts). */}
+      {!user?.mustChangePassword && (
+        <>
+          {/* Custom Fields */}
+          {user?.id && <CustomFieldsSection entityType="user" entityId={user.id} editable={true} className="mt-3" />}
 
-      {/* MFA Section */}
-      <div className="card mt-2">
-        <div className="card-header">
-          <span className="card-title">{t('profile.mfa.title')}</span>
-        </div>
-        <div className="card-body">
-          {mfaError && <div className="alert alert-error mb-2">{mfaError}</div>}
-          {mfaSuccess && <div className="alert alert-success mb-2">{mfaSuccess}</div>}
+          {/* MFA Section */}
+          <div className="card mt-2">
+            <div className="card-header">
+              <span className="card-title">{t('profile.mfa.title')}</span>
+            </div>
+            <div className="card-body">
+              {mfaError && <div className="alert alert-error mb-2">{mfaError}</div>}
+              {mfaSuccess && <div className="alert alert-success mb-2">{mfaSuccess}</div>}
 
-          {!user?.mfaEnabled ? (
-            // MFA not enabled
-            <>
-              {!mfaSetup ? (
-                <div>
-                  <p className="mb-2">{t('profile.mfa.setupDescription')}</p>
-                  <button className="btn btn-primary" onClick={handleSetupMfa} disabled={isSettingUpMfa}>
-                    {isSettingUpMfa ? t('profile.mfa.settingUp') : t('profile.mfa.setupButton')}
-                  </button>
-                </div>
+              {!user?.mfaEnabled ? (
+                // MFA not enabled
+                <>
+                  {!mfaSetup ? (
+                    <div>
+                      <p className="mb-2">{t('profile.mfa.setupDescription')}</p>
+                      <button className="btn btn-primary" onClick={handleSetupMfa} disabled={isSettingUpMfa}>
+                        {isSettingUpMfa ? t('profile.mfa.settingUp') : t('profile.mfa.setupButton')}
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="mb-2">{t('profile.mfa.scanQr')}</p>
+                      <div className="mb-2" style={{ textAlign: 'center' }}>
+                        <img src={mfaSetup.qrCode} alt="MFA QR Code" style={{ maxWidth: '200px' }} />
+                      </div>
+                      <p className="mb-2">
+                        <small>
+                          {t('profile.mfa.manualCode')} <code>{mfaSetup.secret}</code>
+                        </small>
+                      </p>
+                      <form onSubmit={handleEnableMfa}>
+                        <FormField label={t('profile.mfa.verificationCode')}>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={mfaCode}
+                            onChange={(e) => setMfaCode(e.target.value)}
+                            placeholder="123456"
+                            maxLength={6}
+                            required
+                          />
+                        </FormField>
+                        <div className="flex gap-1">
+                          <button type="submit" className="btn btn-primary">
+                            {t('profile.mfa.enableButton')}
+                          </button>
+                          <button type="button" className="btn btn-secondary" onClick={() => setMfaSetup(null)}>
+                            {t('common.cancel')}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                </>
               ) : (
+                // MFA enabled
                 <div>
-                  <p className="mb-2">{t('profile.mfa.scanQr')}</p>
-                  <div className="mb-2" style={{ textAlign: 'center' }}>
-                    <img src={mfaSetup.qrCode} alt="MFA QR Code" style={{ maxWidth: '200px' }} />
-                  </div>
-                  <p className="mb-2">
-                    <small>
-                      {t('profile.mfa.manualCode')} <code>{mfaSetup.secret}</code>
-                    </small>
+                  <p className="mb-2" style={{ color: 'var(--success)' }}>
+                    {t('profile.mfa.disableTitle')}
                   </p>
-                  <form onSubmit={handleEnableMfa}>
-                    <FormField label={t('profile.mfa.verificationCode')}>
+                  <form onSubmit={handleDisableMfa}>
+                    <FormField label={t('profile.mfa.disablePassword')}>
                       <input
-                        type="text"
+                        type="password"
                         className="form-control"
-                        value={mfaCode}
-                        onChange={(e) => setMfaCode(e.target.value)}
-                        placeholder="123456"
-                        maxLength={6}
+                        value={disablePassword}
+                        onChange={(e) => setDisablePassword(e.target.value)}
                         required
                       />
                     </FormField>
-                    <div className="flex gap-1">
-                      <button type="submit" className="btn btn-primary">
-                        {t('profile.mfa.enableButton')}
-                      </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setMfaSetup(null)}>
-                        {t('common.cancel')}
-                      </button>
-                    </div>
+                    <button type="submit" className="btn btn-danger" disabled={isDisablingMfa}>
+                      {isDisablingMfa ? t('profile.mfa.disabling') : t('profile.mfa.disableButton')}
+                    </button>
                   </form>
                 </div>
               )}
-            </>
-          ) : (
-            // MFA enabled
-            <div>
-              <p className="mb-2" style={{ color: 'var(--success)' }}>
-                {t('profile.mfa.disableTitle')}
-              </p>
-              <form onSubmit={handleDisableMfa}>
-                <FormField label={t('profile.mfa.disablePassword')}>
-                  <input
-                    type="password"
-                    className="form-control"
-                    value={disablePassword}
-                    onChange={(e) => setDisablePassword(e.target.value)}
-                    required
-                  />
-                </FormField>
-                <button type="submit" className="btn btn-danger" disabled={isDisablingMfa}>
-                  {isDisablingMfa ? t('profile.mfa.disabling') : t('profile.mfa.disableButton')}
-                </button>
-              </form>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Notification Preferences */}
-      <div className="card mt-3">
-        <div className="card-body">
-          <NotificationPreferences />
-        </div>
-      </div>
+          {/* Notification Preferences */}
+          <div className="card mt-3">
+            <div className="card-body">
+              <NotificationPreferences />
+            </div>
+          </div>
 
-      {/* Calendar Sync */}
-      <div className="card mt-3">
-        <div className="card-body">
-          <CalendarSync />
-        </div>
-      </div>
+          {/* Calendar Sync */}
+          <div className="card mt-3">
+            <div className="card-body">
+              <CalendarSync />
+            </div>
+          </div>
 
-      {/* Sessions Management */}
-      <div className="card mt-3">
-        <div className="card-body">
-          <SessionsManager />
-        </div>
-      </div>
+          {/* Sessions Management */}
+          <div className="card mt-3">
+            <div className="card-body">
+              <SessionsManager />
+            </div>
+          </div>
 
-      {/* GDPR Data Export */}
-      <div className="card mt-3">
-        <div className="card-body">
-          <GdprExport />
-        </div>
-      </div>
+          {/* GDPR Data Export */}
+          <div className="card mt-3">
+            <div className="card-body">
+              <GdprExport />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

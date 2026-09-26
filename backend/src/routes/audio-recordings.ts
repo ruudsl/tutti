@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { bewaakOpslagVooraf, bewaakOpslagNaUpload } from '../middleware/opslagquotum';
 import { eisBruikbaar } from '../services/catalogus';
 import { isAudio, validateUploadedFile } from '../utils/fileValidation';
 import logger from '../utils/logger';
@@ -242,6 +243,7 @@ router.get(
 router.post(
   '/',
   authenticateToken,
+  bewaakOpslagVooraf(),
   audioUpload.single('audio'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
@@ -297,6 +299,8 @@ router.post(
         'Titel niet gevonden.',
       );
       eisBruikbaar('instrument', sectionInstrumentId, req.user!.associationId);
+
+      await bewaakOpslagNaUpload(req, path.join(process.cwd(), 'uploads', 'recordings'));
     } catch (fout) {
       try {
         fs.unlinkSync(req.file.path);

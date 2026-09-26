@@ -156,48 +156,59 @@ erDiagram
 
 Parent organizations that own orchestras, users, and all other data.
 
-| Column                  | Type     | Description                                |
-| ----------------------- | -------- | ------------------------------------------ |
-| id                      | TEXT     | Primary key (UUID)                         |
-| name                    | TEXT     | Unique identifier name                     |
-| display_name            | TEXT     | Human-readable display name                |
-| logo_path               | TEXT     | Path to logo image                         |
-| theme_json              | TEXT     | JSON theme configuration                   |
-| microsoft_client_id     | TEXT     | Microsoft Entra ID client ID               |
-| microsoft_client_secret | TEXT     | Microsoft Entra ID client secret           |
-| microsoft_tenant_id     | TEXT     | Microsoft Entra tenant ID                  |
-| microsoft_enabled       | BOOLEAN  | SSO enabled flag                           |
-| smtp_host               | TEXT     | Email server host                          |
-| smtp_port               | INTEGER  | Email server port (default: 587)           |
-| smtp_secure             | BOOLEAN  | Use TLS                                    |
-| smtp_user               | TEXT     | SMTP username                              |
-| smtp_pass               | TEXT     | SMTP password                              |
-| smtp_from               | TEXT     | From email address                         |
-| smtp_enabled            | BOOLEAN  | Email sending enabled                      |
-| google_drive_client_id  | TEXT     | Google Drive client ID                     |
-| google_drive_api_key    | TEXT     | Google Drive API key                       |
-| google_drive_enabled    | BOOLEAN  | Google Drive integration enabled           |
-| parent_id               | TEXT     | FK to parent association (for hierarchies) |
-| subscription_tier       | TEXT     | Subscription level (free, basic, premium)  |
-| subscription_expires    | DATETIME | Subscription expiration date               |
-| max_members             | INTEGER  | Maximum allowed members                    |
-| max_orchestras          | INTEGER  | Maximum allowed orchestras                 |
-| max_storage_mb          | INTEGER  | Maximum storage in MB                      |
-| is_active               | BOOLEAN  | Association is active                      |
-| slug                    | TEXT     | URL-friendly identifier                    |
-| website                 | TEXT     | Association website                        |
-| phone                   | TEXT     | Contact phone                              |
-| email                   | TEXT     | Contact email                              |
-| address                 | TEXT     | Street address                             |
-| city                    | TEXT     | City                                       |
-| postal_code             | TEXT     | Postal code                                |
-| country                 | TEXT     | Country (default: Nederland)               |
-| billing_email           | TEXT     | Billing contact email                      |
-| kvk_number              | TEXT     | Chamber of Commerce number                 |
-| iban                    | TEXT     | Bank account IBAN                          |
-| created_at              | DATETIME | Creation timestamp                         |
+| Column                  | Type     | Description                                         |
+| ----------------------- | -------- | --------------------------------------------------- |
+| id                      | TEXT     | Primary key (UUID)                                  |
+| name                    | TEXT     | Unique identifier name                              |
+| display_name            | TEXT     | Human-readable display name                         |
+| logo_path               | TEXT     | Path to logo image                                  |
+| theme_json              | TEXT     | JSON theme configuration                            |
+| microsoft_client_id     | TEXT     | Microsoft Entra ID client ID                        |
+| microsoft_client_secret | TEXT     | Microsoft Entra ID client secret                    |
+| microsoft_tenant_id     | TEXT     | Microsoft Entra tenant ID                           |
+| microsoft_enabled       | BOOLEAN  | SSO enabled flag                                    |
+| smtp_host               | TEXT     | Email server host                                   |
+| smtp_port               | INTEGER  | Email server port (default: 587)                    |
+| smtp_secure             | BOOLEAN  | Use TLS                                             |
+| smtp_user               | TEXT     | SMTP username                                       |
+| smtp_pass               | TEXT     | SMTP password                                       |
+| smtp_from               | TEXT     | From email address                                  |
+| smtp_enabled            | BOOLEAN  | Email sending enabled                               |
+| google_drive_client_id  | TEXT     | Google Drive client ID                              |
+| google_drive_api_key    | TEXT     | Google Drive API key                                |
+| google_drive_enabled    | BOOLEAN  | Google Drive integration enabled                    |
+| parent_id               | TEXT     | FK to parent association (for hierarchies)          |
+| subscription_tier       | TEXT     | Subscription level (free, basic, premium)           |
+| subscription_expires    | DATETIME | Subscription expiration date                        |
+| max_members             | INTEGER  | Maximum allowed members                             |
+| max_orchestras          | INTEGER  | Maximum allowed orchestras                          |
+| max_storage_mb          | INTEGER  | Opgeslagen, niet gehandhaafd (zie hieronder)        |
+| opslag_limiet_bytes     | INTEGER  | Eigen opslaggrens; NULL = abonnement, 0 = onbeperkt |
+| is_active               | BOOLEAN  | Association is active                               |
+| slug                    | TEXT     | URL-friendly identifier                             |
+| website                 | TEXT     | Association website                                 |
+| phone                   | TEXT     | Contact phone                                       |
+| email                   | TEXT     | Contact email                                       |
+| address                 | TEXT     | Street address                                      |
+| city                    | TEXT     | City                                                |
+| postal_code             | TEXT     | Postal code                                         |
+| country                 | TEXT     | Country (default: Nederland)                        |
+| billing_email           | TEXT     | Billing contact email                               |
+| kvk_number              | TEXT     | Chamber of Commerce number                          |
+| iban                    | TEXT     | Bank account IBAN                                   |
+| created_at              | DATETIME | Creation timestamp                                  |
 
 **Indexes:** `idx_associations_slug` (unique)
+
+**Opslagquotum.** De opslaggrens van een vereniging is `opslag_limiet_bytes`
+als die is ingevuld (0 = onbeperkt), anders `STORAGE_QUOTA_BYTES_<ABONNEMENT>`
+voor het `subscription_tier`, anders `STORAGE_QUOTA_BYTES`, anders geen grens.
+`max_storage_mb` staat sinds de multi-vereniging-migratie op elke vereniging
+met standaard 5000 en werd nooit gehandhaafd; het telt niet mee. Het gebruik
+wordt live opgeteld (`services/abonnementLimieten.ts`, `opslagGebruik`) uit
+`music_pieces.file_size`, `music_titles.mp3_file_size`, de lengte van
+`music_metadata.musicxml_raw`, `audio_recordings.file_size`,
+`wiki_attachments.file_size` en `email_campaign_attachments.file_size`.
 
 ---
 
@@ -343,6 +354,7 @@ Metadata for music compositions.
 | duration_seconds  | INTEGER  | Duration in seconds             |
 | grade             | TEXT     | Difficulty grade (1-5)          |
 | mp3_file_path     | TEXT     | Path to MP3 preview             |
+| mp3_file_size     | INTEGER  | Bytes van de MP3 (opslagquotum) |
 | is_shared         | BOOLEAN  | Shared with other associations  |
 | internal_notes    | TEXT     | Committee-only notes            |
 | streaming_links   | TEXT     | JSON: Spotify, Apple Music URLs |
@@ -368,26 +380,27 @@ Metadata for music compositions.
 
 Individual sheet music files (parts).
 
-| Column            | Type     | Description              |
-| ----------------- | -------- | ------------------------ |
-| id                | TEXT     | Primary key (UUID)       |
-| title             | TEXT     | Part title               |
-| arranger          | TEXT     | Arranger                 |
-| instrument_id     | TEXT     | FK to instruments        |
-| tuning            | TEXT     | Instrument tuning        |
-| group_number      | TEXT     | Part number (1st, 2nd)   |
-| clef              | TEXT     | Music clef               |
-| file_path         | TEXT     | Path to PDF file         |
-| original_filename | TEXT     | Original upload filename |
-| youtube_url       | TEXT     | YouTube reference        |
-| association_id    | TEXT     | FK to associations       |
-| is_shared         | BOOLEAN  | Shared flag              |
-| uploaded_by       | TEXT     | FK to users              |
-| imslp_source      | TEXT     | IMSLP source URL         |
-| version           | INTEGER  | Version number           |
-| last_modified_by  | TEXT     | Last editor              |
-| deleted_at        | DATETIME | Soft delete timestamp    |
-| created_at        | DATETIME | Creation timestamp       |
+| Column            | Type     | Description                    |
+| ----------------- | -------- | ------------------------------ |
+| id                | TEXT     | Primary key (UUID)             |
+| title             | TEXT     | Part title                     |
+| arranger          | TEXT     | Arranger                       |
+| instrument_id     | TEXT     | FK to instruments              |
+| tuning            | TEXT     | Instrument tuning              |
+| group_number      | TEXT     | Part number (1st, 2nd)         |
+| clef              | TEXT     | Music clef                     |
+| file_path         | TEXT     | Path to PDF file               |
+| original_filename | TEXT     | Original upload filename       |
+| file_size         | INTEGER  | Bytes op schijf (opslagquotum) |
+| youtube_url       | TEXT     | YouTube reference              |
+| association_id    | TEXT     | FK to associations             |
+| is_shared         | BOOLEAN  | Shared flag                    |
+| uploaded_by       | TEXT     | FK to users                    |
+| imslp_source      | TEXT     | IMSLP source URL               |
+| version           | INTEGER  | Version number                 |
+| last_modified_by  | TEXT     | Last editor                    |
+| deleted_at        | DATETIME | Soft delete timestamp          |
+| created_at        | DATETIME | Creation timestamp             |
 
 **Foreign Keys:**
 
@@ -1503,6 +1516,26 @@ Active login sessions.
 - `user_id` -> `users(id)` ON DELETE CASCADE
 
 **Indexes:** `idx_user_sessions_expires_at`
+
+---
+
+#### inlogvertragingen
+
+Wachttijd na mislukte inlogpogingen (`backend/src/utils/inlogvertraging.ts`).
+Eén rij per combinatie van opgegeven e-mailadres en IP-adres (wachtwoordstap),
+of per account (tweede stap). Er staat geen e-mailadres, IP-adres of
+account-id leesbaar in: de sleutel is een HMAC-SHA256 met een sleutel die van
+`JWT_SECRET` is afgeleid. De taak `inlogvertraging-opruimen` verwijdert elk uur
+rijen zonder mislukking in de afgelopen dag.
+
+| Column       | Type    | Description                                   |
+| ------------ | ------- | --------------------------------------------- |
+| sleutel_hash | TEXT    | Primary key, HMAC-SHA256 (hex) van de sleutel |
+| mislukt      | INTEGER | Aantal mislukkingen                           |
+| wachten_tot  | INTEGER | Tot wanneer geweigerd wordt (ms sinds 1970)   |
+| laatste      | INTEGER | Tijdstip van de laatste mislukking (ms)       |
+
+**Indexes:** `idx_inlogvertragingen_laatste`
 
 ---
 

@@ -207,6 +207,14 @@ koppen, een tekst- of bytelichaam en een `AbortSignal`.
 Een stroomonderbreker per host, zodat de kapotte webhook van de ene vereniging
 die van een andere niet stillegt.
 
+Voor de eigen SMTP-server van een vereniging geldt hetzelfde, zonder HTTP:
+`gecontroleerdeSmtpVerbinding` uit `utils/smtpVerbinding.ts` zoekt de host op
+met `controleerUitgaandeHost`, en nodemailer krijgt het gecontroleerde
+IP-adres als `host` en de naam als `tls.servername`. Zo zoekt nodemailer de
+naam niet zelf opnieuw op, en controleert TLS het certificaat nog steeds op de
+naam. De SMTP van de installatie (`SMTP_HOST`) wordt vertrouwd en niet
+gecontroleerd.
+
 ## In tests
 
 De onderbrekers zijn gedeeld over de hele applicatie en dus ook over alle tests

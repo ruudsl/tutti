@@ -805,10 +805,13 @@ router.post(
 
     // Use transaction to ensure atomicity
     withTransaction(() => {
+      // Het wachtwoord heeft de beheerder gekozen, dus het lid kiest bij de
+      // eerste keer inloggen een eigen (moet_wachtwoord_wijzigen, zie
+      // authenticateToken) - net als bij de aanmelding via onboarding.
       db.prepare(
         `
-            INSERT INTO users (id, email, password_hash, first_name, last_name, role, association_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (id, email, password_hash, first_name, last_name, role, association_id, moet_wachtwoord_wijzigen)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
         `,
       ).run(userId, data.email, passwordHash, data.firstName, data.lastName, data.role, req.user!.associationId);
 
@@ -956,6 +959,11 @@ router.put(
     const rolGewijzigd = data.role !== undefined && data.role !== user.role;
     const sessiesIntrekken = rolGewijzigd || !!data.password;
 
+    // Zet een beheerder het wachtwoord van een ander lid, dan kent hij het:
+    // dat lid kiest bij het volgende inloggen een eigen (zie authenticateToken).
+    // Wie zijn eigen wachtwoord zet, kiest het zelf.
+    const moetWachtwoordWijzigen = req.params.id !== req.user!.id ? 1 : 0;
+
     // Use transaction to ensure atomicity
     withTransaction(() => {
       // Update basic info
@@ -965,7 +973,7 @@ router.put(
           `
                 UPDATE users SET email = COALESCE(?, email), first_name = COALESCE(?, first_name),
                        last_name = COALESCE(?, last_name), role = COALESCE(?, role), password_hash = ?,
-                       password_changed_at = ?
+                       password_changed_at = ?, moet_wachtwoord_wijzigen = ?
                 WHERE id = ?
             `,
         ).run(
@@ -975,6 +983,7 @@ router.put(
           data.role,
           passwordHash,
           new Date().toISOString(),
+          moetWachtwoordWijzigen,
           req.params.id,
         );
       } else {

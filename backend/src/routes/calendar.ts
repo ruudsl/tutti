@@ -27,6 +27,52 @@ const router = Router();
 // Secret for calendar feed tokens (use JWT secret as base)
 const CALENDAR_FEED_SECRET = config.jwtSecret + '-calendar-feed';
 
+interface GoogleAgendaClient {
+  clientId: string;
+  clientSecret: string;
+}
+
+/**
+ * Met welke OAuth-client praat Tutti voor deze vereniging met Google Agenda?
+ *
+ * 1. Die van de vereniging zelf, als `associations.google_calendar_client_id`
+ *    is gevuld. Daar is geen scherm voor: alleen wie de installatie beheert
+ *    kan dat in de database zetten (het geheim versleuteld, met
+ *    utils/encryption.ts). Het blijft werken voor wie dat al zo deed.
+ * 2. Anders die van de installatie: `GOOGLE_CALENDAR_CLIENT_ID` en
+ *    `GOOGLE_CALENDAR_CLIENT_SECRET`.
+ * 3. Anders geen: dan is de koppeling niet ingesteld.
+ *
+ * Hier las de code eerst alleen de kolommen van de vereniging, en niets in
+ * de applicatie vulde ze: de knop "Koppel Google Agenda" gaf altijd "niet
+ * geconfigureerd". De installatie is de logische eigenaar van de client: het
+ * terugkeeradres (/api/calendar/google/callback) hoort bij het domein van de
+ * installatie, en Google laat een app met toegang tot agenda's alleen uit de
+ * testfase als de eigenaar dat domein heeft geverifieerd. Een vereniging op
+ * een gedeelde installatie kan dat niet.
+ */
+function googleAgendaClient(associationId: string | null | undefined): GoogleAgendaClient | null {
+  if (associationId) {
+    const eigen = db
+      .prepare('SELECT google_calendar_client_id, google_calendar_client_secret FROM associations WHERE id = ?')
+      .get(associationId) as
+      { google_calendar_client_id: string | null; google_calendar_client_secret: string | null } | undefined;
+    if (eigen?.google_calendar_client_id) {
+      return {
+        clientId: eigen.google_calendar_client_id,
+        clientSecret: ontsleutelGeheim(eigen.google_calendar_client_secret, 'Google-clientgeheim') || '',
+      };
+    }
+  }
+
+  const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim();
+  if (clientId && clientSecret) {
+    return { clientId, clientSecret };
+  }
+  return null;
+}
+
 interface CalendarSettings {
   id: string;
   user_id: string;
@@ -382,18 +428,8 @@ router.post(
   '/google/auth',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    // Get Google OAuth config from association settings
-    const association = db
-      .prepare(
-        `
-        SELECT google_calendar_client_id, google_calendar_client_secret
-        FROM associations WHERE id = ?
-    `,
-      )
-      .get(req.user!.associationId) as
-      { google_calendar_client_id: string; google_calendar_client_secret: string } | undefined;
-
-    if (!association?.google_calendar_client_id) {
+    const client = googleAgendaClient(req.user!.associationId);
+    if (!client) {
       throw new ApiError(400, 'Google Calendar integratie is niet geconfigureerd voor deze vereniging.');
     }
 
@@ -409,7 +445,7 @@ router.post(
     ).run(uuidv4(), req.user!.id, state);
 
     const redirectUri = `${config.frontendUrl.replace(/\/$/, '')}/api/calendar/google/callback`;
-    const authUrl = getGoogleOAuthUrl(association.google_calendar_client_id, redirectUri, state);
+    const authUrl = getGoogleOAuthUrl(client.clientId, redirectUri, state);
 
     res.json({ authUrl });
   }),
@@ -461,29 +497,14 @@ router.get(
       return res.redirect(`${config.frontendUrl}/profile?calendar_error=user_not_found`);
     }
 
-    // Get Google credentials
-    const association = db
-      .prepare(
-        `
-        SELECT google_calendar_client_id, google_calendar_client_secret
-        FROM associations WHERE id = ?
-    `,
-      )
-      .get(user.association_id) as
-      { google_calendar_client_id: string; google_calendar_client_secret: string } | undefined;
-
-    if (!association?.google_calendar_client_id) {
+    const client = googleAgendaClient(user.association_id);
+    if (!client) {
       return res.redirect(`${config.frontendUrl}/profile?calendar_error=not_configured`);
     }
 
     try {
       const redirectUri = `${config.frontendUrl.replace(/\/$/, '')}/api/calendar/google/callback`;
-      const tokens = await exchangeGoogleCode(
-        code,
-        association.google_calendar_client_id,
-        ontsleutelGeheim(association.google_calendar_client_secret, 'Google-clientgeheim') || '',
-        redirectUri,
-      );
+      const tokens = await exchangeGoogleCode(code, client.clientId, client.clientSecret, redirectUri);
 
       // Store tokens
       db.prepare(
@@ -566,18 +587,8 @@ router.post(
       throw new ApiError(400, 'Google Calendar is niet gekoppeld.');
     }
 
-    // Get association credentials
-    const association = db
-      .prepare(
-        `
-        SELECT google_calendar_client_id, google_calendar_client_secret
-        FROM associations WHERE id = ?
-    `,
-      )
-      .get(req.user!.associationId) as
-      { google_calendar_client_id: string; google_calendar_client_secret: string } | undefined;
-
-    if (!association?.google_calendar_client_id) {
+    const client = googleAgendaClient(req.user!.associationId);
+    if (!client) {
       throw new ApiError(400, 'Google Calendar integratie is niet geconfigureerd.');
     }
 
@@ -588,11 +599,7 @@ router.post(
       if (expiresAt <= new Date()) {
         // Refresh token
         try {
-          const newTokens = await refreshGoogleToken(
-            refreshToken,
-            association.google_calendar_client_id,
-            ontsleutelGeheim(association.google_calendar_client_secret, 'Google-clientgeheim') || '',
-          );
+          const newTokens = await refreshGoogleToken(refreshToken, client.clientId, client.clientSecret);
           accessToken = newTokens.accessToken;
 
           db.prepare(

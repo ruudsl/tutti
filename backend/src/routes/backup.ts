@@ -1,6 +1,8 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+import { pipeline } from 'stream/promises';
 import { ZipArchive } from 'archiver';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
@@ -15,6 +17,12 @@ import db from '../database/connection';
 import { logAuditEvent } from './audit-logs';
 import { getPreRestoreDir, schrijfDatabasekopie } from '../scheduler/backup';
 import { schrijfPriveBestand } from '../utils/priveBestand';
+import {
+  heeftEigenSleutel,
+  isVersleuteldBestand,
+  maakBestandsversleuteling,
+  ontsleutelBuffer,
+} from '../utils/encryption';
 
 const router = Router();
 
@@ -109,9 +117,16 @@ function leesManifestRegels(waarde: unknown): { storedName: string; archiveName:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: ZIP file containing backup
+ *         description: >
+ *           ZIP file containing backup. With ENCRYPTION_SECRET set the ZIP is
+ *           encrypted (TUTTI-ENC1, AES-256-GCM) and served as
+ *           harmonie-backup-<timestamp>.zip.enc.
  *         content:
  *           application/zip:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *           application/octet-stream:
  *             schema:
  *               type: string
  *               format: binary
@@ -123,126 +138,72 @@ router.get(
   ipWhitelistMiddleware,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const filename = `harmonie-backup-${timestamp}.zip`;
+    const versleuteld = heeftEigenSleutel();
+    const filename = `harmonie-backup-${timestamp}.zip${versleuteld ? '.enc' : ''}`;
 
-    logger.info(`Backup requested by user ${req.user!.id}`);
-
-    // Set response headers
-    res.setHeader('Content-Type', 'application/zip');
-    // Bewust niet via bijlageKopregel: filename is hierboven opgebouwd uit een
-    // vast voorvoegsel en een tijdstempel, dus er zit geen gebruikersinvoer in
-    // die de kopregel kan verminken.
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    logger.info(`Backup requested by user ${req.user!.id}`, { versleuteld });
 
     // Create archive
     const archive = new ZipArchive({
       zlib: { level: 9 }, // Maximum compression
     });
 
-    // Handle archive errors
-    archive.on('error', (err) => {
-      logger.error('Backup archive error', { error: err });
-      throw new ApiError(500, 'Fout bij maken van backup.');
-    });
+    // Bewust niet via bijlageKopregel: filename is hierboven opgebouwd uit een
+    // vast voorvoegsel en een tijdstempel, dus er zit geen gebruikersinvoer in
+    // die de kopregel kan verminken.
+    const zetKopregels = (inhoudstype: string) => {
+      res.setHeader('Content-Type', inhoudstype);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    };
 
-    // Pipe to response
-    archive.pipe(res);
+    let manifest: Manifest;
+    if (versleuteld) {
+      // De reservekopie is de hele installatie: de database met de gegevens
+      // van elke vereniging en alle uploads. De automatische kopieën worden
+      // al versleuteld zodra ENCRYPTION_SECRET er staat; de download ging nog
+      // leesbaar over de lijn en belandde zo op de laptop van de beheerder.
+      //
+      // Het formaat is dat van de automatische kopieën (TUTTI-ENC1), zodat
+      // `npm run backup:ontsleutel` er ook op werkt. De kop met de tag staat
+      // vóór de gegevens en is pas na het laatste blok bekend: daarom eerst
+      // versleuteld naar een tijdelijk bestand, en dan kop plus bestand naar de
+      // browser. Zo staat er nooit een onversleutelde kopie op schijf, en ook
+      // nooit de hele installatie in het geheugen.
+      const map = fs.mkdtempSync(path.join(os.tmpdir(), 'tutti-backup-'));
+      const tijdelijk = path.join(map, 'backup.zip.enc');
+      try {
+        const { versleutelaar, kop } = maakBestandsversleuteling();
+        const weggeschreven = pipeline(archive, versleutelaar, fs.createWriteStream(tijdelijk, { mode: 0o600 }));
+        manifest = vulArchief(archive);
+        await archive.finalize();
+        await weggeschreven;
 
-    // Flush pending in-memory changes so the on-disk database file is up-to-date
-    db.flush();
-
-    // Add database file
-    if (fs.existsSync(DB_PATH)) {
-      archive.file(DB_PATH, { name: 'database/harmonie.db' });
-      logger.info('Added database to backup');
-    }
-
-    // Get file mappings from database for original filenames
-    const pdfMappings = db
-      .prepare(
-        `
-        SELECT file_path, original_filename FROM music_pieces WHERE file_path IS NOT NULL
-    `,
-      )
-      .all() as { file_path: string; original_filename: string }[];
-
-    const mp3Mappings = db
-      .prepare(
-        `
-        SELECT mp3_file_path as file_path, title as original_filename FROM music_titles
-        WHERE mp3_file_path IS NOT NULL
-    `,
-      )
-      .all() as { file_path: string; original_filename: string }[];
-
-    // Create lookup maps
-    const pdfNameMap = new Map<string, string>();
-    for (const m of pdfMappings) {
-      pdfNameMap.set(m.file_path, m.original_filename);
-    }
-
-    const mp3NameMap = new Map<string, string>();
-    for (const m of mp3Mappings) {
-      mp3NameMap.set(m.file_path, m.original_filename);
-    }
-
-    // Track used names to handle duplicates
-    const usedPdfNames = new Map<string, number>();
-    const usedMp3Names = new Map<string, number>();
-
-    // Create manifest for restore mapping
-    const manifest: {
-      version: number;
-      pdfs: { storedName: string; archiveName: string }[];
-      mp3s: { storedName: string; archiveName: string }[];
-    } = { version: 1, pdfs: [], mp3s: [] };
-
-    // Add uploaded PDF files with original filenames
-    if (fs.existsSync(UPLOAD_DIR)) {
-      const pdfFiles = fs.readdirSync(UPLOAD_DIR).filter((f) => f.endsWith('.pdf'));
-      for (const file of pdfFiles) {
-        let archiveName = pdfNameMap.get(file) || file;
-
-        // Handle duplicate names by adding suffix
-        const baseName = archiveName.replace(/\.pdf$/i, '');
-        const count = usedPdfNames.get(archiveName) || 0;
-        if (count > 0) {
-          archiveName = `${baseName} (${count}).pdf`;
-        }
-        usedPdfNames.set(pdfNameMap.get(file) || file, count + 1);
-
-        archive.file(path.join(UPLOAD_DIR, file), { name: `uploads/${archiveName}` });
-        manifest.pdfs.push({ storedName: file, archiveName });
+        const koptekst = kop();
+        zetKopregels('application/octet-stream');
+        res.setHeader('Content-Length', String(koptekst.length + fs.statSync(tijdelijk).size));
+        res.write(koptekst);
+        await pipeline(fs.createReadStream(tijdelijk), res);
+      } finally {
+        fs.rmSync(map, { recursive: true, force: true });
       }
-      logger.info(`Added ${pdfFiles.length} PDF files to backup`);
+    } else {
+      // Alleen buiten productie: daar is ENCRYPTION_SECRET verplicht.
+      logger.warn('Reservekopie gaat onversleuteld over de lijn: stel ENCRYPTION_SECRET in om hem te versleutelen');
+      zetKopregels('application/zip');
+
+      // Handle archive errors
+      archive.on('error', (err) => {
+        logger.error('Backup archive error', { error: err });
+        throw new ApiError(500, 'Fout bij maken van backup.');
+      });
+
+      // Pipe to response
+      archive.pipe(res);
+      manifest = vulArchief(archive);
+
+      // Finalize archive
+      await archive.finalize();
     }
-
-    // Add uploaded MP3 files with original filenames
-    if (fs.existsSync(MP3_UPLOAD_DIR)) {
-      const mp3Files = fs.readdirSync(MP3_UPLOAD_DIR).filter((f) => f.endsWith('.mp3'));
-      for (const file of mp3Files) {
-        const originalName = mp3NameMap.get(file);
-        let archiveName = originalName ? `${originalName}.mp3` : file;
-
-        // Handle duplicate names by adding suffix
-        const baseName = archiveName.replace(/\.mp3$/i, '');
-        const count = usedMp3Names.get(archiveName) || 0;
-        if (count > 0) {
-          archiveName = `${baseName} (${count}).mp3`;
-        }
-        usedMp3Names.set(originalName ? `${originalName}.mp3` : file, count + 1);
-
-        archive.file(path.join(MP3_UPLOAD_DIR, file), { name: `uploads/mp3/${archiveName}` });
-        manifest.mp3s.push({ storedName: file, archiveName });
-      }
-      logger.info(`Added ${mp3Files.length} MP3 files to backup`);
-    }
-
-    // Add manifest file for restore mapping
-    archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
-
-    // Finalize archive
-    await archive.finalize();
 
     // Audit log the backup download
     logAuditEvent(
@@ -254,6 +215,7 @@ router.get(
       {
         pdfFiles: manifest.pdfs.length,
         mp3Files: manifest.mp3s.length,
+        versleuteld,
       },
       req.ip,
       req.get('user-agent'),
@@ -262,6 +224,109 @@ router.get(
     logger.info(`Backup completed: ${filename}`);
   }),
 );
+
+type Manifest = {
+  version: number;
+  pdfs: { storedName: string; archiveName: string }[];
+  mp3s: { storedName: string; archiveName: string }[];
+};
+
+/**
+ * Stop de database, de uploads en het manifest in het archief. Geeft het
+ * manifest terug voor het auditlog.
+ */
+function vulArchief(archive: ZipArchive): Manifest {
+  // Flush pending in-memory changes so the on-disk database file is up-to-date
+  db.flush();
+
+  // Add database file
+  if (fs.existsSync(DB_PATH)) {
+    archive.file(DB_PATH, { name: 'database/harmonie.db' });
+    logger.info('Added database to backup');
+  }
+
+  // Get file mappings from database for original filenames
+  const pdfMappings = db
+    .prepare(
+      `
+        SELECT file_path, original_filename FROM music_pieces WHERE file_path IS NOT NULL
+    `,
+    )
+    .all() as { file_path: string; original_filename: string }[];
+
+  const mp3Mappings = db
+    .prepare(
+      `
+        SELECT mp3_file_path as file_path, title as original_filename FROM music_titles
+        WHERE mp3_file_path IS NOT NULL
+    `,
+    )
+    .all() as { file_path: string; original_filename: string }[];
+
+  // Create lookup maps
+  const pdfNameMap = new Map<string, string>();
+  for (const m of pdfMappings) {
+    pdfNameMap.set(m.file_path, m.original_filename);
+  }
+
+  const mp3NameMap = new Map<string, string>();
+  for (const m of mp3Mappings) {
+    mp3NameMap.set(m.file_path, m.original_filename);
+  }
+
+  // Track used names to handle duplicates
+  const usedPdfNames = new Map<string, number>();
+  const usedMp3Names = new Map<string, number>();
+
+  // Create manifest for restore mapping
+  const manifest: Manifest = { version: 1, pdfs: [], mp3s: [] };
+
+  // Add uploaded PDF files with original filenames
+  if (fs.existsSync(UPLOAD_DIR)) {
+    const pdfFiles = fs.readdirSync(UPLOAD_DIR).filter((f) => f.endsWith('.pdf'));
+    for (const file of pdfFiles) {
+      let archiveName = pdfNameMap.get(file) || file;
+
+      // Handle duplicate names by adding suffix
+      const baseName = archiveName.replace(/\.pdf$/i, '');
+      const count = usedPdfNames.get(archiveName) || 0;
+      if (count > 0) {
+        archiveName = `${baseName} (${count}).pdf`;
+      }
+      usedPdfNames.set(pdfNameMap.get(file) || file, count + 1);
+
+      archive.file(path.join(UPLOAD_DIR, file), { name: `uploads/${archiveName}` });
+      manifest.pdfs.push({ storedName: file, archiveName });
+    }
+    logger.info(`Added ${pdfFiles.length} PDF files to backup`);
+  }
+
+  // Add uploaded MP3 files with original filenames
+  if (fs.existsSync(MP3_UPLOAD_DIR)) {
+    const mp3Files = fs.readdirSync(MP3_UPLOAD_DIR).filter((f) => f.endsWith('.mp3'));
+    for (const file of mp3Files) {
+      const originalName = mp3NameMap.get(file);
+      let archiveName = originalName ? `${originalName}.mp3` : file;
+
+      // Handle duplicate names by adding suffix
+      const baseName = archiveName.replace(/\.mp3$/i, '');
+      const count = usedMp3Names.get(archiveName) || 0;
+      if (count > 0) {
+        archiveName = `${baseName} (${count}).mp3`;
+      }
+      usedMp3Names.set(originalName ? `${originalName}.mp3` : file, count + 1);
+
+      archive.file(path.join(MP3_UPLOAD_DIR, file), { name: `uploads/mp3/${archiveName}` });
+      manifest.mp3s.push({ storedName: file, archiveName });
+    }
+    logger.info(`Added ${mp3Files.length} MP3 files to backup`);
+  }
+
+  // Add manifest file for restore mapping
+  archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
+
+  return manifest;
+}
 
 /**
  * @swagger
@@ -332,6 +397,8 @@ router.get(
         size: dbSize + pdfSize + mp3Size,
         sizeFormatted: formatBytes(dbSize + pdfSize + mp3Size),
       },
+      // Of de download versleuteld is; het scherm legt uit wat dat betekent.
+      encrypted: heeftEigenSleutel(),
     });
   }),
 );
@@ -343,7 +410,11 @@ const backupUpload = multer({
     fileSize: 500 * 1024 * 1024, // 500MB limit
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/zip' || file.originalname.toLowerCase().endsWith('.zip')) {
+    // Een versleutelde reservekopie heet .zip.enc en komt van de browser als
+    // application/octet-stream; of hij echt versleuteld is, blijkt verderop
+    // uit de kop van het bestand, niet uit de naam.
+    const naam = file.originalname.toLowerCase();
+    if (file.mimetype === 'application/zip' || naam.endsWith('.zip') || naam.endsWith('.zip.enc')) {
       cb(null, true);
     } else {
       // FileValidationError en niet Error: de centrale foutafhandeling kent
@@ -351,7 +422,7 @@ const backupUpload = multer({
       // naar de laatste regel daar, dus wie het verkeerde bestand aanklikte
       // kreeg 500 "Interne serverfout" terwijl er niets aan de server
       // mankeerde.
-      cb(new FileValidationError('Alleen ZIP bestanden zijn toegestaan.'));
+      cb(new FileValidationError('Alleen ZIP bestanden zijn toegestaan (.zip, of versleuteld .zip.enc).'));
     }
   },
 });
@@ -394,7 +465,7 @@ router.post(
     logger.info(`Backup restore requested by user ${req.user!.id}`);
 
     try {
-      const zip = new AdmZip(req.file.buffer);
+      const zip = new AdmZip(leesReservekopie(req.file.buffer));
       const entries = zip.getEntries();
 
       // Magic-byte check: if the backup contains a database, it must be a
@@ -575,6 +646,29 @@ router.post(
     }
   }),
 );
+
+/**
+ * De zip uit een aangeleverde reservekopie: een versleutelde download
+ * (.zip.enc, herkend aan de kop TUTTI-ENC1) wordt eerst ontsleuteld, een
+ * gewone zip - ook een van vóór de versleuteling - gaat ongewijzigd door.
+ *
+ * Ontsleutelen lukt alleen met dezelfde ENCRYPTION_SECRET (en ENCRYPTION_SALT)
+ * als de installatie die de kopie maakte. GCM controleert de tag, dus een
+ * andere sleutel of een beschadigd bestand geeft een fout en nooit onzin.
+ */
+function leesReservekopie(inhoud: Buffer): Buffer {
+  if (!isVersleuteldBestand(inhoud)) return inhoud;
+  try {
+    return ontsleutelBuffer(inhoud);
+  } catch (fout) {
+    logger.warn('Versleutelde reservekopie niet te ontsleutelen', {
+      error: fout instanceof Error ? fout.message : String(fout),
+    });
+    throw new FileValidationError(
+      'Deze versleutelde backup is niet te ontsleutelen. Hij is gemaakt op een installatie met een andere ENCRYPTION_SECRET, of het bestand is beschadigd.',
+    );
+  }
+}
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';

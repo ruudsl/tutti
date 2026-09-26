@@ -51,7 +51,7 @@ class NepSocket {
 const { sockets, io, aanmelding } = vi.hoisted(() => ({
   sockets: [] as any[],
   io: vi.fn(),
-  aanmelding: { user: null as { id: string; role: string } | null },
+  aanmelding: { user: null as { id: string; role: string; mustChangePassword?: boolean } | null },
 }));
 
 vi.mock('socket.io-client', () => ({
@@ -155,6 +155,20 @@ describe('verbinden', () => {
     await laadHook();
 
     expect(io).not.toHaveBeenCalled();
+  });
+
+  it('verbindt pas als het lid een eigen wachtwoord heeft gekozen', async () => {
+    // Met een tijdelijk wachtwoord weigert de server de verbinding, en na zo'n
+    // weigering probeert socket.io het niet opnieuw.
+    aanmelding.user = { id: 'gebruiker-1', role: 'member', mustChangePassword: true };
+    const { useWebSocket } = await import('../useWebSocket');
+    const { rerender } = renderHook(() => useWebSocket());
+    expect(io).not.toHaveBeenCalled();
+
+    aanmelding.user = { id: 'gebruiker-1', role: 'member', mustChangePassword: false };
+    rerender();
+
+    expect(io).toHaveBeenCalledTimes(1);
   });
 
   it('meldt pas verbonden te zijn als de server dat bevestigt', async () => {

@@ -1706,7 +1706,14 @@
     "restoring": "Restoring...",
     "restored": "Backup successfully restored. The page will reload.",
     "errorRestore": "Error restoring backup",
-    "confirmRestore": "Are you sure you want to restore the backup? This will overwrite all current data!"
+    "confirmRestore": "Are you sure you want to restore the backup? This will overwrite all current data!",
+    "encryptedDownload": "The download is encrypted (.zip.enc). It can only be restored on an installation with the same key (ENCRYPTION_SECRET). Keep that key somewhere other than on the server."
+  },
+  "opslag": {
+    "titel": "Storage",
+    "gebruiktVanLimiet": "{{gebruikt}} of {{limiet}} used ({{procent}}%)",
+    "gebruiktOnbeperkt": "{{gebruikt}} used, no limit",
+    "limietBereikt": "Your association's storage limit has been reached. Delete files first or ask for a higher limit."
   },
   "settings": {
     "title": "Settings",
@@ -3442,6 +3449,7 @@
       "type": "Notification type",
       "webhookUrl": "Webhook URL",
       "webhookHelp": "URL where the notification will be sent (e.g., Make, n8n, or custom endpoint)",
+      "webhookKeepHint": "A webhook URL is saved. It is not shown; leave the field empty to keep it.",
       "twilioHelp": "Create a free Twilio account at twilio.com and activate the WhatsApp Sandbox.",
       "twilioFrom": "Twilio WhatsApp number",
       "twilioFromHelp": "The Twilio WhatsApp number (e.g., +14155238886 for sandbox)",
@@ -4524,6 +4532,7 @@
       "maxMembers": "Max Members",
       "maxOrchestras": "Max Orchestras",
       "maxStorage": "Max Storage (MB)",
+      "maxStorageHint": "The storage limit that is enforced. Empty: according to the subscription. 0: unlimited.",
       "isActive": "Association is active",
       "tiers": {
         "free": "Free",

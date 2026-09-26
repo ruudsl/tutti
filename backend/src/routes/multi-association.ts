@@ -9,6 +9,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { bewaakLedenLimiet } from '../services/abonnementLimieten';
+import { validate } from '../middleware/validate';
 import { haalGedeeldeMuziek, haalGedeeldeConcerten, haalPartners } from '../services/partnerschappen';
 import { z } from 'zod';
 
@@ -250,12 +251,29 @@ router.put(
   }),
 );
 
+/**
+ * Alleen de opslaggrens wordt hier gecontroleerd; de overige velden gaan zoals
+ * ze altijd gingen. opslagLimietBytes: weglaten laat hem staan, `null` zet de
+ * vereniging terug op de grens van haar abonnement, 0 is onbeperkt.
+ */
+const abonnementSchema = z.looseObject({
+  opslagLimietBytes: z.number().int().min(0).nullable().optional(),
+});
+
 router.put(
   '/super-admin/associations/:id/subscription',
   authenticateToken,
   requireSuperAdmin,
+  validate(abonnementSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { subscriptionTier, subscriptionExpires, maxMembers, maxOrchestras, maxStorageMb, isActive } = req.body;
+
+    if (req.body.opslagLimietBytes !== undefined) {
+      db.prepare('UPDATE associations SET opslag_limiet_bytes = ? WHERE id = ?').run(
+        req.body.opslagLimietBytes,
+        req.params.id,
+      );
+    }
 
     db.prepare(
       `
@@ -280,6 +298,7 @@ router.put(
 
     logActivity(req.params.id, req.user!.id, 'subscription_updated', 'association', req.params.id, {
       subscriptionTier,
+      opslagLimietBytes: req.body.opslagLimietBytes,
     });
 
     res.json({ message: 'Abonnement bijgewerkt.' });
@@ -1316,6 +1335,7 @@ function mapAssociation(a: any) {
     maxMembers: a.max_members,
     maxOrchestras: a.max_orchestras,
     maxStorageMb: a.max_storage_mb,
+    opslagLimietBytes: a.opslag_limiet_bytes ?? null,
     isActive: a.is_active !== 0,
     memberCount: a.member_count,
     orchestraCount: a.orchestra_count,

@@ -116,7 +116,9 @@ export function generateInvalidToken(): string {
 export function createTestAssociation(overrides: Partial<TestAssociation> = {}): TestAssociation {
   const association: TestAssociation = {
     id: overrides.id || uuidv4(),
-    name: overrides.name || `Test Association ${Date.now()}`,
+    // Date.now() alleen was niet uniek: twee aanroepen in dezelfde milliseconde
+    // gaven dezelfde naam, en de tweede liep dan op de UNIQUE-beperking stuk.
+    name: overrides.name || `Test Association ${Date.now()}-${uuidv4().slice(0, 8)}`,
   };
 
   testDb.prepare('INSERT INTO associations (id, name) VALUES (?, ?)').run(association.id, association.name);
@@ -136,7 +138,7 @@ export function createTestUser(
 
   const user: TestUser = {
     id: overrides.id || uuidv4(),
-    email: overrides.email || `test-${Date.now()}@example.com`,
+    email: overrides.email || `test-${Date.now()}-${uuidv4().slice(0, 8)}@example.com`,
     password,
     passwordHash,
     firstName: overrides.firstName || 'Test',

@@ -6,9 +6,9 @@
  * intrekken van zijn sessies was overgeslagen of mislukt. Alleen tokens zonder
  * sessierij werden tegen de gebruikerstabel gehouden.
  *
- * Daarnaast: een volledig token in de querystring (?token=) geldt alleen nog
- * bij GET en HEAD. De frontend gebruikt het nog voor <audio src>; voor een
- * verzoek dat iets wijzigt hoort het token in de kopregel.
+ * Daarnaast: een volledig token in de querystring (?token=) geldt niet meer,
+ * ook niet bij GET en HEAD. Eerst alleen nog bij lezen, voor <audio src>;
+ * die gebruikt nu een download-token voor één bron (routes/download-token.ts).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -67,9 +67,14 @@ describe('status van het lid bij het aanmelden', () => {
   });
 
   describe('een volledig token in de URL', () => {
-    it('werkt nog bij GET', async () => {
+    it('werkt ook bij GET niet meer', async () => {
       const antwoord = await request(app).get(`/ik?token=${beheerderToken}`);
-      expect(antwoord.status).toBe(200);
+      expect(antwoord.status).toBe(401);
+    });
+
+    it('meldt bij optionele aanmelding via GET niemand aan', async () => {
+      const antwoord = await request(app).get(`/misschien?token=${beheerderToken}`);
+      expect(antwoord.body).toBeNull();
     });
 
     it('werkt niet bij POST', async () => {

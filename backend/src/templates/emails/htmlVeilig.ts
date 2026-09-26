@@ -23,6 +23,24 @@ export function ontsnapHtml(tekst: string): string {
   return tekst.replace(/[&<>"']/g, (teken) => VERVANGINGEN[teken]);
 }
 
+/**
+ * Een adres voor in `href="…"`: alleen http(s), en ontsnapt.
+ *
+ * Ontsnappen alleen is niet genoeg voor een link: `javascript:…` of `data:…`
+ * bevat geen enkel teken dat ontsnapt hoeft te worden. Voor alles wat geen
+ * geldig http- of https-adres is geeft dit `null`; laat de link dan weg.
+ */
+export function veiligeLink(adres: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(adres);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  return ontsnapHtml(url.href);
+}
+
 /** Een kopie waarin elke tekst (ook in een lijst) ontsnapt is. */
 export function ontsnapGegevens<T>(gegevens: T): T {
   const kopie: Record<string, unknown> = {};

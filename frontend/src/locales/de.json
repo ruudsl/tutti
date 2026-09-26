@@ -1724,7 +1724,14 @@
     "restoring": "Wird wiederhergestellt...",
     "restored": "Backup erfolgreich wiederhergestellt. Die Seite wird neu geladen.",
     "errorRestore": "Fehler beim Wiederherstellen des Backups",
-    "confirmRestore": "Sind Sie sicher, dass Sie das Backup wiederherstellen möchten? Dies überschreibt alle aktuellen Daten!"
+    "confirmRestore": "Sind Sie sicher, dass Sie das Backup wiederherstellen möchten? Dies überschreibt alle aktuellen Daten!",
+    "encryptedDownload": "Der Download ist verschlüsselt (.zip.enc). Er kann nur auf einer Installation mit demselben Schlüssel (ENCRYPTION_SECRET) wiederhergestellt werden. Bewahren Sie diesen Schlüssel an einem anderen Ort als auf dem Server auf."
+  },
+  "opslag": {
+    "titel": "Speicher",
+    "gebruiktVanLimiet": "{{gebruikt}} von {{limiet}} belegt ({{procent}} %)",
+    "gebruiktOnbeperkt": "{{gebruikt}} belegt, ohne Limit",
+    "limietBereikt": "Das Speicherlimit Ihres Vereins ist erreicht. Löschen Sie zuerst Dateien oder bitten Sie um ein höheres Limit."
   },
   "settings": {
     "title": "Einstellungen",
@@ -2915,6 +2922,7 @@
       "type": "Benachrichtigungstyp",
       "webhookUrl": "Webhook-URL",
       "webhookHelp": "URL wohin die Benachrichtigung gesendet wird (z.B. Make, n8n oder eigener Endpoint)",
+      "webhookKeepHint": "Eine Webhook-URL ist gespeichert. Sie wird nicht angezeigt; lassen Sie das Feld leer, um sie zu behalten.",
       "twilioHelp": "Erstellen Sie ein kostenloses Twilio-Konto auf twilio.com und aktivieren Sie die WhatsApp Sandbox.",
       "twilioFrom": "Twilio WhatsApp Nummer",
       "twilioFromHelp": "Die Twilio WhatsApp Nummer (z.B. +14155238886 für Sandbox)",
@@ -4524,6 +4532,7 @@
       "maxMembers": "Max. Mitglieder",
       "maxOrchestras": "Max. Orchester",
       "maxStorage": "Max. Speicher (MB)",
+      "maxStorageHint": "Das durchgesetzte Speicherlimit. Leer: laut Abonnement. 0: unbegrenzt.",
       "isActive": "Verein ist aktiv",
       "tiers": {
         "free": "Kostenlos",

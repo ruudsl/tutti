@@ -107,7 +107,7 @@ function zetApiKlaar(): void {
   }
   vi.mocked(api.getMusicTitles).mockImplementation(async () => houder.titels);
   vi.mocked(api.getGenres).mockResolvedValue(GENRES);
-  vi.mocked(api.getMp3Url).mockImplementation((pad: string) => `/mp3/${pad}`);
+  vi.mocked(api.getMp3Url).mockImplementation(async (pad: string) => `/mp3/${pad}`);
   vi.mocked(api.updateTitleMeta).mockResolvedValue({ id: 'titel-1' } as never);
 }
 

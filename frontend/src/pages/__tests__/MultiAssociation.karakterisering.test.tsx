@@ -471,6 +471,50 @@ describe('verenigingsbeheer - verenigingen', () => {
     );
   });
 
+  it('stuurt de opslaggrens in bytes mee, en null als het veld leeg is', async () => {
+    const gebruiker = userEvent.setup();
+    vi.mocked(verenigingApi.getSuperAdminAssociations).mockResolvedValue([
+      { ...VERENIGINGEN[0], opslagLimietBytes: 2048 * 1024 * 1024 },
+      VERENIGINGEN[1],
+    ]);
+    vi.mocked(verenigingApi.updateAssociationSubscription).mockResolvedValue(undefined);
+
+    toon();
+    const eerste = (await screen.findByText('Harmonie Oost')).closest('tr') as HTMLElement;
+    await gebruiker.click(within(eerste).getByTitle('multiAssociation.associations.subscription'));
+    let venster = await screen.findByRole('dialog');
+    const veld = within(venster).getByLabelText('multiAssociation.subscription.maxStorage');
+    expect(veld).toHaveValue(2048);
+    expect(veld).toHaveAccessibleDescription('multiAssociation.subscription.maxStorageHint');
+    await gebruiker.clear(veld);
+    await gebruiker.type(veld, '500');
+    await gebruiker.click(within(venster).getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() =>
+      expect(verenigingApi.updateAssociationSubscription).toHaveBeenCalledWith(
+        'ver-1',
+        expect.objectContaining({ opslagLimietBytes: 500 * 1024 * 1024 }),
+      ),
+    );
+    // De oude, nooit gehandhaafde maxStorageMb gaat niet meer met een
+    // verzonnen standaard van 5000 mee.
+    expect(vi.mocked(verenigingApi.updateAssociationSubscription).mock.calls[0][1]).not.toHaveProperty('maxStorageMb');
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    const tweede = screen.getByText('Fanfare West').closest('tr') as HTMLElement;
+    await gebruiker.click(within(tweede).getByTitle('multiAssociation.associations.subscription'));
+    venster = await screen.findByRole('dialog');
+    expect(within(venster).getByLabelText('multiAssociation.subscription.maxStorage')).toHaveValue(null);
+    await gebruiker.click(within(venster).getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() =>
+      expect(verenigingApi.updateAssociationSubscription).toHaveBeenCalledWith(
+        'ver-2',
+        expect.objectContaining({ opslagLimietBytes: null }),
+      ),
+    );
+  });
+
   it('vraagt eerst om bevestiging voordat een vereniging verdwijnt', async () => {
     const gebruiker = userEvent.setup();
     vi.mocked(verenigingApi.getSuperAdminAssociations).mockResolvedValue(VERENIGINGEN);

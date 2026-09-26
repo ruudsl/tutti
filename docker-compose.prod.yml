@@ -40,6 +40,24 @@ services:
       # Logging
       - '--log.level=INFO'
       - '--accesslog=true'
+      # Het toegangslogboek schrijft geen adres met querystring weg: daar staan
+      # tokens in, zoals bij /reset-password?token=….
+      # Traefik kan de querystring niet van het pad afhalen, dus RequestPath en
+      # RequestLine gaan er helemaal uit. Alles staat standaard uit en alleen
+      # wat hieronder staat komt erin; ook geen koppen (Referer, Cookie,
+      # Authorization).
+      - '--accesslog.fields.defaultmode=drop'
+      - '--accesslog.fields.names.StartUTC=keep'
+      - '--accesslog.fields.names.ClientHost=keep'
+      - '--accesslog.fields.names.RequestMethod=keep'
+      - '--accesslog.fields.names.RequestProtocol=keep'
+      - '--accesslog.fields.names.DownstreamStatus=keep'
+      - '--accesslog.fields.names.DownstreamContentSize=keep'
+      - '--accesslog.fields.names.RequestCount=keep'
+      - '--accesslog.fields.names.RouterName=keep'
+      - '--accesslog.fields.names.ServiceURL=keep'
+      - '--accesslog.fields.names.Duration=keep'
+      - '--accesslog.fields.headers.defaultmode=drop'
     ports:
       - '80:80'
       - '443:443'

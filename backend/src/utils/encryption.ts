@@ -305,6 +305,25 @@ export function versleutelBuffer(inhoud: Buffer): Buffer {
   return Buffer.concat([BESTANDSKOP, iv, cipher.getAuthTag(), versleuteld]);
 }
 
+/**
+ * Versleutel een stroom in hetzelfde formaat als `versleutelBuffer`, voor een
+ * bestand dat te groot is om in zijn geheel in het geheugen te houden (de
+ * reservekopie als download).
+ *
+ * De kop met iv en tag staat vóór de gegevens, maar de tag is pas bekend als
+ * het laatste blok erdoor is. De aanroeper schrijft de uitvoer van
+ * `versleutelaar` daarom eerst weg, en zet na afloop `kop()` ervoor. Het
+ * resultaat is met `ontsleutelBuffer` en `npm run backup:ontsleutel` te lezen.
+ */
+export function maakBestandsversleuteling(): { versleutelaar: crypto.CipherGCM; kop: () => Buffer } {
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const versleutelaar = crypto.createCipheriv(ALGORITHM, bestandssleutel(), iv);
+  return {
+    versleutelaar,
+    kop: () => Buffer.concat([BESTANDSKOP, iv, versleutelaar.getAuthTag()]),
+  };
+}
+
 /** Is dit een met `versleutelBuffer` versleuteld bestand? */
 export function isVersleuteldBestand(inhoud: Buffer): boolean {
   return inhoud.length >= BESTANDSKOP.length && inhoud.subarray(0, BESTANDSKOP.length).equals(BESTANDSKOP);

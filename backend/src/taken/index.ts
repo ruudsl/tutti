@@ -22,6 +22,7 @@ import { getIntervalHours, isBackupEnabled, runBackup } from '../scheduler/backu
 import { cleanupOldThumbnails } from '../routes/thumbnails';
 import { cleanupTempFiles } from '../routes/pdf-tools';
 import { WACHTWOORDHERSTEL_TAAK, verstuurWachtwoordHerstel } from '../routes/auth';
+import { ruimInlogvertragingenOp } from '../utils/inlogvertraging';
 
 const MINUUT = 60 * 1000;
 
@@ -94,6 +95,19 @@ export function registreerStandaardTaken(): void {
     uitvoeren: () => cleanupTempFiles(),
   });
   registreerPeriodiek('pdf-tijdelijk-opruimen', { sleutelVoor: tijdvak('pdf-tijdelijk-opruimen', 60 * MINUUT) });
+
+  // Standen van de wachttijd na mislukte inlogpogingen die een dag stil zijn
+  // (utils/inlogvertraging.ts). Wat weg is, is weg: herhaalbaar.
+  registreerTaak('inlogvertraging-opruimen', {
+    herhaalbaar: true,
+    maxPogingen: 3,
+    uitvoeren: () => {
+      ruimInlogvertragingenOp();
+    },
+  });
+  registreerPeriodiek('inlogvertraging-opruimen', {
+    sleutelVoor: tijdvak('inlogvertraging-opruimen', 60 * MINUUT),
+  });
 
   // Back-up van de database. Een tweede kopie maken kan geen kwaad.
   if (isBackupEnabled()) {

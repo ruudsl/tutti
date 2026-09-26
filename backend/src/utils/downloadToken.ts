@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import config from '../config';
 
@@ -77,6 +78,100 @@ export function verifyDownloadToken(token: string): DownloadTokenPayload | null 
       return decoded as unknown as DownloadTokenPayload;
     }
     return null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Download-token voor één bron
+// ---------------------------------------------------------------------------
+
+/**
+ * Bronnen waarvoor een download-token per bron bestaat. Elke soort hoort bij
+ * precies één downloadroute, die met authenticateBronDownload alleen een
+ * token voor die soort en dat ene id aanneemt.
+ */
+export const BRONSOORTEN = ['mp3'] as const;
+export type Bronsoort = (typeof BRONSOORTEN)[number];
+
+const BRON_DOEL = 'download-bron';
+
+/** Een download-token voor één bron is 5 minuten geldig. */
+export const BRON_TOKEN_GELDIG_SECONDEN = 5 * 60;
+
+/**
+ * Een eigen sleutel, afgeleid van het JWT-geheim. Een sessietoken of een
+ * algemeen download-token is daardoor nooit een geldig brontoken, en een
+ * brontoken is nergens anders een geldig token.
+ */
+function bronSleutel(): Buffer {
+  return crypto.createHmac('sha256', config.jwtSecret).update('tutti:download-bron').digest();
+}
+
+export interface BronToken {
+  /** De gebruiker voor wie het token is uitgegeven. */
+  sub: string;
+  /** De vereniging uit de sessie waarmee het is aangevraagd. */
+  ver: string | null;
+  rol: string;
+  soort: Bronsoort;
+  bron: string;
+  /** Hash van het sessietoken: afmelden of intrekken maakt dit token ook ongeldig. */
+  sid: string;
+  doel: typeof BRON_DOEL;
+  iat?: number;
+  exp?: number;
+}
+
+/**
+ * Maak een kortlevend token voor één bron (soort + id), één gebruiker, één
+ * vereniging en één sessie. Bedoeld voor een adres zonder Authorization-
+ * kopregel, zoals <audio src>.
+ */
+export function maakBronToken(gegevens: {
+  soort: Bronsoort;
+  bronId: string;
+  userId: string;
+  associationId: string | null;
+  rol: string;
+  sessieHash: string;
+}): string {
+  return jwt.sign(
+    {
+      doel: BRON_DOEL,
+      soort: gegevens.soort,
+      bron: gegevens.bronId,
+      ver: gegevens.associationId,
+      rol: gegevens.rol,
+      sid: gegevens.sessieHash,
+    },
+    bronSleutel(),
+    { algorithm: 'HS256', subject: gegevens.userId, expiresIn: BRON_TOKEN_GELDIG_SECONDEN },
+  );
+}
+
+/**
+ * Controleer een brontoken voor precies deze soort en dit id.
+ *
+ * @returns de inhoud als handtekening, vervaltijd, soort en id kloppen;
+ *   anders null. Of de gebruiker en zijn sessie nog geldig zijn, kijkt
+ *   authenticateBronDownload na.
+ */
+export function controleerBronToken(token: string, soort: Bronsoort, bronId: string): BronToken | null {
+  try {
+    const inhoud = jwt.verify(token, bronSleutel(), { algorithms: ['HS256'] }) as Partial<BronToken>;
+    if (
+      inhoud.doel !== BRON_DOEL ||
+      inhoud.soort !== soort ||
+      inhoud.bron !== bronId ||
+      typeof inhoud.sub !== 'string' ||
+      typeof inhoud.sid !== 'string' ||
+      typeof inhoud.rol !== 'string'
+    ) {
+      return null;
+    }
+    return inhoud as BronToken;
   } catch {
     return null;
   }

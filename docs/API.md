@@ -34,6 +34,41 @@ Response:
 }
 ```
 
+Het token hoort in de `Authorization`-kopregel. Een sessietoken in de URL
+(`?token=`) wordt nergens aangenomen.
+
+### Eerst een eigen wachtwoord
+
+Heeft een lid een wachtwoord dat een ander heeft gekozen (aanmelding via
+onboarding, `POST /api/users`, of een beheerder die met `PUT /api/users/:id`
+het wachtwoord van een ander lid zet), dan staat `mustChangePassword: true` in
+het antwoord van inloggen en van `GET /api/auth/me`. Tot het lid een eigen
+wachtwoord kiest, geeft elke andere route:
+
+```json
+{ "error": "Kies eerst een eigen wachtwoord.", "code": "WACHTWOORD_WIJZIGEN_VERPLICHT" }
+```
+
+met status 403. Wel bereikbaar: `GET /api/auth/me`,
+`POST /api/auth/change-password` en `POST /api/auth/logout`.
+
+### Download-token voor één bron
+
+Voor een adres dat geen kopregel kan meesturen, zoals `<audio src>`:
+
+```http
+POST /api/download-token/bron
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "soort": "mp3", "id": "<bestandsnaam>" }
+```
+
+Antwoord: `{ "token": "...", "expiresIn": 300 }`. Het token geldt vijf
+minuten, alleen op `GET /api/music-pieces/mp3/<bestandsnaam>?token=...`, en
+alleen zolang de sessie waarmee het is aangevraagd bestaat. Een bestand buiten
+de eigen vereniging geeft 404.
+
 ## Endpoints Overview
 
 | Group             | Path                       | Description                                            |
@@ -83,6 +118,36 @@ Response:
   "error": "Error message in Dutch"
 }
 ```
+
+Sommige fouten hebben daarnaast een vaste `code`, zodat de frontend de melding
+in de taal van de gebruiker kan tonen. Zo geeft een upload die de opslaggrens
+van de vereniging overschrijdt `413` met `"code": "OPSLAGLIMIET_BEREIKT"`. Dat
+geldt voor bladmuziek (`/music-pieces/upload`, `/upload-zip`), mp3 en MusicXML
+bij een titel, audio-opnames, wiki- en mailbijlagen, opslaan vanuit de
+pdf-hulpmiddelen, IMSLP-import en het opnieuw proberen van een mislukte
+import. Bij een cloud-import wordt een bestand dat niet meer past als fout bij
+dat bestand gemeld. Het gebruik tegenover de grens staat op
+`GET /api/settings/opslag` (beheerder):
+
+```json
+{
+  "gebruik": {
+    "bladmuziek": 1048576,
+    "mp3": 0,
+    "musicxml": 0,
+    "opnames": 0,
+    "wikibijlagen": 0,
+    "mailbijlagen": 0,
+    "totaal": 1048576
+  },
+  "limiet": 5368709120
+}
+```
+
+`limiet` is `null` als er geen grens is. Een super-admin zet een eigen grens
+per vereniging met `opslagLimietBytes` op
+`PUT /api/multi-association/super-admin/associations/:id/subscription` (`null`
+= volgens abonnement, `0` = onbeperkt).
 
 ### Paginated List
 
