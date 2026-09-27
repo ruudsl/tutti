@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import MfaSettings from '../components/MfaSettings';
 import BackupSettings from '../components/BackupSettings';
+import OpslagGebruik from '../components/OpslagGebruik';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { useDashboardWidgets } from '../hooks/useDashboardWidgets';
@@ -68,6 +69,7 @@ export default function Dashboard() {
       {user?.role === ROLES.ADMIN && (
         <div className="mt-3">
           <h2 className="mb-2">{t('dashboard.administration')}</h2>
+          <OpslagGebruik />
           <BackupSettings />
         </div>
       )}

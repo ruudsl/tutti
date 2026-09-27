@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ZipArchive } from 'archiver';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { bewaakOpslag } from '../services/abonnementLimieten';
 import { eisBruikbaar, zoekInstrument } from '../services/catalogus';
 import { FileValidationError } from '../utils/errors';
 import db from '../database/connection';
@@ -611,6 +612,11 @@ router.post(
     const newFilename = `${uniqueSuffix}.pdf`;
     const uploadFilePath = path.join(UPLOAD_DIR, newFilename);
 
+    // Het tijdelijke bestand telt niet mee voor de opslag; de kopie in de
+    // uploadmap wel.
+    const grootte = fs.statSync(tempFilePath).size;
+    bewaakOpslag(req.user!.associationId, grootte);
+
     // Copy file from temp to uploads (keep temp file for further downloads)
     fs.copyFileSync(tempFilePath, uploadFilePath);
 
@@ -619,8 +625,8 @@ router.post(
     db.prepare(
       `
     INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
-                             file_path, original_filename, association_id, uploaded_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             file_path, original_filename, file_size, association_id, uploaded_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     ).run(
       pieceId,
@@ -632,6 +638,7 @@ router.post(
       pieceClef,
       newFilename,
       filename.endsWith('.pdf') ? filename : `${filename}.pdf`,
+      grootte,
       req.user!.associationId,
       req.user!.id,
     );

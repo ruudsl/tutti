@@ -31,6 +31,7 @@ import http from 'http';
 import https from 'https';
 import net from 'net';
 import { Readable, pipeline } from 'stream';
+import { domainToASCII } from 'url';
 import zlib from 'zlib';
 
 /** Bereiken waar de server nooit op verzoek van een gebruiker heen belt. */
@@ -197,6 +198,46 @@ export async function controleerUitgaandAdres(ruw: string, opzoeken?: Opzoeker):
   const url = leesAdres(ruw);
   await zoekVeiligOp(hostVan(url), opzoeken ?? standaardOpzoeker);
   return url;
+}
+
+/** Een gecontroleerde host voor een verbinding die niet over HTTP gaat. */
+export interface GecontroleerdeHost {
+  /** Het IP-adres dat is gecontroleerd; verbind met precies dit adres. */
+  adres: string;
+  /**
+   * De naam voor TLS (SNI en certificaatcontrole), in ASCII-vorm. Ontbreekt
+   * als de host zelf al een IP-adres is: daar hoort geen servername bij.
+   */
+  servername?: string;
+}
+
+/**
+ * Controleer een losse host (zonder URL eromheen), zoals een SMTP-server die
+ * een beheerder van een vereniging heeft ingesteld.
+ *
+ * Geeft het gecontroleerde IP-adres terug, zodat de aanroeper daarmee
+ * verbindt en niet met de naam. Een client die de naam zelf nog eens opzoekt
+ * (nodemailer doet dat) kan anders een ander antwoord krijgen dan bij de
+ * controle: DNS-rebinding, net als bij `gebruikersadres: true` voor HTTP.
+ *
+ * @throws OnveiligAdresFout als de host geen geldige hostnaam is of naar een
+ *   eigen of speciaal adres wijst.
+ */
+export async function controleerUitgaandeHost(ruw: string, opzoeken?: Opzoeker): Promise<GecontroleerdeHost> {
+  const host = ruw.trim().toLowerCase();
+  const url = leesAdres(`https://${net.isIPv6(host) ? `[${host}]` : host}/`);
+
+  // Een host met `/`, `@` of `:` erin leest als URL anders dan als hostnaam:
+  // dan is iets anders gecontroleerd dan wat de client zou aanroepen. Een naam
+  // met bijzondere letters staat in de URL in zijn ASCII-vorm.
+  const gecontroleerd = hostVan(url);
+  const verwacht = net.isIP(host) ? host : domainToASCII(host);
+  if (!verwacht || gecontroleerd !== verwacht) {
+    throw new OnveiligAdresFout('Dit is geen geldige hostnaam.');
+  }
+
+  const [adres] = await zoekVeiligOp(gecontroleerd, opzoeken ?? standaardOpzoeker);
+  return net.isIP(gecontroleerd) ? { adres } : { adres, servername: gecontroleerd };
 }
 
 type LookupTerugroep = (

@@ -53,6 +53,28 @@ interface NotificationSettings {
   updated_at: string;
 }
 
+/**
+ * Wat de browser ziet in plaats van een opgeslagen geheim: alleen dát er een
+ * is. Komt het masker bij het opslaan terug, dan blijft het bestaande staan.
+ *
+ * Ook het webhook-adres is een geheim: bij Slack, Discord, Make of n8n kan
+ * iedereen die het adres kent berichten in het kanaal van de vereniging
+ * zetten. Het staat versleuteld in de database en gaat nooit terug naar de
+ * browser, ook niet gedeeltelijk.
+ */
+const MASKER = '••••••••';
+
+/** De instellingen zoals ze naar de browser gaan: zonder geheimen. */
+function voorDeBrowser(settings: NotificationSettings) {
+  return {
+    ...settings,
+    webhook_url: settings.webhook_url ? MASKER : null,
+    twilio_auth_token: settings.twilio_auth_token ? MASKER : null,
+    enabled: Boolean(settings.enabled),
+    include_image: Boolean(settings.include_image),
+  };
+}
+
 interface NotificationLog {
   id: string;
   rehearsal_id: string;
@@ -93,13 +115,8 @@ router.get(
         return res.json(null);
       }
 
-      // Don't send the auth token back to the frontend
-      res.json({
-        ...settings,
-        twilio_auth_token: settings.twilio_auth_token ? '••••••••' : null,
-        enabled: Boolean(settings.enabled),
-        include_image: Boolean(settings.include_image),
-      });
+      // Geen token en geen webhook-adres terug naar de browser.
+      res.json(voorDeBrowser(settings));
     } catch (error) {
       logger.error('Error fetching notification settings', { error });
       res.status(500).json({ error: 'Failed to fetch notification settings' });
@@ -141,9 +158,6 @@ router.put(
       const notifType = notification_type || 'webhook';
 
       // Validate based on type
-      if (notifType === 'webhook' && !webhook_url) {
-        return res.status(400).json({ error: 'webhook_url is required for webhook type' });
-      }
       if (notifType === 'whatsapp') {
         if (!twilio_account_sid) {
           return res.status(400).json({ error: 'twilio_account_sid is required for WhatsApp' });
@@ -159,15 +173,30 @@ router.put(
       const existing = db
         .prepare(
           `
-            SELECT id, twilio_auth_token FROM seating_notification_settings WHERE orchestra_id = ?
+            SELECT id, twilio_auth_token, webhook_url FROM seating_notification_settings WHERE orchestra_id = ?
         `,
         )
-        .get(orchestraId) as { id: string; twilio_auth_token: string | null } | undefined;
+        .get(orchestraId) as { id: string; twilio_auth_token: string | null; webhook_url: string | null } | undefined;
 
       // Het masker komt terug als het token niet is gewijzigd: dan het
       // bestaande houden. Een nieuw token gaat versleuteld de database in.
       const tokenToSave =
-        twilio_auth_token === '••••••••' ? existing?.twilio_auth_token : versleutelGeheim(twilio_auth_token);
+        twilio_auth_token === MASKER ? existing?.twilio_auth_token : versleutelGeheim(twilio_auth_token);
+
+      // Het webhook-adres net zo, met één verschil: het scherm laat het veld
+      // leeg als er al een adres is. Bij een webhook betekent leeg (of het
+      // masker) dus "ongewijzigd". Wie naar WhatsApp wisselt stuurt geen adres
+      // mee; dan gaat het weg, zoals voorheen.
+      const nieuwAdres = typeof webhook_url === 'string' && webhook_url.trim() !== MASKER ? webhook_url.trim() : '';
+      const webhookToSave = nieuwAdres
+        ? versleutelGeheim(nieuwAdres)
+        : notifType === 'webhook' || webhook_url === MASKER
+          ? (existing?.webhook_url ?? null)
+          : null;
+
+      if (notifType === 'webhook' && !webhookToSave) {
+        return res.status(400).json({ error: 'webhook_url is required for webhook type' });
+      }
 
       if (existing) {
         db.prepare(
@@ -181,7 +210,7 @@ router.put(
             `,
         ).run(
           notifType,
-          webhook_url || null,
+          webhookToSave,
           twilio_account_sid || null,
           tokenToSave || null,
           twilio_whatsapp_from || null,
@@ -205,7 +234,7 @@ router.put(
           id,
           orchestraId,
           notifType,
-          webhook_url || null,
+          webhookToSave,
           twilio_account_sid || null,
           tokenToSave || null,
           twilio_whatsapp_from || null,
@@ -225,12 +254,7 @@ router.put(
         )
         .get(orchestraId) as NotificationSettings;
 
-      res.json({
-        ...settings,
-        twilio_auth_token: settings.twilio_auth_token ? '••••••••' : null,
-        enabled: Boolean(settings.enabled),
-        include_image: Boolean(settings.include_image),
-      });
+      res.json(voorDeBrowser(settings));
     } catch (error) {
       logger.error('Error saving notification settings', { error });
       res.status(500).json({ error: 'Failed to save notification settings' });
@@ -365,14 +389,15 @@ async function sendWebhook(
   settings: NotificationSettings,
   payload: Record<string, unknown>,
 ): Promise<{ success: boolean; error?: string; response?: string }> {
-  if (!settings.webhook_url) {
+  const webhookUrl = ontsleutelGeheim(settings.webhook_url, 'webhook-adres');
+  if (!webhookUrl) {
     return { success: false, error: 'Webhook URL not configured' };
   }
 
   try {
     // Het adres komt van een gebruiker, en het antwoord gaat terug naar die
     // gebruiker. Zonder controle las je zo via de server een intern adres uit.
-    const doel = await controleerUitgaandAdres(settings.webhook_url);
+    const doel = await controleerUitgaandAdres(webhookUrl);
 
     // Eén poging: een webhook is een bericht, en een tweede poging is een
     // tweede bericht. Elke host een eigen stroomonderbreker, zodat de kapotte

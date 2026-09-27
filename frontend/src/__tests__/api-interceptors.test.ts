@@ -225,17 +225,53 @@ describe('de response-interceptor bij andere statussen', () => {
   });
 });
 
-describe('getMp3Url', () => {
-  it('bouwt het adres op met de baseURL van de instantie', () => {
-    localStorage.setItem('token', 'jwt-van-de-server');
+describe('de response-interceptor bij een verplichte wachtwoordwijziging', () => {
+  it('stuurt een lid dat eerst een eigen wachtwoord moet kiezen naar het profiel', async () => {
+    localStorage.setItem('token', 'geldig-token');
+    antwoordMetFout(403, { error: 'Kies eerst een eigen wachtwoord.', code: 'WACHTWOORD_WIJZIGEN_VERPLICHT' });
 
-    expect(getMp3Url('stuk.mp3')).toBe('/api/music-pieces/mp3/stuk.mp3?token=jwt-van-de-server');
+    await expect(getUsers()).rejects.toMatchObject({ response: { status: 403 } });
+
+    expect(window.location.href).toBe('/profile');
+    // Geen afmelding: het lid moet op het profiel juist ingelogd zijn.
+    expect(localStorage.getItem('token')).toBe('geldig-token');
   });
 
-  // Vastgelegd, niet goedgekeurd: zonder token komt hier letterlijk
-  // "?token=null" uit. De backend krijgt dan de tekst "null" als token
-  // aangeboden in plaats van helemaal niets.
-  it('zet letterlijk null in het adres als er geen token is', () => {
-    expect(getMp3Url('stuk.mp3')).toBe('/api/music-pieces/mp3/stuk.mp3?token=null');
+  it('laadt het profiel niet opnieuw als het lid daar al is', async () => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { href: '', pathname: '/profile' },
+    });
+    antwoordMetFout(403, { code: 'WACHTWOORD_WIJZIGEN_VERPLICHT' });
+
+    await expect(getUsers()).rejects.toBeTruthy();
+
+    expect(window.location.href).toBe('');
+  });
+
+  it('stuurt bij een gewone 403 nergens heen', async () => {
+    antwoordMetFout(403, { error: 'Onvoldoende rechten', code: 'IETS_ANDERS' });
+
+    await expect(getUsers()).rejects.toBeTruthy();
+
+    expect(window.location.href).toBe('');
+  });
+});
+
+describe('getMp3Url', () => {
+  it('zet een download-token voor dit ene bestand in het adres, niet het sessietoken', async () => {
+    localStorage.setItem('token', 'jwt-van-de-server');
+    antwoordMet({ token: 'kort-bron-token', expiresIn: 300 });
+
+    const adres = await getMp3Url('stuk.mp3');
+
+    expect(laatsteVerzoek().methode).toBe('post');
+    expect(laatsteVerzoek().uri).toBe('/api/download-token/bron');
+    expect(laatsteVerzoek().body).toEqual({ soort: 'mp3', id: 'stuk.mp3' });
+    // Het sessietoken gaat in de kopregel van de aanvraag, niet in het adres.
+    expect(laatsteVerzoek().headers.Authorization).toBe('Bearer jwt-van-de-server');
+    expect(adres).toBe('/api/music-pieces/mp3/stuk.mp3?token=kort-bron-token');
+    expect(adres).not.toContain('jwt-van-de-server');
   });
 });

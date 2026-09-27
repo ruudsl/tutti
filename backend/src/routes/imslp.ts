@@ -4,6 +4,7 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { bewaakOpslag } from '../services/abonnementLimieten';
 import { searchImslp, getWorkDetails, downloadPdf } from '../services/imslp';
 import db from '../database/connection';
 import logger from '../utils/logger';
@@ -233,6 +234,10 @@ router.post(
       throw new ApiError(502, 'Het gedownloade bestand is te groot.');
     }
 
+    // Het bestand staat nog alleen in het geheugen; past het niet, dan komt
+    // het niet op schijf.
+    bewaakOpslag(user.associationId, pdfBuffer.length);
+
     // Save the PDF
     fs.writeFileSync(filePath, pdfBuffer);
     logger.info(`Saved PDF to: ${filePath}`);
@@ -315,8 +320,8 @@ router.post(
     }
 
     db.prepare(
-      `INSERT INTO music_pieces (id, title, arranger, instrument_id, file_path, original_filename, association_id, imslp_source, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      `INSERT INTO music_pieces (id, title, arranger, instrument_id, file_path, original_filename, file_size, association_id, imslp_source, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
     ).run(
       pieceId,
       title,
@@ -324,6 +329,7 @@ router.post(
       instrumentId,
       filename,
       filename,
+      pdfBuffer.length,
       user.associationId,
       imslpPermalink || fileUrl,
     );

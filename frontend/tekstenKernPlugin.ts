@@ -36,6 +36,9 @@ export const KERN = [
   // weer binnenhalen.
   'pageTitle.login',
   'pageTitle.notFound',
+  // De melding bij een volle opslag komt uit api/client.ts, die in de
+  // hoofdbundel zit.
+  'opslag.limietBereikt',
 ] as const;
 
 type Teksten = { [sleutel: string]: unknown };

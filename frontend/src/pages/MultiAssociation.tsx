@@ -32,6 +32,8 @@ import { FormModal } from '../components/FormModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Association, Invitation, Partnership, AssociationMember, SuperAdmin } from '../api/multi-association';
 
+const MB = 1024 * 1024;
+
 const SUBSCRIPTION_TIERS = [
   { value: 'free', color: 'bg-gray-100 text-gray-800' },
   { value: 'basic', color: 'bg-blue-100 text-blue-800' },
@@ -566,15 +568,30 @@ function SubscriptionModal({
     subscriptionExpires: association.subscriptionExpires?.slice(0, 10) || '',
     maxMembers: association.maxMembers || 100,
     maxOrchestras: association.maxOrchestras || 5,
-    maxStorageMb: association.maxStorageMb || 5000,
+    // De opslaggrens die de server handhaaft (opslag_limiet_bytes), hier in
+    // MB. Leeg volgt het abonnement, 0 is onbeperkt. maxStorageMb ging altijd
+    // mee met 5000 als standaard, maar werd nergens gehandhaafd; het veld
+    // stuurt nu de echte grens.
+    opslagLimietMb:
+      association.opslagLimietBytes === null || association.opslagLimietBytes === undefined
+        ? ''
+        : String(Math.round(association.opslagLimietBytes / MB)),
     isActive: association.isActive,
   });
+
+  const verstuur = () => {
+    const { opslagLimietMb, ...rest } = formData;
+    onSubmit({
+      ...rest,
+      opslagLimietBytes: opslagLimietMb === '' ? null : Math.round(Number(opslagLimietMb) * MB),
+    });
+  };
 
   return (
     <FormModal
       title={`${t('multiAssociation.subscription.title')}: ${association.name}`}
       onClose={onClose}
-      onSubmit={() => onSubmit(formData)}
+      onSubmit={verstuur}
       isLoading={isLoading}
       submitLabel={t('common.save')}
     >
@@ -644,13 +661,17 @@ function SubscriptionModal({
             <input
               id={`${veldId}-maxStorageMb`}
               type="number"
-              value={formData.maxStorageMb}
-              onChange={(e) => setFormData((prev) => ({ ...prev, maxStorageMb: parseInt(e.target.value) }))}
+              value={formData.opslagLimietMb}
+              onChange={(e) => setFormData((prev) => ({ ...prev, opslagLimietMb: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg"
-              min="100"
+              min="0"
+              aria-describedby={`${veldId}-maxStorageMb-uitleg`}
             />
           </div>
         </div>
+        <p id={`${veldId}-maxStorageMb-uitleg`} className="text-sm text-gray-500">
+          {t('multiAssociation.subscription.maxStorageHint')}
+        </p>
 
         <label className="flex items-center gap-2">
           <input

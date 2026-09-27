@@ -130,7 +130,23 @@ describe('SMTP testen', () => {
     const antwoord = await testKnop();
 
     expect(antwoord.status).toBe(200);
-    expect(createTransport).toHaveBeenCalledWith(expect.objectContaining({ host: 'smtp.example.org', port: 465 }));
+    expect(createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({ host: '203.0.113.10', tls: { servername: 'smtp.example.org' }, port: 465 }),
+    );
     expect(sendMail).toHaveBeenCalledTimes(1);
+  });
+
+  it('verbindt met het gecontroleerde adres, niet met de naam', async () => {
+    // Kreeg nodemailer de naam, dan zocht hij die zelf opnieuw op en kon een
+    // eigen nameserver hem dan naar 127.0.0.1 sturen.
+    stelOpzoekerInVoorTests(async () => [{ address: '198.51.100.7' }]);
+    zetHost('Smtp.Example.org');
+
+    const antwoord = await testKnop();
+
+    expect(antwoord.status).toBe(200);
+    const opties = (createTransport.mock.calls[0] as unknown[])[0] as { host: string; tls?: { servername?: string } };
+    expect(opties.host).toBe('198.51.100.7');
+    expect(opties.tls?.servername).toBe('smtp.example.org');
   });
 });

@@ -9,6 +9,7 @@ import db from '../database/connection';
 import {
   generateToken,
   authenticateToken,
+  authenticateTokenBijTijdelijkWachtwoord,
   AuthRequest,
   verenigingGesloten,
   MELDING_NIET_ACTIEF,
@@ -381,7 +382,7 @@ router.post(
  */
 router.post(
   '/logout',
-  authenticateToken,
+  authenticateTokenBijTijdelijkWachtwoord,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     // Uitloggen wiste alleen het token in de browser. Het token zelf bleef
     // geldig tot het verliep: wie het had afgeluisterd of uit een gedeelde
@@ -438,7 +439,7 @@ router.post(
  */
 router.get(
   '/me',
-  authenticateToken,
+  authenticateTokenBijTijdelijkWachtwoord,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db
       .prepare(
@@ -526,7 +527,7 @@ router.get(
  */
 router.post(
   '/change-password',
-  authenticateToken,
+  authenticateTokenBijTijdelijkWachtwoord,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
@@ -550,7 +551,7 @@ router.post(
 
     // Revoke all other sessions for this user; the current session stays valid
     const authHeader = req.headers.authorization;
-    const currentToken = (authHeader && authHeader.split(' ')[1]) || (req.query.token as string | undefined);
+    const currentToken = authHeader && authHeader.split(' ')[1];
     revokeUserSessions(req.user!.id, currentToken ? hashToken(currentToken) : undefined);
 
     // Log audit event

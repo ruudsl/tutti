@@ -66,6 +66,16 @@ waarschuwing in het logboek. De terugval op `JWT_SECRET` die elders geldt,
 telt hier bewust niet: wie het JWT-geheim vervangt, zou anders geen enkele oude
 back-up meer kunnen openen.
 
+**De download uit het beheerscherm** wordt op dezelfde manier versleuteld: met
+`ENCRYPTION_SECRET` ingesteld is het een `harmonie-backup-<tijdstempel>.zip.enc`
+in hetzelfde formaat (`TUTTI-ENC1`). Terugzetten via het beheerscherm neemt
+zowel zo'n `.zip.enc` als een gewone (oudere) `.zip` aan; een `.zip.enc` gaat
+alleen terug op een installatie met dezelfde `ENCRYPTION_SECRET` en
+`ENCRYPTION_SALT`. Wil je de inhoud buiten de applicatie bekijken, dan maakt
+`npm run backup:ontsleutel --workspace=backend -- harmonie-backup-….zip.enc` er
+weer een gewone `.zip` van. Zonder `ENCRYPTION_SECRET` (alleen buiten productie)
+blijft de download een leesbare `.zip`.
+
 Bewaar `ENCRYPTION_SECRET` en `ENCRYPTION_SALT` (als die is ingesteld) ergens
 anders dan op de server. Zonder die twee is een versleutelde back-up niet terug
 te zetten — en ze zijn ook nodig om de versleutelde geheimen in de database

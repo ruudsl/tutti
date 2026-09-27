@@ -245,17 +245,25 @@ Two-way sync with Google Calendar.
 
 **Configuration:**
 
-1. Create OAuth credentials in Google Cloud Console
-2. Enable Google Calendar API
-3. Configure per association in admin panel
+1. Maak in Google Cloud Console een OAuth-client aan (type "Web application")
+2. Zet de Google Calendar API aan
+3. Voeg `<FRONTEND_URL>/api/calendar/google/callback` toe als redirect-URI
+4. Zet de gegevens bij de installatie:
 
-**Database Configuration:**
-
-```sql
--- Set in admin panel > Settings > Integrations
-google_calendar_client_id = 'your-client-id'
-google_calendar_client_secret = 'your-client-secret'
+```env
+GOOGLE_CALENDAR_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CALENDAR_CLIENT_SECRET=your-client-secret
 ```
+
+De client hoort bij de installatie, niet bij een vereniging: de redirect-URI
+ligt op het domein van de installatie, en Google haalt een app met toegang tot
+agenda's pas uit de testfase als de eigenaar dat domein heeft geverifieerd. Er
+is geen instellingenscherm voor.
+
+Een vereniging die al een eigen client had in
+`associations.google_calendar_client_id` / `google_calendar_client_secret`
+(met de hand in de database gezet; het geheim versleuteld met
+`ENCRYPTION_SECRET`) houdt die: die gaat voor op de client van de installatie.
 
 ---
 

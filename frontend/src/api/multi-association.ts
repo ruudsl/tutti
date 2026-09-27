@@ -24,6 +24,11 @@ export interface Association {
   maxMembers?: number;
   maxOrchestras?: number;
   maxStorageMb?: number;
+  /**
+   * De eigen opslaggrens van deze vereniging in bytes: `null` volgt het
+   * abonnement, 0 is onbeperkt. Deze grens wordt gehandhaafd; maxStorageMb niet.
+   */
+  opslagLimietBytes?: number | null;
   isActive: boolean;
   memberCount?: number;
   orchestraCount?: number;
@@ -139,6 +144,7 @@ export async function updateAssociationSubscription(
     maxMembers?: number;
     maxOrchestras?: number;
     maxStorageMb?: number;
+    opslagLimietBytes?: number | null;
     isActive?: boolean;
   },
 ): Promise<void> {

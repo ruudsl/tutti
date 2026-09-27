@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { getMp3Url } from '../../api';
 import { Icon } from '../../components/Icon';
+import { Mp3Speler } from '../../components/Mp3Speler';
 import { StreamingLinks } from '../../components/StreamingLinks';
 import { formatDuration } from '../../utils/format';
 import type { MusicTitle } from '../../types';
@@ -97,9 +97,8 @@ export function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps)
               {title.mp3FilePath && (
                 <div style={{ marginBottom: '0.75rem' }}>
                   <strong>MP3 Preview:</strong>
-                  <audio
-                    controls
-                    src={getMp3Url(title.mp3FilePath)}
+                  <Mp3Speler
+                    bestand={title.mp3FilePath}
                     style={{ display: 'block', marginTop: '0.5rem', maxWidth: '400px' }}
                   />
                 </div>

@@ -19,13 +19,17 @@
  * kan hem laten oplopen, en een aanvaller met veel IP-adressen kan de zes
  * cijfers niet ongeremd raden.
  *
- * De standen staan in het geheugen van het proces, net als die van de
- * snelheidsbegrenzer per IP-adres. Een herstart zet ze terug; dat kost een
- * aanvaller hooguit een handvol extra pogingen, want de begrenzer per IP-adres
- * blijft daarnaast gelden.
+ * De standen staan in de tabel `inlogvertragingen`, zodat een herstart ze
+ * niet terugzet. Als sleutel staat daar een HMAC-SHA256 van de sleutel
+ * hieronder, met een sleutel afgeleid van het servergeheim: geen leesbaar
+ * e-mailadres of IP-adres. Standen zonder nieuwe mislukking ruimt de
+ * achtergrondtaak 'inlogvertraging-opruimen' op (taken/index.ts).
  */
 
+import crypto from 'crypto';
 import { ipKeyGenerator } from 'express-rate-limit';
+import config from '../config';
+import db from '../database/connection';
 
 /** Zoveel mislukkingen zijn vrij; vanaf de volgende geldt een wachttijd. */
 export const VRIJE_POGINGEN = 5;
@@ -33,17 +37,15 @@ const BASIS_WACHTTIJD_MS = 60 * 1000;
 /** Nooit langer dan dit: daarna kan de echte gebruiker het weer proberen. */
 export const MAX_WACHTTIJD_MS = 15 * 60 * 1000;
 /** Zonder nieuwe mislukking wordt een stand na een dag vergeten. */
-const VERGEET_NA_MS = 24 * 60 * 60 * 1000;
-/** Bovengrens zodat de map niet onbeperkt kan groeien. */
+export const VERGEET_NA_MS = 24 * 60 * 60 * 1000;
+/** Bovengrens zodat de tabel tussen twee opruimrondes niet onbeperkt kan groeien. */
 const MAX_STANDEN = 50_000;
 
 interface Stand {
   mislukt: number;
-  wachtenTot: number;
+  wachten_tot: number;
   laatste: number;
 }
-
-const standen = new Map<string, Stand>();
 
 /** Sleutel voor de wachtwoordstap: het opgegeven adres plus het IP-adres. */
 export function inlogSleutel(email: string, ip: string | undefined): string {
@@ -60,10 +62,18 @@ export function mfaSleutel(userId: string): string {
   return `mfa|${userId}`;
 }
 
-function actueleStand(sleutel: string, nu: number): Stand | undefined {
-  const stand = standen.get(sleutel);
-  if (stand && nu - stand.laatste > VERGEET_NA_MS) {
-    standen.delete(sleutel);
+/** Wat er in de tabel staat in plaats van de sleutel zelf. */
+function sleutelHash(sleutel: string): string {
+  const geheim = crypto.createHmac('sha256', config.jwtSecret).update('tutti:inlogvertraging').digest();
+  return crypto.createHmac('sha256', geheim).update(sleutel).digest('hex');
+}
+
+function actueleStand(hash: string, nu: number): Stand | undefined {
+  const stand = db
+    .prepare('SELECT mislukt, wachten_tot, laatste FROM inlogvertragingen WHERE sleutel_hash = ?')
+    .get(hash) as Stand | undefined;
+  if (stand && nu - Number(stand.laatste) > VERGEET_NA_MS) {
+    db.prepare('DELETE FROM inlogvertragingen WHERE sleutel_hash = ?').run(hash);
     return undefined;
   }
   return stand;
@@ -77,21 +87,25 @@ export function wachttijdNaMislukkingen(mislukt: number): number {
 
 /** Hoeveel milliseconden er voor deze sleutel nog gewacht moet worden (0: geen). */
 export function resterendeWachttijd(sleutel: string, nu: number = Date.now()): number {
-  const stand = actueleStand(sleutel, nu);
-  return stand ? Math.max(0, stand.wachtenTot - nu) : 0;
+  const stand = actueleStand(sleutelHash(sleutel), nu);
+  return stand ? Math.max(0, Number(stand.wachten_tot) - nu) : 0;
 }
 
+/**
+ * Houd de tabel onder MAX_STANDEN. Eerst wat afgelopen en al even stil is,
+ * dan de oudste.
+ */
 function snoei(nu: number): void {
-  if (standen.size < MAX_STANDEN) return;
-  for (const [sleutel, stand] of standen) {
-    if (stand.wachtenTot <= nu && nu - stand.laatste > BASIS_WACHTTIJD_MS) {
-      standen.delete(sleutel);
-    }
-  }
-  // Nog steeds vol: de oudste eerst (een Map houdt de invoegvolgorde aan).
-  for (const sleutel of standen.keys()) {
-    if (standen.size < MAX_STANDEN) break;
-    standen.delete(sleutel);
+  const { aantal } = db.prepare('SELECT COUNT(*) AS aantal FROM inlogvertragingen').get() as { aantal: number };
+  if (aantal < MAX_STANDEN) return;
+  db.prepare('DELETE FROM inlogvertragingen WHERE wachten_tot <= ? AND laatste < ?').run(nu, nu - BASIS_WACHTTIJD_MS);
+  const { over } = db.prepare('SELECT COUNT(*) AS over FROM inlogvertragingen').get() as { over: number };
+  if (over >= MAX_STANDEN) {
+    db.prepare(
+      `DELETE FROM inlogvertragingen WHERE sleutel_hash IN (
+         SELECT sleutel_hash FROM inlogvertragingen ORDER BY laatste ASC LIMIT ?
+       )`,
+    ).run(over - MAX_STANDEN + 1);
   }
 }
 
@@ -100,22 +114,33 @@ export function registreerMislukking(
   sleutel: string,
   nu: number = Date.now(),
 ): { mislukt: number; wachttijdMs: number } {
-  const vorige = actueleStand(sleutel, nu);
+  const hash = sleutelHash(sleutel);
+  const vorige = actueleStand(hash, nu);
   if (!vorige) snoei(nu);
-  const mislukt = (vorige?.mislukt ?? 0) + 1;
+  const mislukt = Number(vorige?.mislukt ?? 0) + 1;
   const wachttijdMs = wachttijdNaMislukkingen(mislukt);
-  // Opnieuw invoegen zet de sleutel achteraan, zodat snoeien de oudste pakt.
-  standen.delete(sleutel);
-  standen.set(sleutel, { mislukt, wachtenTot: nu + wachttijdMs, laatste: nu });
+  db.prepare(
+    'INSERT OR REPLACE INTO inlogvertragingen (sleutel_hash, mislukt, wachten_tot, laatste) VALUES (?, ?, ?, ?)',
+  ).run(hash, mislukt, nu + wachttijdMs, nu);
   return { mislukt, wachttijdMs };
 }
 
 /** Na een geslaagde inlog begint de teller opnieuw. */
 export function wisMislukkingen(sleutel: string): void {
-  standen.delete(sleutel);
+  db.prepare('DELETE FROM inlogvertragingen WHERE sleutel_hash = ?').run(sleutelHash(sleutel));
+}
+
+/**
+ * Vergeet de standen zonder nieuwe mislukking in de afgelopen dag. Voor de
+ * achtergrondtaak 'inlogvertraging-opruimen'.
+ *
+ * @returns het aantal verwijderde standen.
+ */
+export function ruimInlogvertragingenOp(nu: number = Date.now()): number {
+  return db.prepare('DELETE FROM inlogvertragingen WHERE laatste < ?').run(nu - VERGEET_NA_MS).changes;
 }
 
 /** Alleen voor tests: elke test begint zonder opgebouwde wachttijd. */
 export function wisAlleInlogvertragingen(): void {
-  standen.clear();
+  db.prepare('DELETE FROM inlogvertragingen').run();
 }

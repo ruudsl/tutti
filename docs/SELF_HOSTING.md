@@ -260,7 +260,12 @@ beleid staat in `backend/src/middleware/beveiligingskoppen.ts`
   Over gewoon http (een thuisnetwerk zonder TLS) laat het de pagina leeg.
 - Laat je toegangslogboek geen querystring en geen Referer wegschrijven: ook
   daar staan tokens in. `frontend/nginx.conf` heeft daarvoor een eigen
-  `log_format`.
+  `log_format`. Traefik kan de querystring niet van het pad afhalen; in
+  `docker-compose.prod.yml` staat daarom `--accesslog.fields.defaultmode=drop`
+  met een lijst van velden die er wél in mogen, zonder `RequestPath` en
+  `RequestLine`, en `--accesslog.fields.headers.defaultmode=drop`. Een regel
+  ziet er dan uit als `"GET - HTTP/2.0" 200 … "frontend@docker" … 5ms`: methode,
+  status, router en duur, maar geen adres.
 
 ### Data Storage
 

@@ -14,11 +14,18 @@ function isStoring(fout: DienstFout): boolean {
 export class ApiError extends Error {
   statusCode: number;
   isOperational: boolean;
+  /**
+   * Een vaste code naast de Nederlandse melding, voor een fout die de
+   * frontend in de taal van de gebruiker wil tonen (zoals
+   * OPSLAGLIMIET_BEREIKT). Komt als `code` in het antwoord.
+   */
+  code?: string;
 
-  constructor(statusCode: number, message: string, isOperational = true) {
+  constructor(statusCode: number, message: string, isOperational = true, code?: string) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
+    this.code = code;
 
     Error.captureStackTrace(this, this.constructor);
   }
@@ -81,7 +88,7 @@ export function errorHandler(err: Error | ApiError, req: Request, res: Response,
 
   // Handle known API errors
   if (err instanceof ApiError) {
-    res.status(err.statusCode).json({ error: err.message });
+    res.status(err.statusCode).json(err.code ? { error: err.message, code: err.code } : { error: err.message });
     return;
   }
 

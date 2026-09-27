@@ -256,6 +256,20 @@ describe('Melding met de opstelling', () => {
     });
   });
 
+  describe('opgeslagen webhook-adres', () => {
+    it('belt het ontsleutelde adres, niet de opgeslagen cijfertekst', async () => {
+      maakInstellingen(orkest, { webhookUrl: encrypt('https://hooks.chat.example/geheim-pad') });
+      const repetitie = maakRepetitie(vereniging.id, orkest);
+      maakStoel(repetitie, 'Anna', 1, 0);
+
+      await runNotificationRound();
+
+      expect(webhookAanroepen).toHaveBeenCalledTimes(1);
+      expect(webhookAanroepen.mock.calls[0][0]).toBe('https://hooks.chat.example/geheim-pad');
+      expect(logRegels(repetitie)[0].status).toBe('sent');
+    });
+  });
+
   describe('wat met rust gelaten wordt', () => {
     it('stuurt niets als er nog geen opstelling gemaakt is', async () => {
       maakInstellingen(orkest);

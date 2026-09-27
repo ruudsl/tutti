@@ -1,13 +1,18 @@
 /**
  * Een versleutelde reservekopie van de database weer leesbaar maken.
  *
- * De automatische back-up (scheduler/backup.ts) en de kopie van vóór een
- * terugzetting worden versleuteld zodra ENCRYPTION_SECRET is ingesteld. Om er
- * een terug te zetten, maak je hem eerst leesbaar - met dezelfde
- * ENCRYPTION_SECRET (en ENCRYPTION_SALT, als die is ingesteld) als de server
- * die hem schreef:
+ * De automatische back-up (scheduler/backup.ts), de kopie van vóór een
+ * terugzetting en de download uit het beheerscherm (routes/backup.ts, een
+ * `.zip.enc`) worden versleuteld zodra ENCRYPTION_SECRET is ingesteld. Om er
+ * een buiten de applicatie te gebruiken, maak je hem eerst leesbaar - met
+ * dezelfde ENCRYPTION_SECRET (en ENCRYPTION_SALT, als die is ingesteld) als de
+ * server die hem schreef:
  *
  *   npm run backup:ontsleutel --workspace=backend -- <bestand.sqlite.enc> [doel.sqlite]
+ *   npm run backup:ontsleutel --workspace=backend -- <harmonie-backup-….zip.enc> [doel.zip]
+ *
+ * Een `.zip.enc` kan ook zonder ontsleutelen terug via het beheerscherm, op
+ * een installatie met dezelfde sleutel.
  *
  * In een productie-image zonder tsx: `node dist/scripts/ontsleutel-backup.js`.
  *
@@ -37,7 +42,9 @@ export function ontsleutelBackupbestand(bron: string, doel?: string): string {
 if (require.main === module) {
   const [bron, doel] = process.argv.slice(2);
   if (!bron) {
-    console.error('Gebruik: npm run backup:ontsleutel --workspace=backend -- <bestand.sqlite.enc> [doel.sqlite]');
+    console.error(
+      'Gebruik: npm run backup:ontsleutel --workspace=backend -- <bestand.sqlite.enc|bestand.zip.enc> [doel]',
+    );
     process.exit(1);
   }
   try {

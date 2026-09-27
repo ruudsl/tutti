@@ -335,6 +335,29 @@ describe('downloadProgramPdf en downloadBackup', () => {
     vi.useRealTimers();
   });
 
+  it('downloadBackup neemt de naam van een versleutelde kopie over', async () => {
+    antwoordMet(new Blob(['TUTTI-ENC1']), {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': 'attachment; filename="harmonie-backup-2026-09-25T10-00-00.zip.enc"',
+      },
+    });
+    await downloadBackup();
+
+    expect(laatsteBestandsnaam()).toBe('harmonie-backup-2026-09-25T10-00-00.zip.enc');
+  });
+
+  it('downloadBackup valt bij een versleutelde kopie terug op een naam op .zip.enc', async () => {
+    // Zonder bruikbare kopregel zegt het inhoudstype of het een versleutelde
+    // kopie is; een .zip-naam zou het bestand verkeerd aanduiden.
+    vi.setSystemTime(new Date('2026-09-25T10:00:00Z'));
+    antwoordMet(new Blob(['TUTTI-ENC1']), { headers: { 'Content-Type': 'application/octet-stream' } });
+    await downloadBackup();
+
+    expect(laatsteBestandsnaam()).toBe('harmonie-backup-2026-09-25.zip.enc');
+    vi.useRealTimers();
+  });
+
   it('restoreBackup stuurt het bestand met een ruimere tijdslimiet', async () => {
     antwoordMet({});
     await restoreBackup(new File(['PK'], 'backup.zip'));

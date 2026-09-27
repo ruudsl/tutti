@@ -108,7 +108,7 @@ function zetApiKlaar(): void {
   }
   vi.mocked(api.getMusicTitles).mockResolvedValue(TITELS);
   vi.mocked(api.getGenres).mockResolvedValue(GENRES);
-  vi.mocked(api.getMp3Url).mockImplementation((pad: string) => `/mp3/${pad}`);
+  vi.mocked(api.getMp3Url).mockImplementation(async (pad: string) => `/mp3/${pad}`);
 }
 
 function wikkel({ children }: { children: ReactNode }) {

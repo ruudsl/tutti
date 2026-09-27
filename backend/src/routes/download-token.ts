@@ -1,6 +1,18 @@
 import { Router, Response } from 'express';
+import { z } from 'zod';
+import db from '../database/connection';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { generateDownloadToken, DOWNLOAD_TOKEN_TTL_SECONDS } from '../utils/downloadToken';
+import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { validate } from '../middleware/validate';
+import { hashToken } from '../utils/sessionStore';
+import {
+  generateDownloadToken,
+  DOWNLOAD_TOKEN_TTL_SECONDS,
+  BRONSOORTEN,
+  Bronsoort,
+  BRON_TOKEN_GELDIG_SECONDEN,
+  maakBronToken,
+} from '../utils/downloadToken';
 
 /**
  * Download token endpoint.
@@ -26,5 +38,67 @@ router.post('/', authenticateToken, (req: AuthRequest, res: Response) => {
     expiresIn: DOWNLOAD_TOKEN_TTL_SECONDS,
   });
 });
+
+const bronTokenSchema = z.object({
+  soort: z.enum(BRONSOORTEN),
+  id: z.string().min(1).max(255),
+});
+
+/**
+ * Bestaat deze bron in de vereniging van de aanvrager? Per soort de vraag die
+ * ook de downloadroute zelf stelt.
+ */
+function bronBestaat(soort: Bronsoort, id: string, associationId: string | null): boolean {
+  switch (soort) {
+    case 'mp3':
+      return Boolean(
+        db
+          .prepare('SELECT 1 FROM music_titles WHERE mp3_file_path = ? AND association_id = ? AND deleted_at IS NULL')
+          .get(id, associationId),
+      );
+    default:
+      return false;
+  }
+}
+
+/**
+ * POST /api/download-token/bron  { soort: 'mp3', id: '<bestandsnaam>' }
+ *
+ * Een token voor één bron, dat alleen de bijbehorende downloadroute aanneemt
+ * (authenticateBronDownload), vijf minuten geldig en gebonden aan deze
+ * gebruiker, vereniging en sessie. Voor <audio src>, dat geen kopregel kan
+ * meesturen.
+ */
+router.post(
+  '/bron',
+  authenticateToken,
+  validate(bronTokenSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { soort, id } = req.body as z.infer<typeof bronTokenSchema>;
+    const user = req.user!;
+
+    // authenticateToken heeft hier een sessietoken uit de kopregel aanvaard:
+    // een download-token geldt niet bij POST, een token in de URL evenmin.
+    const authHeader = req.headers.authorization;
+    const sessietoken = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined;
+    if (!sessietoken) {
+      throw new ApiError(401, 'Een download-token vraagt een sessie.');
+    }
+
+    if (!bronBestaat(soort, id, user.associationId)) {
+      throw new ApiError(404, 'Niet gevonden.');
+    }
+
+    const token = maakBronToken({
+      soort,
+      bronId: id,
+      userId: user.id,
+      associationId: user.associationId,
+      rol: user.role,
+      sessieHash: hashToken(sessietoken),
+    });
+    res.json({ token, expiresIn: BRON_TOKEN_GELDIG_SECONDEN });
+  }),
+);
 
 export default router;

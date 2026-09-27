@@ -153,12 +153,26 @@ export default function BackupSettings() {
           >
             {restoring ? t('backup.restoring') : t('backup.restore')}
           </button>
-          <input ref={fileInputRef} type="file" accept=".zip" style={{ display: 'none' }} onChange={handleFileSelect} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".zip,.enc"
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
         </div>
 
         <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--text-light)' }}>
           {t('backup.restoreDescription')}
         </p>
+        {info?.encrypted && (
+          <p
+            data-testid="backup-versleuteld"
+            style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-light)' }}
+          >
+            {t('backup.encryptedDownload')}
+          </p>
+        )}
       </div>
 
       {showRestoreConfirm && (

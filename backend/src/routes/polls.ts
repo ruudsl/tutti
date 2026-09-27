@@ -7,6 +7,7 @@ import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 import { sendEmail } from '../utils/email';
+import { ontsnapHtml, veiligeLink } from '../templates/emails/htmlVeilig';
 import { z } from 'zod';
 
 const router = Router();
@@ -1371,14 +1372,20 @@ router.post(
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const pollUrl = `${frontendUrl}/polls?view=${poll.id}`;
 
+    // De titel en de naam zijn tekst die een gebruiker heeft ingevuld: in de
+    // html ontsnapt, anders werd een titel als `<a href=…>` opmaak in de mail
+    // van elk lid. Het adres alleen als link als het een http(s)-adres is.
+    const titelHtml = ontsnapHtml(String(poll.title ?? ''));
+    const linkHtml = veiligeLink(pollUrl);
+
     let sentCount = 0;
     for (const user of nonVoters) {
       const emailHtml = `
-            <p>Hallo ${user.first_name},</p>
-            <p>Je hebt nog niet gestemd op de peiling "<strong>${poll.title}</strong>".</p>
+            <p>Hallo ${ontsnapHtml(String(user.first_name ?? ''))},</p>
+            <p>Je hebt nog niet gestemd op de peiling "<strong>${titelHtml}</strong>".</p>
             ${poll.ends_at ? `<p>De peiling sluit op ${new Date(poll.ends_at).toLocaleDateString('nl-NL')}.</p>` : ''}
-            <p><a href="${pollUrl}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Stem nu</a></p>
-            <p>Of ga naar: ${pollUrl}</p>
+            ${linkHtml ? `<p><a href="${linkHtml}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Stem nu</a></p>` : ''}
+            <p>Of ga naar: ${ontsnapHtml(pollUrl)}</p>
         `;
 
       const emailText = `Hallo ${user.first_name},\n\nJe hebt nog niet gestemd op de peiling "${poll.title}".\n\nStem nu: ${pollUrl}`;

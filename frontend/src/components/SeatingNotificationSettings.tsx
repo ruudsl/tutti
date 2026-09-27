@@ -52,7 +52,10 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
       if (data) {
         setFormData({
           notification_type: data.notification_type || 'whatsapp',
-          webhook_url: data.webhook_url || '',
+          // De server geeft het adres niet terug, alleen een masker: het adres
+          // van een Slack- of Discord-webhook is zelf het geheim. Het veld
+          // blijft leeg; leeg opslaan houdt het bestaande adres.
+          webhook_url: '',
           twilio_account_sid: data.twilio_account_sid || '',
           twilio_auth_token: data.twilio_auth_token || '',
           twilio_whatsapp_from: data.twilio_whatsapp_from || '',
@@ -269,9 +272,14 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
               id="webhookUrl"
               value={formData.webhook_url}
               onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
-              placeholder="https://..."
+              placeholder={settings?.webhook_url || 'https://...'}
             />
             <small className="form-help">{t('seating.notifications.webhookHelp')}</small>
+            {settings?.webhook_url && (
+              <small className="form-help" style={{ display: 'block' }}>
+                {t('seating.notifications.webhookKeepHint')}
+              </small>
+            )}
           </div>
         )}
 

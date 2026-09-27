@@ -13,7 +13,8 @@ const router = Router();
 
 function getRequestToken(req: AuthRequest): string | undefined {
   const authHeader = req.headers.authorization;
-  return (authHeader && authHeader.split(' ')[1]) || (req.query.token as string | undefined);
+  // Alleen de kopregel: een sessietoken in de URL weigert authenticateToken.
+  return authHeader ? authHeader.split(' ')[1] : undefined;
 }
 
 /**

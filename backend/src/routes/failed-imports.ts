@@ -6,6 +6,7 @@ import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { eisBruikbaar } from '../services/catalogus';
+import { bewaakOpslag } from '../services/abonnementLimieten';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -185,10 +186,16 @@ router.post(
     }
 
     // Check if the file still exists (for file-based imports)
+    let grootte: number | null = null;
     if (failedImport.file_path) {
       const fullPath = path.join(UPLOAD_DIR, failedImport.file_path);
       if (!fs.existsSync(fullPath)) {
         throw new ApiError(400, 'Oorspronkelijk bestand is niet meer beschikbaar.');
+      }
+      // Als stuk telt het bestand mee voor de opslag van de vereniging.
+      grootte = fs.statSync(fullPath).size;
+      if (failedImport.import_type === 'pdf') {
+        bewaakOpslag(req.user!.associationId, grootte);
       }
     }
 
@@ -222,8 +229,8 @@ router.post(
         db.prepare(
           `
                 INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
-                                         file_path, original_filename, association_id, uploaded_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                         file_path, original_filename, file_size, association_id, uploaded_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
         ).run(
           pieceId,
@@ -235,6 +242,7 @@ router.post(
           metadata.clef || null,
           failedImport.file_path,
           failedImport.original_filename,
+          grootte,
           req.user!.associationId,
           req.user!.id,
         );

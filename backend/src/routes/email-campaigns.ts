@@ -6,12 +6,14 @@ import fs from 'fs';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { bewaakOpslagVooraf, bewaakOpslagNaUpload } from '../middleware/opslagquotum';
 import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 import { sendEmail } from '../utils/email';
 import { z } from 'zod';
 import sanitizeHtml from 'sanitize-html';
+import { ontsnapHtml } from '../templates/emails/htmlVeilig';
 
 const sanitizeForLog = (value: unknown): string =>
   String(value ?? '')
@@ -806,11 +808,15 @@ router.post(
       throw new ApiError(404, 'Campagne niet gevonden.');
     }
 
-    const html = personalizeEmail(campaign.body_html, {
-      firstName: 'Test',
-      lastName: 'Gebruiker',
-      email: email,
-    });
+    const html = personalizeEmail(
+      campaign.body_html,
+      {
+        firstName: 'Test',
+        lastName: 'Gebruiker',
+        email: email,
+      },
+      true,
+    );
 
     const text = personalizeEmail(
       campaign.body_text || sanitizeHtml(campaign.body_html, { allowedTags: [], allowedAttributes: {} }),
@@ -841,13 +847,29 @@ router.post(
   }),
 );
 
-// Helper: Personalize email content
-function personalizeEmail(content: string, recipient: { firstName: string; lastName: string; email: string }): string {
+/**
+ * Vul de gegevens van de ontvanger in.
+ *
+ * In de html-versie gaan de waarden ontsnapt in de tekst: een lid kiest zijn
+ * eigen naam, en `<a href=…>` als voornaam werd anders opmaak in de mail. De
+ * vervanging gaat via een functie, zodat `$&` in een naam geen bijzondere
+ * betekenis krijgt.
+ */
+function personalizeEmail(
+  content: string,
+  recipient: { firstName: string; lastName: string; email: string },
+  alsHtml = false,
+): string {
+  const waarde = (tekst: string | null | undefined) => {
+    const ruw = String(tekst ?? '');
+    return alsHtml ? ontsnapHtml(ruw) : ruw;
+  };
+  const volledigeNaam = `${recipient.firstName ?? ''} ${recipient.lastName ?? ''}`;
   return content
-    .replace(/\{\{firstName\}\}/g, recipient.firstName)
-    .replace(/\{\{lastName\}\}/g, recipient.lastName)
-    .replace(/\{\{email\}\}/g, recipient.email)
-    .replace(/\{\{fullName\}\}/g, `${recipient.firstName} ${recipient.lastName}`);
+    .replace(/\{\{firstName\}\}/g, () => waarde(recipient.firstName))
+    .replace(/\{\{lastName\}\}/g, () => waarde(recipient.lastName))
+    .replace(/\{\{email\}\}/g, () => waarde(recipient.email))
+    .replace(/\{\{fullName\}\}/g, () => waarde(volledigeNaam));
 }
 
 // Helper: Get recipients for a campaign
@@ -969,7 +991,7 @@ async function sendCampaign(campaignId: string, associationId: string): Promise<
     ).run(recipientId, campaignId, recipient.id, recipient.email, new Date().toISOString());
 
     try {
-      const html = personalizeEmail(campaign.body_html, recipient);
+      const html = personalizeEmail(campaign.body_html, recipient, true);
       const text = personalizeEmail(
         campaign.body_text || sanitizeHtml(campaign.body_html, { allowedTags: [], allowedAttributes: {} }),
         recipient,
@@ -1093,6 +1115,7 @@ router.post(
   '/:id/attachments',
   authenticateToken,
   requireRole('admin', 'music_committee'),
+  bewaakOpslagVooraf(),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
@@ -1112,6 +1135,8 @@ router.post(
     if (!req.file) {
       throw new ApiError(400, 'Geen bestand geüpload.');
     }
+
+    await bewaakOpslagNaUpload(req, uploadsDir);
 
     const attachmentId = uuidv4();
     const now = new Date().toISOString();

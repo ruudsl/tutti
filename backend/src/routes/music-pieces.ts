@@ -7,7 +7,7 @@ import zlib from 'zlib';
 import { promisify } from 'util';
 import AdmZip from 'adm-zip';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { authenticateToken, authenticateBronDownload, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { eisBruikbaar, instrumentenOpNaam } from '../services/catalogus';
 import { FileValidationError } from '../utils/errors';
@@ -20,6 +20,8 @@ import {
   bulkDeletePiecesSchema,
 } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
+import { bewaakOpslag } from '../services/abonnementLimieten';
+import { bewaakOpslagVooraf, bewaakOpslagNaUpload } from '../middleware/opslagquotum';
 import { bijlageKopregel } from '../utils/contentDisposition';
 import logger from '../utils/logger';
 import { beschermdeFetch } from '../utils/veerkracht';
@@ -306,6 +308,26 @@ async function pakUit(entry: AdmZip.IZipEntry, grens: number): Promise<Buffer> {
     throw new Error('Bestand in de ZIP is beschadigd (controlesom klopt niet).');
   }
   return data;
+}
+
+/** De grootte van de mp3 die bij een titel van deze vereniging staat. */
+function huidigeMp3Grootte(titleId: string, associationId: string | null): number {
+  const rij = db
+    .prepare('SELECT mp3_file_size FROM music_titles WHERE id = ? AND association_id = ?')
+    .get(titleId, associationId) as { mp3_file_size: number | null } | undefined;
+  return rij?.mp3_file_size ?? 0;
+}
+
+/** De grootte in bytes van de MusicXML die bij een titel van deze vereniging staat. */
+function huidigeMusicxmlGrootte(titleId: string, associationId: string | null): number {
+  const rij = db
+    .prepare(
+      `SELECT COALESCE(SUM(LENGTH(CAST(mm.musicxml_raw AS BLOB))), 0) AS grootte
+         FROM music_metadata mm JOIN music_titles mt ON mt.id = mm.music_title_id
+        WHERE mm.music_title_id = ? AND mt.association_id = ?`,
+    )
+    .get(titleId, associationId) as { grootte: number } | undefined;
+  return rij?.grootte ?? 0;
 }
 
 // Delete file safely (async)
@@ -967,6 +989,7 @@ router.post(
   '/title-mp3/:titleId',
   authenticateToken,
   requireRole('admin', 'music_committee'),
+  bewaakOpslagVooraf((req) => huidigeMp3Grootte(req.params.titleId, req.user!.associationId)),
   mp3Upload.single('mp3'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { titleId } = req.params;
@@ -979,16 +1002,20 @@ router.post(
     const title = db
       .prepare(
         `
-        SELECT id, mp3_file_path FROM music_titles WHERE id = ? AND association_id = ?
+        SELECT id, mp3_file_path, mp3_file_size FROM music_titles WHERE id = ? AND association_id = ?
     `,
       )
-      .get(titleId, req.user!.associationId) as { id: string; mp3_file_path: string | null } | undefined;
+      .get(titleId, req.user!.associationId) as
+      { id: string; mp3_file_path: string | null; mp3_file_size: number | null } | undefined;
 
     if (!title) {
       // Delete uploaded file
       await deleteFile(req.file.path);
       throw new ApiError(404, 'Titel niet gevonden.');
     }
+
+    // De nieuwe mp3 vervangt de oude, dus die ruimte komt vrij.
+    await bewaakOpslagNaUpload(req, MP3_UPLOAD_DIR, undefined, title.mp3_file_size ?? 0);
 
     // Delete old MP3 file if exists
     if (title.mp3_file_path) {
@@ -997,7 +1024,12 @@ router.post(
     }
 
     // Update title with new MP3 path
-    db.prepare('UPDATE music_titles SET mp3_file_path = ? WHERE id = ?').run(req.file.filename, titleId);
+    db.prepare('UPDATE music_titles SET mp3_file_path = ?, mp3_file_size = ? WHERE id = ? AND association_id = ?').run(
+      req.file.filename,
+      req.file.size,
+      titleId,
+      req.user!.associationId,
+    );
 
     logger.info(`MP3 uploaded for title: ${titleId}`, { filename: req.file.filename, uploadedBy: req.user!.id });
 
@@ -1067,7 +1099,9 @@ router.delete(
     await deleteFile(filePath);
 
     // Clear MP3 path from database
-    db.prepare('UPDATE music_titles SET mp3_file_path = NULL WHERE id = ?').run(titleId);
+    db.prepare(
+      'UPDATE music_titles SET mp3_file_path = NULL, mp3_file_size = NULL WHERE id = ? AND association_id = ?',
+    ).run(titleId, req.user!.associationId);
 
     logger.info(`MP3 deleted for title: ${titleId}`, { deletedBy: req.user!.id });
 
@@ -1109,7 +1143,9 @@ router.delete(
  */
 router.get(
   '/mp3/:filename',
-  authenticateToken,
+  // <audio src> kan geen kopregel meesturen: dan een download-token voor dit
+  // ene bestand (POST /api/download-token/bron), nooit het sessietoken.
+  authenticateBronDownload('mp3', (req) => req.params.filename),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { filename } = req.params;
 
@@ -1187,6 +1223,7 @@ router.post(
   '/title-musicxml/:titleId',
   authenticateToken,
   requireRole('admin', 'music_committee'),
+  bewaakOpslagVooraf((req) => huidigeMusicxmlGrootte(req.params.titleId, req.user!.associationId)),
   musicxmlUpload.single('musicxml'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { titleId } = req.params;
@@ -1209,6 +1246,14 @@ router.post(
       await fs.promises.unlink(req.file.path).catch(() => {});
       throw new ApiError(404, 'Titel niet gevonden.');
     }
+
+    // De inhoud komt in music_metadata.musicxml_raw en vervangt wat daar stond.
+    await bewaakOpslagNaUpload(
+      req,
+      MUSICXML_UPLOAD_DIR,
+      undefined,
+      huidigeMusicxmlGrootte(titleId, req.user!.associationId),
+    );
 
     // Read and parse MusicXML
     const xmlContent = await fs.promises.readFile(req.file.path, 'utf-8');
@@ -2058,6 +2103,7 @@ router.post(
   '/upload',
   authenticateToken,
   requireRole('admin', 'music_committee'),
+  bewaakOpslagVooraf(),
   upload.array('files', 100),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const files = req.files as Express.Multer.File[];
@@ -2098,6 +2144,10 @@ router.post(
       }
     }
 
+    // Past het in de opslag van de vereniging? Anders gaan ook de geldige
+    // bestanden weer van schijf.
+    await bewaakOpslagNaUpload(req, UPLOAD_DIR, validFiles);
+
     // Load instruments + aliases once instead of querying per file
     const instrumentMap = instrumentenOpNaam(req.user!.associationId);
 
@@ -2113,8 +2163,8 @@ router.post(
           db.prepare(
             `
                     INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
-                                             file_path, original_filename, youtube_url, association_id, uploaded_by)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                             file_path, original_filename, file_size, youtube_url, association_id, uploaded_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `,
           ).run(
             pieceId,
@@ -2126,6 +2176,7 @@ router.post(
             parsed.clef,
             file.filename,
             file.originalname,
+            file.size,
             youtubeUrl,
             req.user!.associationId,
             req.user!.id,
@@ -2296,13 +2347,17 @@ router.post(
         throw zipTeGroot();
       }
 
+      // En of dat in de opslag van de vereniging past, ook vóór het uitpakken.
+      // De zip zelf is tijdelijk en gaat in het finally-blok weer weg.
+      bewaakOpslag(req.user!.associationId, opgegevenTotaal);
+
       // Load instruments + aliases once instead of querying per entry
       const instrumentMap = instrumentenOpNaam(req.user!.associationId);
 
       // Eerst alle bestanden op schijf, één voor één zodat er nooit meer dan
       // één uitgepakt bestand tegelijk in het geheugen staat. De transactie
       // hieronder blijft synchroon: daar mag niets tussen komen.
-      const weggeschreven: { originalFilename: string; newFilename: string }[] = [];
+      const weggeschreven: { originalFilename: string; newFilename: string; grootte: number }[] = [];
       let uitgepakt = 0;
       try {
         for (const entry of pdfEntries) {
@@ -2322,13 +2377,20 @@ router.post(
 
             const newFilename = `${Date.now()}-${uuidv4()}.pdf`;
             await fs.promises.writeFile(path.join(UPLOAD_DIR, newFilename), content);
-            weggeschreven.push({ originalFilename, newFilename });
+            weggeschreven.push({ originalFilename, newFilename, grootte: content.length });
           } catch (err) {
             // Te groot geldt voor de hele zip, niet voor dit ene bestand.
             if (err instanceof ApiError) throw err;
             errors.push({ filename: originalFilename, error: (err as Error).message });
           }
         }
+
+        // De opgegeven groottes komen uit de zip zelf en kunnen liegen; wat
+        // werkelijk is uitgepakt telt.
+        bewaakOpslag(
+          req.user!.associationId,
+          weggeschreven.reduce((som, { grootte }) => som + grootte, 0),
+        );
       } catch (err) {
         await Promise.all(weggeschreven.map(({ newFilename }) => deleteFile(path.join(UPLOAD_DIR, newFilename))));
         throw err;
@@ -2340,7 +2402,7 @@ router.post(
       const zonderRij: string[] = [];
       try {
         withTransaction(() => {
-          for (const { originalFilename, newFilename } of weggeschreven) {
+          for (const { originalFilename, newFilename, grootte } of weggeschreven) {
             try {
               const parsed = parseFilename(originalFilename);
               const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument, instrumentMap) : null;
@@ -2349,8 +2411,8 @@ router.post(
               db.prepare(
                 `
                         INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
-                                                 file_path, original_filename, association_id, uploaded_by)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                                 file_path, original_filename, file_size, association_id, uploaded_by)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `,
               ).run(
                 pieceId,
@@ -2362,6 +2424,7 @@ router.post(
                 parsed.clef,
                 newFilename,
                 originalFilename,
+                grootte,
                 req.user!.associationId,
                 req.user!.id,
               );

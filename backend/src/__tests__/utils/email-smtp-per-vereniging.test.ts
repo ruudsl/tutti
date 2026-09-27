@@ -38,8 +38,15 @@ const zetSmtpAan = (verenigingId: string, host: string, afzender: string) => {
   ).run(host, `mail@${host}`, afzender, verenigingId);
 };
 
+// Voor de SMTP van een vereniging krijgt nodemailer het gecontroleerde
+// IP-adres als host en de naam als tls.servername; zie
+// email-smtp-vastgepind-adres.test.ts. Welke server het is, staat dan in de
+// servername.
 const gebruikteHosts = () =>
-  createTransport.mock.calls.map((aanroep: unknown[]) => (aanroep[0] as { host?: string })?.host);
+  createTransport.mock.calls.map((aanroep: unknown[]) => {
+    const opties = aanroep[0] as { host?: string; tls?: { servername?: string } };
+    return opties?.tls?.servername ?? opties?.host;
+  });
 const gebruikteAfzenders = () =>
   sendMail.mock.calls.map((aanroep: unknown[]) => (aanroep[0] as { from?: string })?.from);
 

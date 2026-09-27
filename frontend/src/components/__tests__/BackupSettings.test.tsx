@@ -129,6 +129,58 @@ describe('BackupSettings, de kaart zelf', () => {
   });
 });
 
+describe('BackupSettings, versleutelde download', () => {
+  it('legt uit dat een versleutelde kopie alleen terug kan met dezelfde sleutel', async () => {
+    infoOphalen.mockResolvedValue({ ...INFO, encrypted: true });
+    render(<BackupSettings />);
+
+    expect(await screen.findByTestId('backup-versleuteld')).toHaveTextContent('backup.encryptedDownload');
+  });
+
+  it('zegt niets over versleuteling als de server niet versleutelt', async () => {
+    infoOphalen.mockResolvedValue({ ...INFO, encrypted: false });
+    render(<BackupSettings />);
+    await screen.findByText('43 MB');
+
+    expect(screen.queryByTestId('backup-versleuteld')).not.toBeInTheDocument();
+  });
+
+  it('laat bij terugzetten ook een versleuteld .zip.enc-bestand kiezen', async () => {
+    render(<BackupSettings />);
+    await screen.findByText('43 MB');
+
+    expect(bestandsveld().accept.split(',')).toEqual(expect.arrayContaining(['.zip', '.enc']));
+  });
+
+  it('heeft de uitleg in alle drie de talen, met de bestandsnaam en de sleutel erin', async () => {
+    const talen = await Promise.all([
+      import('../../locales/nl.json'),
+      import('../../locales/en.json'),
+      import('../../locales/de.json'),
+    ]);
+    for (const taal of talen) {
+      const tekst = (taal.default as { backup: Record<string, string> }).backup.encryptedDownload;
+      expect(tekst).toContain('.zip.enc');
+      expect(tekst).toContain('ENCRYPTION_SECRET');
+    }
+  });
+
+  it('stuurt een gekozen .zip.enc-bestand door naar het terugzetten', async () => {
+    const bediener = userEvent.setup();
+    render(<BackupSettings />);
+    await screen.findByText('43 MB');
+
+    fireEvent.change(bestandsveld(), {
+      target: { files: [new File(['TUTTI-ENC1'], 'harmonie-backup.zip.enc', { type: 'application/octet-stream' })] },
+    });
+    const venster = await screen.findByRole('alertdialog');
+    await bediener.click(within(venster).getByRole('button', { name: 'backup.restoreButton' }));
+
+    await waitFor(() => expect(terugzetten).toHaveBeenCalledTimes(1));
+    expect(terugzetten.mock.calls[0][0].name).toBe('harmonie-backup.zip.enc');
+  });
+});
+
 describe('BackupSettings, downloaden', () => {
   it('downloadt en meldt dat het gelukt is', async () => {
     const bediener = userEvent.setup();

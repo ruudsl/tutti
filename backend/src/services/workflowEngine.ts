@@ -3,6 +3,7 @@ import { isModuleEnabled } from '../modules/service';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '../utils/email';
 import sanitizeHtml from 'sanitize-html';
+import { ontsnapHtml } from '../templates/emails/htmlVeilig';
 import { beschermdeFetch } from '../utils/veerkracht';
 import { controleerUitgaandAdres } from '../utils/uitgaandAdres';
 
@@ -195,6 +196,9 @@ async function executeSendEmail(config: Record<string, any>, context: ExecutionC
 
   const processedSubject = replaceVariables(subject || '', context);
   const processedBody = replaceVariables(body || '', context);
+  // De tekst van de regel is html van de beheerder; wat er via {{…}} in komt
+  // (een naam, een titel) is invoer van leden en hoort daarin tekst te blijven.
+  const processedHtml = replaceVariables(body || '', context, ontsnapHtml);
 
   for (const email of recipients) {
     try {
@@ -208,7 +212,7 @@ async function executeSendEmail(config: Record<string, any>, context: ExecutionC
           allowedTags: [],
           allowedAttributes: {},
         }),
-        html: processedBody,
+        html: processedHtml,
       });
       context.log.push(`Email sent to ${email}`);
     } catch (error) {
@@ -516,7 +520,15 @@ function evaluateConditions(conditions: any, context: ExecutionContext): boolean
   return true;
 }
 
-function replaceVariables(text: string, context: ExecutionContext): string {
+/**
+ * @param ontsnap wat er met een ingevulde waarde gebeurt voordat hij in de
+ *   tekst komt; voor html `ontsnapHtml`, anders ongewijzigd.
+ */
+function replaceVariables(
+  text: string,
+  context: ExecutionContext,
+  ontsnap: (waarde: string) => string = (waarde) => waarde,
+): string {
   let result = text;
 
   // Replace entity variables
@@ -529,7 +541,7 @@ function replaceVariables(text: string, context: ExecutionContext): string {
   // zoals hij is.
   if (context.entityData) {
     for (const [key, value] of Object.entries(context.entityData)) {
-      const vervanging = String(value ?? '');
+      const vervanging = ontsnap(String(value ?? ''));
       result = result.replace(new RegExp(`{{${key}}}`, 'g'), () => vervanging);
     }
   }

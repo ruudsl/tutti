@@ -266,8 +266,11 @@ describe('meldingen rond de opstelling - instellingen en verzending', () => {
         .prepare(
           'SELECT webhook_url, minutes_before, enabled FROM seating_notification_settings WHERE orchestra_id = ?',
         )
-        .all(orkest.id);
-      expect(rijen).toEqual([{ webhook_url: 'https://nieuw.example/hook', minutes_before: 30, enabled: 0 }]);
+        .all(orkest.id) as { webhook_url: string; minutes_before: number; enabled: number }[];
+      // Het adres staat versleuteld; zie opstelling-webhookadres-versleuteld.test.ts.
+      expect(rijen.map((r) => ({ ...r, webhook_url: decrypt(r.webhook_url) }))).toEqual([
+        { webhook_url: 'https://nieuw.example/hook', minutes_before: 30, enabled: 0 },
+      ]);
     });
 
     it('houdt het bestaande auth-token als de gemaskeerde waarde terugkomt', async () => {

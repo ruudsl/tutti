@@ -121,7 +121,10 @@ async function sendWhatsApp(settings: NotificationSettings, message: string): Pr
 }
 
 async function sendWebhook(settings: NotificationSettings, payload: Record<string, unknown>): Promise<boolean> {
-  if (!settings.webhook_url) {
+  // Versleuteld opgeslagen: het adres van een Slack- of Discord-webhook is zelf
+  // het geheim.
+  const webhookUrl = ontsleutelGeheim(settings.webhook_url, 'webhook-adres');
+  if (!webhookUrl) {
     logger.error('Webhook URL not configured');
     return false;
   }
@@ -130,7 +133,7 @@ async function sendWebhook(settings: NotificationSettings, payload: Record<strin
     // Zelfde controle als in routes/seating-notifications.ts: het adres komt van
     // een gebruiker. Hier gaat het antwoord nergens heen, maar de server belt
     // er wel naartoe - ook naar adressen die van vóór deze controle zijn.
-    const doel = await controleerUitgaandAdres(settings.webhook_url);
+    const doel = await controleerUitgaandAdres(webhookUrl);
     const response = await beschermdeFetch(
       `webhook:${doel.host}`,
       doel.href,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getMp3Url } from '../../api';
+import { Mp3Speler } from '../../components/Mp3Speler';
 import type { MusicaInfoDetail } from '../../api';
 import { Icon } from '../../components/Icon';
 import { Modal } from '../../components/Modal';
@@ -299,7 +299,7 @@ export function TitleMetaModal({
           <span className="form-label">{t('titles.mp3Preview')}</span>
           {currentMp3Path ? (
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <audio controls src={getMp3Url(currentMp3Path)} style={{ flex: 1, height: '40px' }} />
+              <Mp3Speler bestand={currentMp3Path} style={{ flex: 1, height: '40px' }} />
               <button type="button" className="btn btn-danger btn-sm" onClick={onMp3Delete} title={t('common.delete')}>
                 <Icon name="trash" size={16} />
               </button>

@@ -171,6 +171,40 @@ describe('meldingsinstellingen - opslaan', () => {
     );
   });
 
+  it('laat een bewaard webhook-adres leeg en houdt het bij opslaan zonder invullen', async () => {
+    // De server geeft alleen een masker terug; het adres zelf is een geheim.
+    // Het masker hoort niet als waarde in het veld (dan zou het meegaan als
+    // "nieuw adres"), maar als plaatshouder, met de uitleg dat leeg houdt.
+    vi.mocked(api.getSeatingNotificationSettings).mockResolvedValue({
+      ...BEWAARD,
+      notification_type: 'webhook',
+      webhook_url: '••••••••',
+    });
+    const gebruiker = await toonEnWacht();
+
+    const veld = screen.getByLabelText('seating.notifications.webhookUrl');
+    expect(veld).toHaveValue('');
+    expect(veld).toHaveAttribute('placeholder', '••••••••');
+    expect(screen.getByText('seating.notifications.webhookKeepHint')).toBeInTheDocument();
+
+    await gebruiker.click(screen.getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() => expect(api.saveSeatingNotificationSettings).toHaveBeenCalled());
+    expect(api.saveSeatingNotificationSettings).toHaveBeenCalledWith(
+      'ork-1',
+      expect.objectContaining({ notification_type: 'webhook', webhook_url: '' }),
+    );
+  });
+
+  it('toont de uitleg over een bewaard adres niet als er nog geen is', async () => {
+    const gebruiker = await toonEnWacht();
+
+    await gebruiker.click(screen.getByRole('button', { name: /Webhook/ }));
+
+    expect(screen.queryByText('seating.notifications.webhookKeepHint')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('seating.notifications.webhookUrl')).toHaveAttribute('placeholder', 'https://...');
+  });
+
   it('toont de verwijderknop zodra er bewaard is', async () => {
     const gebruiker = await toonEnWacht();
 

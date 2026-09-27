@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import logger from '../utils/logger';
 import { sendEmail } from '../utils/email';
+import { ontsnapHtml, veiligeLink } from '../templates/emails/htmlVeilig';
 import { sendWhatsAppNotification, isWhatsAppConfigured } from './whatsapp';
 import { sendTelegramNotification, isTelegramConfigured } from './telegram';
 import webpush from 'web-push';
@@ -491,6 +492,15 @@ async function sendEmailNotification(
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const actionUrl = data?.url ? `${frontendUrl}${data.url}` : frontendUrl;
 
+  // Titel, tekst en naam zijn tekst, geen opmaak: een titel als
+  // `<a href=…>` of een naam met `<img …>` werd anders opmaak in de mail. De
+  // tekst is platte tekst met regeleinden (zie maintenanceAlerts.ts); die
+  // blijven zichtbaar als <br>. De link alleen als het een http(s)-adres is.
+  const titelHtml = ontsnapHtml(title);
+  const tekstHtml = ontsnapHtml(body).replace(/\r?\n/g, '<br>');
+  const naamHtml = ontsnapHtml(user.first_name ?? '');
+  const linkHtml = data?.url ? veiligeLink(actionUrl) : null;
+
   const html = `
 <!DOCTYPE html>
 <html>
@@ -508,12 +518,12 @@ async function sendEmailNotification(
 <body>
   <div class="container">
     <div class="header">
-      <h2 style="margin: 0;">${title}</h2>
+      <h2 style="margin: 0;">${titelHtml}</h2>
     </div>
     <div class="content">
-      <p>Hallo ${user.first_name},</p>
-      <p>${body}</p>
-      ${data?.url ? `<a href="${actionUrl}" class="button">Bekijken in app</a>` : ''}
+      <p>Hallo ${naamHtml},</p>
+      <p>${tekstHtml}</p>
+      ${linkHtml ? `<a href="${linkHtml}" class="button">Bekijken in app</a>` : ''}
     </div>
     <div class="footer">
       <p>Je ontvangt deze e-mail omdat je notificaties hebt ingeschakeld in de Harmonie app.</p>

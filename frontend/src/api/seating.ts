@@ -150,8 +150,10 @@ export interface SeatingNotificationSettings {
   id: string;
   orchestra_id: string;
   notification_type: 'webhook' | 'whatsapp';
+  /** Alleen een masker als er een adres is opgeslagen; het adres zelf komt nooit terug. */
   webhook_url: string | null;
   twilio_account_sid: string | null;
+  /** Idem: alleen een masker. */
   twilio_auth_token: string | null;
   twilio_whatsapp_from: string | null;
   twilio_whatsapp_to: string | null;

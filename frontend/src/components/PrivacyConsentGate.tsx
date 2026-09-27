@@ -26,10 +26,16 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
   const [step, setStep] = useState<'loading' | 'consent' | 'privacy' | 'done'>('loading');
   const [privacySettings, setPrivacySettings] = useState<Record<string, PrivacyVisibility>>({});
 
+  // Wie eerst een eigen wachtwoord moet kiezen, krijgt van de API alleen
+  // antwoord op wat daarvoor nodig is (middleware/auth.ts). De toestemming
+  // komt daarna; zonder deze uitzondering legde het scherm zich over het
+  // formulier om het wachtwoord te wijzigen, met een knop die niet werkt.
+  const eerstWachtwoord = !!user?.mustChangePassword;
+
   const { data: consentStatus, isLoading: consentLoading } = useQuery({
     queryKey: ['privacy-consent-check', CURRENT_CONSENT_VERSION],
     queryFn: () => checkConsent(CURRENT_CONSENT_VERSION),
-    enabled: !!user,
+    enabled: !!user && !eerstWachtwoord,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -40,7 +46,7 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
   });
 
   useEffect(() => {
-    if (!user) {
+    if (!user || eerstWachtwoord) {
       setStep('done');
       return;
     }
@@ -53,7 +59,7 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
     } else {
       setStep('consent');
     }
-  }, [user, consentStatus, consentLoading]);
+  }, [user, eerstWachtwoord, consentStatus, consentLoading]);
 
   useEffect(() => {
     if (currentSettings) {

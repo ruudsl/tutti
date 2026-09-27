@@ -113,7 +113,11 @@ export function useWebSocket() {
   });
 
   const listenersRef = useRef<Map<string, Set<EventCallback<any>>>>(new Map());
-  const isAuthenticated = user !== null;
+  // Met een tijdelijk wachtwoord weigert de server de verbinding
+  // (websocket/index.ts), en na zo'n weigering probeert socket.io het niet
+  // opnieuw. Dus pas verbinden als het lid een eigen wachtwoord heeft; het
+  // verse profiel na het wijzigen zet dit dan vanzelf op true.
+  const isAuthenticated = user !== null && !user.mustChangePassword;
 
   const connect = useCallback(() => {
     const token = localStorage.getItem('token');

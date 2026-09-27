@@ -5,6 +5,12 @@ export interface BackupInfo {
   pdfFiles: { count: number; size: number; sizeFormatted: string };
   mp3Files: { count: number; size: number; sizeFormatted: string };
   total: { size: number; sizeFormatted: string };
+  /**
+   * Of de download versleuteld is (ENCRYPTION_SECRET staat op de server). Dan
+   * is het een `.zip.enc` die alleen terug kan op een installatie met dezelfde
+   * sleutel. Ontbreekt bij een oudere server.
+   */
+  encrypted?: boolean;
 }
 
 export const getBackupInfo = async (): Promise<BackupInfo> => {
@@ -22,7 +28,10 @@ export const downloadBackup = async (): Promise<void> => {
   link.href = url;
 
   const contentDisposition = response.headers['content-disposition'];
-  let filename = `harmonie-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+  // Zonder bruikbare kopregel: een versleutelde kopie komt als
+  // application/octet-stream, een gewone als application/zip.
+  const versleuteld = String(response.headers['content-type'] ?? '').includes('octet-stream');
+  let filename = `harmonie-backup-${new Date().toISOString().slice(0, 10)}.zip${versleuteld ? '.enc' : ''}`;
   if (contentDisposition) {
     const match = contentDisposition.match(/filename="(.+)"/);
     if (match) filename = match[1];
