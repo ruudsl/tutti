@@ -2,7 +2,9 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
-## [Nog niet uitgebracht]
+## [1.19.0] - 2026-09-28
+
+Deze versie gaat bijna helemaal over veiligheid: de rest van de eigen beveiligingsreview van september is verwerkt, in drie rondes. Wie Tutti zelf beheert, moet vóór het bijwerken een `ENCRYPTION_SECRET` instellen; zonder dat geheim start de server niet. Verder: een PDF delen vanuit een andere app komt nu echt aan, Google Agenda koppelen werkt, en een vereniging kan een opslaglimiet krijgen.
 
 ### Let op bij bijwerken
 

@@ -2,7 +2,9 @@
 
 All notable changes to this application are documented here.
 
-## [Unreleased]
+## [1.19.0] - 2026-09-28
+
+This version is almost entirely about security: the rest of our own security review from September has been worked through, in three rounds. If you run Tutti yourself, set an `ENCRYPTION_SECRET` before upgrading; without it the server does not start. Also: sharing a PDF from another app now actually arrives, connecting Google Calendar works, and an association can get a storage limit.
 
 ### Note when upgrading
 
