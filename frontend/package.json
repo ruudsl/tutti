@@ -43,7 +43,7 @@
     "recharts": "^3.10.1",
     "socket.io-client": "^4.8.4",
     "ua-parser-js": "^2.0.10",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@anthropic-ai/tokenizer": "^0.0.4",
