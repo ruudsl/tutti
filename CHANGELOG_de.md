@@ -2,7 +2,9 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
-## [Unveröffentlicht]
+## [1.19.0] - 2026-09-28
+
+Diese Version dreht sich fast ganz um Sicherheit: Der Rest der eigenen Sicherheitsprüfung vom September ist in drei Runden umgesetzt. Wer Tutti selbst betreibt, muss vor dem Aktualisieren ein `ENCRYPTION_SECRET` setzen; ohne dieses Geheimnis startet der Server nicht. Außerdem: Ein aus einer anderen App geteiltes PDF kommt jetzt wirklich an, Google Kalender lässt sich verbinden, und ein Verein kann eine Speichergrenze bekommen.
 
 ### Beim Aktualisieren beachten
 

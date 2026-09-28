@@ -9,7 +9,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | WP         | Titel                                           | Uren             | Status       |
 | ---------- | ----------------------------------------------- | ---------------- | ------------ |
 | 1          | Onafhankelijke security audit                   | extern           | ⬜ Gepland   |
-| 2          | Security audit remediation                      | 65h              | ⬜ Gepland   |
+| 2          | Security audit remediation                      | 65h              | 🔄 Voorwerk² |
 | 3          | WCAG 2.1 AA accessibility audit + fixes         | 45h              | ✅ Voltooid  |
 | 4          | Docker packaging + self-hosting guide           | 50h              | ✅ Voltooid  |
 | 5          | Open music metadata (MusicXML / JSKOS)          | 75h              | ✅ Voltooid  |
@@ -21,6 +21,8 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 11         | Pilot deployments (2-3 verenigingen)            | 45h              | ⬜ Gepland   |
 | 12         | Achtergrondtaken die een herstart overleven     | 40h              | ✅ Voltooid  |
 | **Totaal** |                                                 | **540h + audit** |
+
+² De externe audit (WP1) moet nog gebeuren. Wat een eigen review vooraf kon vinden, is in september 2026 opgelost; zie WP2 hieronder.
 
 ¹ Alle deliverables zijn geleverd, maar de staging-uitrol is _ingericht_ en nog niet _aantoonbaar werkend_: hij heeft nog geen keer gedraaid, en de Build Command in het Render-dashboard staat nog zonder `--include=dev`. Zie WP8 hieronder.
 
@@ -193,6 +195,14 @@ Remediatie van alle bevindingen uit WP1, typisch:
 - [ ] Alle medium bevindingen opgelost of gedocumenteerd met mitigatie
 - [ ] Re-test door auditor (indien van toepassing)
 - [ ] Security changelog
+
+### Voorwerk: eigen review, september 2026
+
+Vóór de externe audit is de code in eigen beheer nagelopen op verenigingsgrens, authenticatie, bestanden en invoer, en geheimen en gegevensbescherming. Elke bevinding is met een test tegen de echte code bevestigd, en elke reparatie heeft een test die zonder de reparatie faalt.
+
+- **Uitkomst:** 1 kritieke, 8 hoge en 17 middelzware bevindingen, plus een reeks lage. Alle kritieke, hoge en middelzware zijn opgelost in PR #234, #235, #236 en #237; de lage op één na. Die ene is een AVG-keuze voor het bestuur (zie WP6).
+- **Security changelog:** de secties _Beveiliging_ in `CHANGELOG.md` bij 1.18.0 en 1.19.0.
+- **Voor de auditor:** de lijst met bevindingen en waar de reparaties staan, is op aanvraag beschikbaar. Die staat bewust niet in deze openbare repository. Het advies is de audit te beginnen bij koppelingen die een vereniging zelf instelt, bij bestanden die de server terugserveert, en bij paden waarlangs een rol of identiteit binnenkomt buiten het gewone inloggen.
 
 ---
 
@@ -459,7 +469,7 @@ Fase 1-4 zijn geïmplementeerd:
 - [x] Offline PDF viewing
 - [x] Background push notifications — `push` + `pushsubscriptionchange` handlers in `frontend/src/sw-custom.ts`
 - [x] App shortcuts (manifest)
-- [x] Share Target API
+- [x] Share Target API — _stond hier sinds augustus als af, maar werkte niet: de service worker ving het gedeelde bestand niet op en de pagina stuurde het naar een route die niet bestaat. Sinds 1.19.0 komt een gedeelde PDF op de uploadpagina aan_
 - [x] Improved mobile touch UX
 - [x] Lighthouse gemeten in CI — _job `lighthouse` in `ci.yml`, mediaan van drie metingen tegen de gebouwde applicatie_
   - Gemeten 19-08-2026: performance 80, accessibility 98, best-practices 96, seo 100
