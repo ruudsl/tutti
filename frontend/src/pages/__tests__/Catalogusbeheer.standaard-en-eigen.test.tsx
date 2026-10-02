@@ -49,8 +49,11 @@ const { zetGenre, zetInstrument, superbeheerder, muteerder } = vi.hoisted(() => 
   muteerder: () => ({ mutate: () => {}, mutateAsync: async () => {}, isPending: false }),
 }));
 
+// Dezelfde vorm als het antwoord van GET /multi-association/am-i-super-admin.
+// Een kale boolean hier verborg dat de pagina's het object zelf als waarde
+// namen: `{ isSuperAdmin: false }` is waar, en elke beheerder kreeg de knoppen.
 vi.mock('../../hooks/useMultiAssociation', () => ({
-  useIsSuperAdmin: () => ({ data: superbeheerder.waarde }),
+  useIsSuperAdmin: () => ({ data: { isSuperAdmin: superbeheerder.waarde } }),
 }));
 
 vi.mock('../../hooks/useGenres', () => ({

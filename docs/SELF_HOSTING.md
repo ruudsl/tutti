@@ -424,8 +424,10 @@ docker compose restart
 # Check database file
 docker compose exec backend ls -la /app/data/
 
-# Check database integrity
-docker compose exec backend sqlite3 /app/data/tutti.db "PRAGMA integrity_check;"
+# Check database integrity. De image heeft geen sqlite3; kopieer het bestand
+# eruit en controleer het op de host (sqlite3 daar installeren).
+docker compose cp backend:/app/data/tutti.db ./tutti-controle.db
+sqlite3 ./tutti-controle.db "PRAGMA integrity_check;"
 ```
 
 ### SSL Certificate Issues
@@ -464,16 +466,37 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:3001/api/health/detailed
 
 ### Reset Admin Password
 
-```bash
-# Connect to database
-docker compose exec backend sqlite3 /app/data/tutti.db
+Eerst het gewone pad: **Wachtwoord vergeten** op het inlogscherm. Dat werkt
+zodra er e-mail is ingesteld (in Tutti onder Instellingen → SMTP, of met de
+`SMTP_*`-variabelen).
 
-# In SQLite shell:
-UPDATE users SET password_hash = '$2b$10$...' WHERE email = 'admin@example.com';
-.quit
+Lukt dat niet - bijvoorbeeld omdat de enige beheerder is buitengesloten
+voordat er e-mail was - dan zet je het wachtwoord rechtstreeks in het
+databasebestand. De image bevat het script niet; je draait het vanuit een
+checkout van de repository op de host:
+
+```bash
+# Server stoppen: anders schrijft die het bestand straks terug zoals het in
+# zijn geheugen stond, en is je wijziging weg.
+docker compose stop backend
+docker compose cp backend:/app/data/tutti.db ./tutti.db
+
+# In de checkout (eenmalig: npm ci --workspace=backend)
+DB_PATH=./tutti.db node backend/scripts/reset-admin-password.js
+#   zonder argument: een willekeurig wachtwoord, één keer getoond
+#   met argumenten:  ... reset-admin-password.js <wachtwoord> <e-mailadres>
+
+docker compose cp ./tutti.db backend:/app/data/tutti.db
+docker compose start backend
+rm ./tutti.db
 ```
 
-Or set `ADMIN_INIT_PASSWORD` in `.env` and restart (only works if user doesn't exist).
+Zonder e-mailadres herstelt het script `admin@harmonie.nl`, het account dat
+een verse installatie aanmaakt. Bij het eerstvolgende inloggen moet de
+gebruiker het wachtwoord zelf wijzigen.
+
+`ADMIN_INIT_PASSWORD` helpt hier niet: die geldt alleen bij de allereerste
+start, als de database nog leeg is.
 
 ---
 

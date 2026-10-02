@@ -153,7 +153,7 @@ export default function UserGuide() {
       <div className="user-guide-footer">
         <p className="text-light text-sm">
           {t('userGuide.needHelp')}{' '}
-          <a href="https://github.com/ruudsl/harmonie/issues" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/ruudsl/tutti/issues" target="_blank" rel="noopener noreferrer">
             {t('userGuide.contactSupport')}
           </a>
         </p>

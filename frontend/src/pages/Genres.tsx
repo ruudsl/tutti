@@ -30,7 +30,7 @@ export default function Genres() {
   const isAdmin = user?.role === ROLES.ADMIN;
   // Een standaardgenre geldt voor alle verenigingen; alleen de superbeheerder
   // wijzigt of verwijdert het. Een vereniging verbergt het.
-  const { data: isSuperAdmin = false } = useIsSuperAdmin();
+  const isSuperAdmin = useIsSuperAdmin().data?.isSuperAdmin === true;
   const magBeheren = (genre: Genre) => !genre.standaard || isSuperAdmin;
 
   // TanStack Query hooks; ook de verborgen standaardgenres, om ze weer te kunnen tonen

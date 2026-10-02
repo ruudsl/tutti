@@ -281,7 +281,10 @@
     "replacementRequests": "Invalverzoeken",
     "musicSharing": "Muziek delen",
     "mobileMenu": "Menu",
-    "importeren": "Importeren"
+    "importeren": "Importeren",
+    "gdprAdmin": "AVG-beheer",
+    "dataExport": "Jouw gegevens",
+    "multiAssociation": "Verenigingen"
   },
   "roles": {
     "admin": "Beheerder",

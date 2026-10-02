@@ -281,7 +281,10 @@
     "replacementRequests": "Replacement Requests",
     "musicSharing": "Share music",
     "mobileMenu": "Menu",
-    "importeren": "Import"
+    "importeren": "Import",
+    "gdprAdmin": "GDPR",
+    "dataExport": "Your data",
+    "multiAssociation": "Associations"
   },
   "roles": {
     "admin": "Administrator",

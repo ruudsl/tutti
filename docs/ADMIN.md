@@ -91,9 +91,15 @@ Users can belong to multiple associations:
 
 ## Backup & Restore
 
+Een reservekopie omvat de hele installatie: alle verenigingen samen. Daarom
+kan alleen een **superbeheerder** er een maken of terugzetten
+(`requireSuperAdmin` in `backend/src/routes/backup.ts`). Een
+verenigingsbeheerder kan dat niet, ook niet voor alleen de eigen vereniging.
+
 ### Creating Backups
 
-Admins can create backups via Settings → Backup:
+De superbeheerder vindt de kaart _Backup_ op het dashboard, onder
+_Beheer_:
 
 - Downloads a ZIP file containing the SQLite database and all uploaded files
 - Recommended before major changes or updates
@@ -102,9 +108,9 @@ Admins can create backups via Settings → Backup:
 
 To restore a backup:
 
-1. Go to Settings → Backup
+1. Dashboard → _Beheer_ → _Backup_
 2. Upload the ZIP file
-3. Confirm the restore (this overwrites all data!)
+3. Confirm the restore (this overwrites all data, for every association!)
 
 ### Automated Backups
 

@@ -18,6 +18,7 @@ import { getSettings } from '../api/settings';
 import { Icon, type IconName } from './Icon';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 import { AssociationSwitcher } from './AssociationSwitcher';
+import { useIsSuperAdmin } from '../hooks/useMultiAssociation';
 import { SectionErrorBoundary } from './SectionErrorBoundary';
 import type { AssociationSettings } from '../types';
 
@@ -25,6 +26,8 @@ interface SidebarNavItem {
   path: string;
   labelKey: string;
   roles?: string[];
+  /** Alleen voor een superbeheerder; dat is geen rol, maar een eigen tabel. */
+  alleenSuperbeheerder?: boolean;
 }
 
 interface SidebarNavGroup {
@@ -255,6 +258,8 @@ const navGroups: SidebarNavGroup[] = [
       '/health',
       '/custom-fields',
       '/accounting',
+      '/gdpr-admin',
+      '/multi-association',
     ],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
@@ -267,10 +272,17 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/payment-settings', labelKey: 'nav.paymentSettings', roles: [ROLES.ADMIN] },
       { path: '/entra-sync', labelKey: 'nav.entraSync', roles: [ROLES.ADMIN] },
       { path: '/importeren', labelKey: 'nav.importeren', roles: [ROLES.ADMIN] },
+      { path: '/gdpr-admin', labelKey: 'nav.gdprAdmin', roles: [ROLES.ADMIN] },
       { path: '/theme', labelKey: 'nav.theme', roles: [ROLES.ADMIN] },
       { path: '/changelog', labelKey: 'nav.changelog', roles: [ROLES.ADMIN] },
       { path: '/audit-logs', labelKey: 'nav.auditLogs', roles: [ROLES.ADMIN] },
       { path: '/health', labelKey: 'nav.health', roles: [ROLES.ADMIN] },
+      {
+        path: '/multi-association',
+        labelKey: 'nav.multiAssociation',
+        roles: [ROLES.ADMIN],
+        alleenSuperbeheerder: true,
+      },
     ],
   },
 ];
@@ -358,11 +370,13 @@ export default function Layout() {
 
   const userRole = user?.role || '';
   const { enabled: enabledModules } = useModules();
+  const isSuperbeheerder = useIsSuperAdmin().data?.isSuperAdmin === true;
 
   // Filter nav groups op rol en op de modules die deze vereniging aan heeft.
   // Een groep waarvan alles wegvalt, verdwijnt zelf ook.
   const isItemVisible = (item: SidebarNavItem) => {
     if (item.roles && !item.roles.includes(userRole)) return false;
+    if (item.alleenSuperbeheerder && !isSuperbeheerder) return false;
     return isPathVisible(item.path, enabledModules);
   };
 
@@ -549,6 +563,16 @@ export default function Layout() {
               </span>
               <span className="sidebar-item-label">{t('nav.privacySettings')}</span>
             </NavLink>
+            <NavLink
+              to="/data-export"
+              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+              title={sidebarCollapsed ? t('nav.dataExport') : undefined}
+            >
+              <span className="sidebar-item-icon" aria-hidden="true">
+                <Icon name="download" size={18} />
+              </span>
+              <span className="sidebar-item-label">{t('nav.dataExport')}</span>
+            </NavLink>
             <button
               className="sidebar-direct-link sidebar-footer-link"
               onClick={handleRestartOnboarding}
@@ -697,6 +721,18 @@ export default function Layout() {
                 </span>
                 {t('nav.profile')}
               </NavLink>
+              <NavLink to="/privacy-settings" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                <span className="mobile-menu-icon" aria-hidden="true">
+                  <Icon name="shield" size={20} />
+                </span>
+                {t('nav.privacySettings')}
+              </NavLink>
+              <NavLink to="/data-export" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                <span className="mobile-menu-icon" aria-hidden="true">
+                  <Icon name="download" size={20} />
+                </span>
+                {t('nav.dataExport')}
+              </NavLink>
               <div className="mobile-menu-actions">
                 <DarkModeToggle />
                 <button className="btn btn-outline btn-sm" onClick={handleLogout}>
@@ -716,7 +752,7 @@ export default function Layout() {
           |
         </span>
         <a
-          href="https://github.com/ruudsl/harmonie/issues"
+          href="https://github.com/ruudsl/tutti/issues"
           target="_blank"
           rel="noopener noreferrer"
           className="feedback-link"

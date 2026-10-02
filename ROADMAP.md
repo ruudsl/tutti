@@ -521,8 +521,8 @@ Gestructureerde pilot deployments:
 
 - [ ] 2-3 live deployments
 - [x] Import tooling voor spreadsheets/legacy data — _leden, muziekbibliotheek, instrumenten in bezit, contacten, uniformen en apparatuur uit CSV, met eerst een voorbeeld per regel; bestaande gegevens bijwerken met oud → nieuw per veld, 24-09-2026; zie `docs/IMPORTEREN.md`. Nog niet: concertkleding_
-- [ ] Onboarding handleiding
-- [ ] Feedback rapport per pilot
+- [x] Onboarding handleiding — _`docs/PILOT_ONBOARDING.md`, 02-10-2026: wie wat doet in de eerste week, hoe leden toegang krijgen, de importvolgorde, privacy vooraf, en eerlijk wat er nog niet is. Nagelopen tegen de code; onderweg gerepareerd: AVG-beheer, Verenigingen en Jouw gegevens stonden in geen menu, en de reservekopiekaart stond bij elke beheerder terwijl alleen de superbeheerder er een mag maken_
+- [ ] Feedback rapport per pilot — _sjabloon klaar: `docs/templates/PILOT_FEEDBACK.md`; de verslagen zelf volgen per pilot_
 - [ ] Publieke case studies
 
 ---

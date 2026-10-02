@@ -2,6 +2,20 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [Nog niet uitgebracht]
+
+### Toegevoegd
+
+- **Handleiding voor een pilotvereniging** (`docs/PILOT_ONBOARDING.md`): wie wat doet in de eerste week, hoe leden toegang krijgen, in welke volgorde je importeert, wat je vooraf met privacy regelt, en wat er nog niet is. Met een sjabloon voor het pilotverslag (`docs/templates/PILOT_FEEDBACK.md`).
+- **AVG-beheer, Verenigingen en Jouw gegevens staan in het menu.** De pagina's bestonden, maar waren alleen te vinden door het adres te typen. Verenigingen ziet alleen een superbeheerder; Privacy en Jouw gegevens staan nu ook in het mobiele menu.
+
+### Gerepareerd
+
+- **Genres en instrumenten:** een gewone beheerder kreeg bij een standaarditem de knoppen bewerken en verwijderen, die de server daarna weigerde. Die knoppen zijn weer alleen voor de superbeheerder.
+- **De reservekopiekaart op het dashboard** staat alleen nog bij de superbeheerder. Een reservekopie omvat de hele installatie; een verenigingsbeheerder kreeg de kaart te zien en daarna een foutmelding.
+- **De feedbacklink** onderaan elke pagina wees naar de oude naam van de repository.
+- **Het noodscript voor het beheerderswachtwoord** (`backend/scripts/reset-admin-password.js`) zet zonder argument niet meer `admin123`, maar een willekeurig wachtwoord dat het één keer toont. Het weigert een te kort wachtwoord, herstelt desgewenst een ander account, en de gebruiker moet het wachtwoord bij het volgende inloggen wijzigen. `docs/SELF_HOSTING.md` beschrijft nu hoe je het bij Docker gebruikt; de oude aanwijzing ging uit van `sqlite3` in de image, en dat zit er niet in.
+
 ## [1.19.0] - 2026-09-28
 
 Deze versie gaat bijna helemaal over veiligheid: de rest van de eigen beveiligingsreview van september is verwerkt, in drie rondes. Wie Tutti zelf beheert, moet vóór het bijwerken een `ENCRYPTION_SECRET` instellen; zonder dat geheim start de server niet. Verder: een PDF delen vanuit een andere app komt nu echt aan, Google Agenda koppelen werkt, en een vereniging kan een opslaglimiet krijgen.

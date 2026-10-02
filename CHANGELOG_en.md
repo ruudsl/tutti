@@ -2,6 +2,20 @@
 
 All notable changes to this application are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **Guide for a pilot association** (`docs/PILOT_ONBOARDING.md`, in Dutch): who does what in the first week, how members get access, the order of imports, what to arrange for privacy beforehand, and what is not there yet. With a template for the pilot report (`docs/templates/PILOT_FEEDBACK.md`).
+- **GDPR administration, Associations and Your data are in the menu.** The pages existed but could only be reached by typing the address. Associations is shown to super admins only; Privacy and Your data are now also in the mobile menu.
+
+### Fixed
+
+- **Genres and instruments:** an ordinary admin got edit and delete buttons on standard items, which the server then refused. Those buttons are for super admins only again.
+- **The backup card on the dashboard** is now shown to super admins only. A backup covers the whole installation; an association admin saw the card and then an error.
+- **The feedback link** at the bottom of every page pointed to the repository's old name.
+- **The emergency script for the admin password** (`backend/scripts/reset-admin-password.js`) no longer sets `admin123` when called without an argument, but a random password it shows once. It refuses a password that is too short, can reset another account, and the user must change the password at the next login. `docs/SELF_HOSTING.md` now explains how to use it with Docker; the old instructions assumed `sqlite3` in the image, which it does not contain.
+
 ## [1.19.0] - 2026-09-28
 
 This version is almost entirely about security: the rest of our own security review from September has been worked through, in three rounds. If you run Tutti yourself, set an `ENCRYPTION_SECRET` before upgrading; without it the server does not start. Also: sharing a PDF from another app now actually arrives, connecting Google Calendar works, and an association can get a storage limit.

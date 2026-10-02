@@ -281,7 +281,10 @@
     "stageDesigner": "Bühnenaufstellung",
     "musicSharing": "Musik teilen",
     "mobileMenu": "Menü",
-    "importeren": "Importieren"
+    "importeren": "Importieren",
+    "gdprAdmin": "DSGVO",
+    "dataExport": "Ihre Daten",
+    "multiAssociation": "Vereine"
   },
   "roles": {
     "admin": "Administrator",
