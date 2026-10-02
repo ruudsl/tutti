@@ -13,6 +13,7 @@ Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
 ### Behoben
 
+- **Ticketrechnungen** zweier Vereine am selben Tag erhielten dieselbe Nummer, und die zweite scheiterte mit einem Datenbankfehler statt einer Rechnung. Die Nummer ist jetzt pro Verein eindeutig. Das schlief noch: Ticketrechnungen werden noch nicht automatisch erstellt.
 - **Genres und Instrumente:** Ein gewöhnlicher Administrator bekam bei einem Standardeintrag die Schaltflächen Bearbeiten und Löschen, die der Server danach ablehnte. Diese Schaltflächen sind wieder nur für Super-Admins.
 - **Die Sicherungskarte auf dem Dashboard** erscheint nur noch bei Super-Admins. Eine Sicherung umfasst die ganze Installation; ein Vereinsadministrator sah die Karte und danach eine Fehlermeldung.
 - **Der Feedback-Link** unten auf jeder Seite zeigte auf den alten Namen des Repositorys.

@@ -13,6 +13,7 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
 ### Gerepareerd
 
+- **Kaartfacturen** van twee verenigingen op dezelfde dag kregen hetzelfde nummer, en de tweede gaf een databasefout in plaats van een factuur. Het nummer is nu uniek per vereniging. Dit sliep nog: kaartfacturen worden nog niet automatisch gemaakt.
 - **Genres en instrumenten:** een gewone beheerder kreeg bij een standaarditem de knoppen bewerken en verwijderen, die de server daarna weigerde. Die knoppen zijn weer alleen voor de superbeheerder.
 - **De reservekopiekaart op het dashboard** staat alleen nog bij de superbeheerder. Een reservekopie omvat de hele installatie; een verenigingsbeheerder kreeg de kaart te zien en daarna een foutmelding.
 - **De feedbacklink** onderaan elke pagina wees naar de oude naam van de repository.

@@ -13,6 +13,7 @@ All notable changes to this application are documented here.
 
 ### Fixed
 
+- **Ticket invoices** from two associations on the same day got the same number, and the second one failed with a database error instead of an invoice. The number is now unique per association. This was dormant: ticket invoices are not yet created automatically.
 - **Genres and instruments:** an ordinary admin got edit and delete buttons on standard items, which the server then refused. Those buttons are for super admins only again.
 - **The backup card on the dashboard** is now shown to super admins only. A backup covers the whole installation; an association admin saw the card and then an error.
 - **The feedback link** at the bottom of every page pointed to the repository's old name.

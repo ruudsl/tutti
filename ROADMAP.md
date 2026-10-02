@@ -130,21 +130,13 @@ pull request achterblijven.
     zelf: `uses_count` alleen ophogen `WHERE uses_count < max_uses`, en kijken
     of er een rij veranderde. Anders kunnen twee gelijktijdige bestellingen
     samen over de grens heen - zie `docs/POSTGRES_MIGRATION.md` §4.H
-11. **Kaartfacturen van twee verenigingen op één dag krijgen hetzelfde nummer.**
-    `services/invoices.ts` telt per vereniging per dag (`INV-20260923-0001`),
-    maar `ticket_invoices.invoice_number` is uniek over de hele installatie. De
-    tweede vereniging die op een dag een kaart verkoopt, krijgt daardoor
-    `UNIQUE constraint failed` en geen factuur. Vandaag slaapt dit:
-    `createInvoice` wordt nergens aangeroepen. Het gaat af zodra kaartfacturen
-    worden aangesloten. Twee oplossingen, en de keuze raakt wat er op de
-    factuur staat:
-    - de vereniging in het nummer opnemen (bijvoorbeeld de slug): geen
-      schemawijziging, maar een lang nummer dat meeverandert met de slug;
-    - de sleutel `(association_id, invoice_number)` maken, zoals bij `invoices`
-      en `transactions`: het juiste model, maar een tabel-herbouw waarbij
-      `invoice_line_items` (met `ON DELETE CASCADE`) mee moet, omdat de
-      migratieloper elke migratie in een transactie draait en de
-      verwijzingscontrole daarbinnen niet uit kan
+11. ~~Kaartfacturen van twee verenigingen op één dag krijgen hetzelfde nummer.~~
+    **Opgelost op 02-10-2026.** Het nummer is nu uniek per vereniging, zoals bij
+    `invoices` en `transactions`: migratie
+    `20261002210000_kaartfactuurnummer_per_vereniging` bouwt `ticket_invoices`
+    opnieuw op zonder `UNIQUE` op het nummer en met een unieke sleutel op
+    `(association_id, invoice_number)`. De foreign keys staan tijdens de herbouw
+    uit, zodat `invoice_line_items` (`ON DELETE CASCADE`) blijft staan.
 
 Daarnaast wachten twee GitHub-instellingen die alleen de eigenaar van de
 repository kan zetten. Zonder deze twee stopt `deploy-staging.yml` met een
