@@ -78,9 +78,16 @@ export const createTicketOrder = async (
     buyerPhone?: string;
     notes?: string;
     captchaToken?: string;
+    /** Een kortingscode; de server rekent de korting zelf uit. */
+    discountCode?: string;
   },
 ): Promise<{
   orderId: string;
+  /** `paid` als er niets te betalen was (een code van honderd procent). */
+  status?: 'pending' | 'paid';
+  subtotal?: number;
+  discount?: number;
+  serviceFee?: number;
   total: number;
   expiresAt: string;
   items: { ticketTypeId: string; name: string; quantity: number; unitPrice: number; subtotal: number }[];

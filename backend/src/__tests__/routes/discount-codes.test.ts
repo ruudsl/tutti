@@ -19,6 +19,9 @@ import { errorHandler } from '../../middleware/errorHandler';
 import { createTestAssociation, createTestEnvironment, TestAssociation } from '../testUtils';
 
 const app = express();
+// Elke controle komt van een eigen adres (zie `controleer`), zodat de grens op
+// het aantal pogingen per adres deze tests niet raakt.
+app.set('trust proxy', true);
 app.use(express.json());
 app.use('/api/discount-codes', discountCodesRoutes);
 app.use(errorHandler);
@@ -298,7 +301,12 @@ describe('kortingscodes', () => {
   });
 
   describe('een code controleren', () => {
-    const controleer = (body: Record<string, unknown>) => request(app).post('/api/discount-codes/validate').send(body);
+    let adres = 0;
+    const controleer = (body: Record<string, unknown>) =>
+      request(app)
+        .post('/api/discount-codes/validate')
+        .set('X-Forwarded-For', `10.0.${Math.floor(++adres / 250)}.${adres % 250}`)
+        .send(body);
 
     it('keurt een geldige code goed', async () => {
       const id = maakCode({ discount_value: 10 });
@@ -433,5 +441,28 @@ describe('kortingscodes', () => {
       const antwoord = await controleer({ code: codeVan(vreemdeId).code, concertId, orderTotal: 100 });
       expect(antwoord.body.valid).toBe(false);
     });
+  });
+});
+
+describe('POST /discount-codes/validate - raden', () => {
+  it('stopt na twintig pogingen per minuut', async () => {
+    const limietApp = express();
+    limietApp.set('trust proxy', true);
+    limietApp.use(express.json());
+    limietApp.use('/api/discount-codes', discountCodesRoutes);
+
+    const antwoorden = [];
+    for (let i = 0; i < 21; i++) {
+      antwoorden.push(
+        await request(limietApp)
+          .post('/api/discount-codes/validate')
+          .set('X-Forwarded-For', '203.0.113.7')
+          .send({ code: `GOK${i}`, concertId: uuidv4(), orderTotal: 10 }),
+      );
+    }
+
+    expect(antwoorden.slice(0, 20).every((a) => a.status === 200)).toBe(true);
+    expect(antwoorden[20].status).toBe(429);
+    expect(antwoorden[20].body.code).toBe('RATE_LIMITED');
   });
 });

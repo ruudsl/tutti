@@ -385,7 +385,9 @@ app.get('/api/changelog', async (req, res) => {
 app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concerts/:id/tickets, /tickets/...
 app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
 app.use('/api/payment-settings', optionalAuth, requireModule('ticketing'), paymentSettingsRoutes);
-app.use('/api/discount-codes', discountCodesRoutes);
+// Achter de module, net als de betaalinstellingen hierboven. De publieke
+// controle (POST /validate) heeft geen token en gaat er dus gewoon door.
+app.use('/api/discount-codes', optionalAuth, requireModule('ticketing'), discountCodesRoutes);
 // De zaalindelingen stonden op de wortel van de API: deze router heeft routes
 // op '/' en '/:id', dus /api/ gaf de indelingen terug en /api/<wat dan ook>
 // antwoordde met "Venue layout not found" in plaats van een nette 404. De
