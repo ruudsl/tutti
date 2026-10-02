@@ -119,17 +119,17 @@ pull request achterblijven.
    De achterstandslijst in `src/locales/__tests__/translations.test.ts` is leeg;
    het mechanisme blijft staan zodat een nieuw gat weer opvalt
 
-10. **Kortingscodes zijn half gebouwd.** De backend kan ze aanmaken, wijzigen en
-    controleren (`routes/discount-codes.ts`), maar er is geen scherm voor, de
-    bestelroute in `routes/tickets.ts` neemt geen code aan, en
-    `applyDiscountCode` in `services/ticketing.ts` - die het gebruik vastlegt -
-    wordt nergens aangeroepen. `uses_count` blijft daardoor altijd 0, en
-    "maximaal 50 keer" of "één keer per koper" wordt nooit gehandhaafd. Kwaad
-    kan het nu niet: niemand kan een code gebruiken. Afbouwen of weghalen is
-    een productkeuze. Wordt het afgebouwd, zet dan de grens in het vastleggen
-    zelf: `uses_count` alleen ophogen `WHERE uses_count < max_uses`, en kijken
-    of er een rij veranderde. Anders kunnen twee gelijktijdige bestellingen
-    samen over de grens heen - zie `docs/POSTGRES_MIGRATION.md` §4.H
+10. ~~Kortingscodes zijn half gebouwd.~~ **Afgebouwd op 02-10-2026.**
+    Beheerders en muziekcommissie maken codes aan onder **Kortingscodes**
+    (`/kortingscodes`); de koper vult de code in bij het bestellen. Eén regel
+    voor een geldige code (`services/kortingscodes.ts`) voor de controle vooraf
+    én de bestelling. De code wordt bij het bestellen gereserveerd met één
+    voorwaardelijke INSERT in de bestellingstransactie, telt bij betalen als
+    gebruikt en wordt vrijgegeven bij annuleren, verlopen of mislukken; zo
+    houden het maximum en de grens per koper stand bij gelijktijdige
+    bestellingen. Een bestelling zonder te betalen bedrag is meteen betaald.
+    Nog niet: een terugbetaling geeft de code niet vrij, en de (nog niet
+    aangesloten) kaartfacturen tonen de korting niet als aparte regel
 11. ~~Kaartfacturen van twee verenigingen op één dag krijgen hetzelfde nummer.~~
     **Opgelost op 02-10-2026.** Het nummer is nu uniek per vereniging, zoals bij
     `invoices` en `transactions`: migratie

@@ -285,7 +285,8 @@
     "gdprAdmin": "AVG-beheer",
     "dataExport": "Jouw gegevens",
     "multiAssociation": "Verenigingen",
-    "uitnodigingen": "Uitnodigingen"
+    "uitnodigingen": "Uitnodigingen",
+    "kortingscodes": "Kortingscodes"
   },
   "roles": {
     "admin": "Beheerder",
@@ -2734,7 +2735,24 @@
       "lookForward": "We kijken ernaar uit u te zien!"
     },
     "offlineMode": "Offline modus",
-    "onlineMode": "Online modus"
+    "onlineMode": "Online modus",
+    "kortingscode": {
+      "veld": "Kortingscode",
+      "toepassen": "Toepassen",
+      "weghalen": "Weghalen",
+      "korting": "Korting ({{code}})",
+      "reden": {
+        "onbekend": "Deze kortingscode kennen we niet.",
+        "inactief": "Deze kortingscode is niet meer actief.",
+        "nog_niet_geldig": "Deze kortingscode is nog niet geldig.",
+        "verlopen": "Deze kortingscode is verlopen.",
+        "op": "Deze kortingscode is op.",
+        "koper": "Je hebt deze kortingscode al zo vaak gebruikt als mag.",
+        "minimum": "Je bestelling is te klein voor deze kortingscode.",
+        "concert": "Deze kortingscode geldt niet voor dit concert.",
+        "kaartsoort": "Deze kortingscode geldt niet voor de gekozen kaarten."
+      }
+    }
   },
   "ticketDashboard": {
     "title": "Ticket Dashboard",
@@ -3321,7 +3339,8 @@
     "importeren": "$t(nav.importeren)",
     "instrumenten": "$t(nav.instruments)",
     "uitnodiging": "Uitnodiging",
-    "uitnodigingen": "Uitnodigingen"
+    "uitnodigingen": "Uitnodigingen",
+    "kortingscodes": "Kortingscodes"
   },
   "seating": {
     "title": "Orkestopstelling",
@@ -4338,7 +4357,16 @@
     "applyCode": "Code toepassen",
     "codeApplied": "Kortingscode toegepast",
     "invalidCode": "Ongeldige kortingscode",
-    "discount": "Korting"
+    "discount": "Korting",
+    "aangemaakt": "Kortingscode aangemaakt",
+    "uitleg": "De koper vult de code in bij het bestellen. De korting gaat van de kaarten af, niet van de servicekosten. Een code die al gebruikt is, zet je liever uit dan dat je hem verwijdert.",
+    "onbeperkt": "Onbeperkt",
+    "perKoper": "Maximaal per koper",
+    "concert": "Alleen voor concert",
+    "alleConcerten": "Alle concerten",
+    "geenCodes": "Er zijn nog geen kortingscodes.",
+    "verwijderTitel": "Kortingscode verwijderen",
+    "verwijderVraag": "Kortingscode {{code}} verwijderen? Ook wie hem gebruikte, wordt gewist."
   },
   "serviceFee": {
     "serviceFee": "Servicekosten",

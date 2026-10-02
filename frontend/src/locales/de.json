@@ -285,7 +285,8 @@
     "gdprAdmin": "DSGVO",
     "dataExport": "Ihre Daten",
     "multiAssociation": "Vereine",
-    "uitnodigingen": "Einladungen"
+    "uitnodigingen": "Einladungen",
+    "kortingscodes": "Rabattcodes"
   },
   "roles": {
     "admin": "Administrator",
@@ -2252,7 +2253,8 @@
     "importeren": "$t(nav.importeren)",
     "instrumenten": "$t(nav.instruments)",
     "uitnodiging": "Einladung",
-    "uitnodigingen": "Einladungen"
+    "uitnodigingen": "Einladungen",
+    "kortingscodes": "Rabattcodes"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -3537,7 +3539,24 @@
     "refund": "Erstattung",
     "exportSuccess": "Export erfolgreich heruntergeladen.",
     "offlineMode": "Offline-Modus",
-    "onlineMode": "Online-Modus"
+    "onlineMode": "Online-Modus",
+    "kortingscode": {
+      "veld": "Rabattcode",
+      "toepassen": "Anwenden",
+      "weghalen": "Entfernen",
+      "korting": "Rabatt ({{code}})",
+      "reden": {
+        "onbekend": "Diesen Rabattcode kennen wir nicht.",
+        "inactief": "Dieser Rabattcode ist nicht mehr aktiv.",
+        "nog_niet_geldig": "Dieser Rabattcode ist noch nicht gültig.",
+        "verlopen": "Dieser Rabattcode ist abgelaufen.",
+        "op": "Dieser Rabattcode ist aufgebraucht.",
+        "koper": "Sie haben diesen Rabattcode bereits so oft verwendet wie erlaubt.",
+        "minimum": "Ihre Bestellung ist für diesen Rabattcode zu klein.",
+        "concert": "Dieser Rabattcode gilt nicht für dieses Konzert.",
+        "kaartsoort": "Dieser Rabattcode gilt nicht für die gewählten Karten."
+      }
+    }
   },
   "bulk": {
     "title": "Massenaktionen",
@@ -4318,27 +4337,36 @@
     "yesCancel": "Ja, Übertragung Abbrechen"
   },
   "discountCodes": {
-    "title": "Kortingscodes",
-    "addCode": "Code Toevoegen",
-    "editCode": "Code Bewerken",
+    "title": "Rabattcodes",
+    "addCode": "Code hinzufügen",
+    "editCode": "Code bearbeiten",
     "code": "Code",
-    "description": "Beschrijving",
-    "discountType": "Kortingstype",
-    "percentage": "Prozentsatz",
-    "fixedAmount": "Vast bedrag",
-    "discountValue": "Kortingswaarde",
-    "minOrderAmount": "Minimaal bestelbedrag",
-    "maxUses": "Maximum gebruik",
-    "usesCount": "Aantal keer gebruikt",
-    "validFrom": "Geldig vanaf",
-    "validUntil": "Geldig tot",
-    "isActive": "Actief",
-    "usage": "Gebruik",
-    "noUsage": "Nog niet gebruikt",
-    "applyCode": "Code toepassen",
-    "codeApplied": "Kortingscode toegepast",
-    "invalidCode": "Ongeldige kortingscode",
-    "discount": "Korting"
+    "description": "Beschreibung",
+    "discountType": "Rabattart",
+    "percentage": "Prozent",
+    "fixedAmount": "Fester Betrag",
+    "discountValue": "Rabattwert",
+    "minOrderAmount": "Mindestbestellwert",
+    "maxUses": "Maximale Nutzung",
+    "usesCount": "Anzahl verwendet",
+    "validFrom": "Gültig ab",
+    "validUntil": "Gültig bis",
+    "isActive": "Aktiv",
+    "usage": "Nutzung",
+    "noUsage": "Noch nicht verwendet",
+    "applyCode": "Code anwenden",
+    "codeApplied": "Rabattcode angewendet",
+    "invalidCode": "Ungültiger Rabattcode",
+    "discount": "Rabatt",
+    "aangemaakt": "Rabattcode erstellt",
+    "uitleg": "Käufer geben den Code bei der Bestellung ein. Der Rabatt gilt für die Karten, nicht für die Servicegebühr. Einen bereits verwendeten Code besser deaktivieren als löschen.",
+    "onbeperkt": "Unbegrenzt",
+    "perKoper": "Höchstens pro Käufer",
+    "concert": "Nur für Konzert",
+    "alleConcerten": "Alle Konzerte",
+    "geenCodes": "Es gibt noch keine Rabattcodes.",
+    "verwijderTitel": "Rabattcode löschen",
+    "verwijderVraag": "Rabattcode {{code}} löschen? Auch wer ihn verwendet hat, wird gelöscht."
   },
   "serviceFee": {
     "serviceFee": "Servicekosten",

@@ -60,8 +60,8 @@ export const MODULES: ModuleDefinition[] = [
     description:
       'Kaartverkoop voor concerten, met betaalinstellingen, verkoopoverzicht en de scanner bij de deur. Zet dit uit als er geen kaarten via Tutti worden verkocht.',
     defaultEnabled: false,
-    apiPrefixes: ['/tickets', '/payment-settings'],
-    navPaths: ['/my-tickets', '/ticket-sales', '/ticket-scanner', '/payment-settings'],
+    apiPrefixes: ['/tickets', '/payment-settings', '/discount-codes'],
+    navPaths: ['/my-tickets', '/ticket-sales', '/kortingscodes', '/ticket-scanner', '/payment-settings'],
   },
   {
     key: 'stage',

@@ -126,6 +126,7 @@ vi.mock('../pages/Statistics', maakPagina('Statistics'));
 vi.mock('../pages/Tasks', maakPagina('Tasks'));
 vi.mock('../pages/ThemeSettings', maakPagina('ThemeSettings'));
 vi.mock('../pages/TicketSales', maakPagina('TicketSales'));
+vi.mock('../pages/Kortingscodes', maakPagina('Kortingscodes'));
 vi.mock('../pages/TicketScanner', maakPagina('TicketScanner'));
 vi.mock('../pages/TicketTransfer', maakPagina('TicketTransfer'));
 vi.mock('../pages/Tools', maakPagina('Tools'));
@@ -378,6 +379,7 @@ const VERWACHTE_ROLLEN: [pad: string, pagina: string, rollen: string[] | null][]
   ['/lists/3/7', 'MusicListManager', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/music-sharing', 'MusicSharing', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/ticket-sales', 'TicketSales', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
+  ['/kortingscodes', 'Kortingscodes', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/concerts/12/guest-list', 'GuestList', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
 
   // Beheerder, muziekcommissie en dirigent
@@ -675,6 +677,14 @@ describe('App - uitgezette modules', () => {
     stand.rol = ROLES.ADMIN;
     stand.modules = ALLE_MODULES.filter((m) => m !== 'ticketing');
     bezoek('/ticket-sales');
+
+    expect(await zichtbarePagina()).toBe('Dashboard');
+  });
+
+  it('houdt de kortingscodes weg als kaartverkoop uit staat', async () => {
+    stand.rol = ROLES.ADMIN;
+    stand.modules = ALLE_MODULES.filter((m) => m !== 'ticketing');
+    bezoek('/kortingscodes');
 
     expect(await zichtbarePagina()).toBe('Dashboard');
   });

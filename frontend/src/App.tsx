@@ -176,6 +176,7 @@ const MockPayment = lui(() => import('./pages/MockPayment'));
 const TicketTransfer = lui(() => import('./pages/TicketTransfer'));
 const AcceptTransfer = lui(() => import('./pages/AcceptTransfer'));
 const UitnodigingAannemen = lui(() => import('./pages/UitnodigingAannemen'));
+const Kortingscodes = lui(() => import('./pages/Kortingscodes'));
 const Uitnodigingen = lui(() => import('./pages/Uitnodigingen'));
 
 // Stage Layout Designer
@@ -776,6 +777,14 @@ function AppRoutes() {
             element={
               <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
                 <TicketSales />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="kortingscodes"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+                <Kortingscodes />
               </PrivateRoute>
             }
           />

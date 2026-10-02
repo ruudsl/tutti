@@ -58,6 +58,7 @@ export * from './music';
 export * from './rehearsals';
 export * from './concerts';
 export * from './tickets';
+export * from './discount-codes';
 export * from './seating';
 export * from './calendar';
 

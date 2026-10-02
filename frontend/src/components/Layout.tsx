@@ -59,6 +59,7 @@ const navGroups: SidebarNavGroup[] = [
       '/concerts',
       '/my-tickets',
       '/ticket-sales',
+      '/kortingscodes',
       '/ticket-scanner',
       '/holiday-settings',
       '/season-planner',
@@ -81,6 +82,7 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/holiday-settings', labelKey: 'nav.holidays', roles: [ROLES.ADMIN] },
       { path: '/my-tickets', labelKey: 'nav.myTickets' },
       { path: '/ticket-sales', labelKey: 'nav.ticketSales', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/kortingscodes', labelKey: 'nav.kortingscodes', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       {
         path: '/ticket-scanner',
         labelKey: 'nav.ticketScanner',

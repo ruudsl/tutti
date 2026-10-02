@@ -285,7 +285,8 @@
     "gdprAdmin": "GDPR",
     "dataExport": "Your data",
     "multiAssociation": "Associations",
-    "uitnodigingen": "Invitations"
+    "uitnodigingen": "Invitations",
+    "kortingscodes": "Discount codes"
   },
   "roles": {
     "admin": "Administrator",
@@ -2278,7 +2279,8 @@
     "importeren": "$t(nav.importeren)",
     "instrumenten": "$t(nav.instruments)",
     "uitnodiging": "Invitation",
-    "uitnodigingen": "Invitations"
+    "uitnodigingen": "Invitations",
+    "kortingscodes": "Discount codes"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -2892,7 +2894,24 @@
       "lookForward": "We look forward to seeing you!"
     },
     "offlineMode": "Offline mode",
-    "onlineMode": "Online mode"
+    "onlineMode": "Online mode",
+    "kortingscode": {
+      "veld": "Discount code",
+      "toepassen": "Apply",
+      "weghalen": "Remove",
+      "korting": "Discount ({{code}})",
+      "reden": {
+        "onbekend": "We do not recognise this discount code.",
+        "inactief": "This discount code is no longer active.",
+        "nog_niet_geldig": "This discount code is not valid yet.",
+        "verlopen": "This discount code has expired.",
+        "op": "This discount code has been used up.",
+        "koper": "You have already used this discount code as often as allowed.",
+        "minimum": "Your order is too small for this discount code.",
+        "concert": "This discount code is not valid for this concert.",
+        "kaartsoort": "This discount code is not valid for the selected tickets."
+      }
+    }
   },
   "offlineScanner": {
     "title": "Offline Scanner",
@@ -4360,7 +4379,16 @@
     "applyCode": "Apply code",
     "codeApplied": "Discount code applied",
     "invalidCode": "Invalid discount code",
-    "discount": "Discount"
+    "discount": "Discount",
+    "aangemaakt": "Discount code created",
+    "uitleg": "Buyers enter the code when ordering. The discount comes off the tickets, not off the service fee. Rather turn off a code that has been used than delete it.",
+    "onbeperkt": "Unlimited",
+    "perKoper": "Maximum per buyer",
+    "concert": "Only for concert",
+    "alleConcerten": "All concerts",
+    "geenCodes": "There are no discount codes yet.",
+    "verwijderTitel": "Delete discount code",
+    "verwijderVraag": "Delete discount code {{code}}? Who used it is erased as well."
   },
   "serviceFee": {
     "serviceFee": "Service fee",

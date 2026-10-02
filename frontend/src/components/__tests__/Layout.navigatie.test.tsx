@@ -292,6 +292,7 @@ describe('uitgezette modules', () => {
 
     expect(paden).not.toContain('/my-tickets');
     expect(paden).not.toContain('/ticket-sales');
+    expect(paden).not.toContain('/kortingscodes');
     expect(paden).not.toContain('/ticket-scanner');
     expect(paden).not.toContain('/payment-settings');
     // De rest van de agenda blijft gewoon staan.
