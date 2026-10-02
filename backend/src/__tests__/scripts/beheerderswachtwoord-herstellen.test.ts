@@ -100,6 +100,16 @@ describe('beheerderswachtwoord herstellen', () => {
     expect((await lees('admin@harmonie.nl')).hash).toBe('oud');
   });
 
+  it('meldt een ontbrekend databasebestand als fout en maakt er geen aan', () => {
+    fs.rmSync(dbPad);
+
+    const uitvoer = draai('een-lang-genoeg-wachtwoord');
+
+    expect(uitvoer.status).not.toBe(0);
+    expect(uitvoer.stderr).toContain('Database niet te lezen');
+    expect(fs.existsSync(dbPad)).toBe(false);
+  });
+
   it('meldt een onbekend e-mailadres als fout en verandert niets', async () => {
     const uitvoer = draai('een-lang-genoeg-wachtwoord', 'niemand@voorbeeld.nl');
 

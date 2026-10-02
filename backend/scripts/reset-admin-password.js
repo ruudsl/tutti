@@ -32,11 +32,6 @@ async function main() {
   const initSqlJs = require('sql.js');
   const SQL = await initSqlJs();
 
-  if (!fs.existsSync(DB_PATH)) {
-    console.error('Database niet gevonden op:', DB_PATH);
-    process.exit(1);
-  }
-
   const opgegeven = process.argv[2];
   const email = process.argv[3] || STANDAARD_EMAIL;
   if (opgegeven !== undefined && opgegeven.length < MIN_WACHTWOORDLENGTE) {
@@ -45,7 +40,16 @@ async function main() {
   }
   const wachtwoord = opgegeven ?? crypto.randomBytes(18).toString('base64url');
 
-  const db = new SQL.Database(fs.readFileSync(DB_PATH));
+  // Meteen lezen in plaats van eerst kijken of het bestand bestaat: tussen
+  // die twee stappen kan het bestand veranderen.
+  let inhoud;
+  try {
+    inhoud = fs.readFileSync(DB_PATH);
+  } catch (fout) {
+    console.error('Database niet te lezen op:', DB_PATH, `(${fout.code || fout.message})`);
+    process.exit(1);
+  }
+  const db = new SQL.Database(inhoud);
   const zoek = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)');
   zoek.bind([email]);
   const gevonden = zoek.step();
