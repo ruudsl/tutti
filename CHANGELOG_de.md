@@ -6,6 +6,7 @@ Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
 ### Hinzugefügt
 
+- **Einladen per Link funktioniert von Anfang bis Ende.** Die eingeladene Person erhält eine E-Mail mit dem Link (nl, en, de), der Link steht auch auf dem Bildschirm zum Kopieren, und `/invite/…` ist eine Seite, auf der man die Einladung annimmt - auch wenn man sich erst anmelden muss. Administratoren und Vorstand finden die Einladungen unter **Verwaltung → Einladungen**; vorher standen sie nur auf einer Seite für Super-Admins, es ging keine E-Mail hinaus und der Link führte ins Leere. Eine Einladung ist für jemanden, der bereits ein Konto hat.
 - **Anleitung für einen Pilotverein** (`docs/PILOT_ONBOARDING.md`, auf Niederländisch): wer in der ersten Woche was tut, wie Mitglieder Zugang bekommen, in welcher Reihenfolge importiert wird, was vorab zum Datenschutz zu regeln ist, und was es noch nicht gibt. Mit einer Vorlage für den Pilotbericht (`docs/templates/PILOT_FEEDBACK.md`).
 - **DSGVO-Verwaltung, Vereine und Ihre Daten stehen im Menü.** Die Seiten gab es, sie waren aber nur über die eingetippte Adresse erreichbar. Vereine sehen nur Super-Admins; Datenschutz und Ihre Daten stehen jetzt auch im mobilen Menü.
 

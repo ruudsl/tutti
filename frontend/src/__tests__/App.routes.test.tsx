@@ -46,6 +46,8 @@ const { stand, maakPagina } = vi.hoisted(() => {
 
 // --- de pagina's, allemaal weggemockt -------------------------------------
 vi.mock('../pages/AcceptTransfer', maakPagina('AcceptTransfer'));
+vi.mock('../pages/UitnodigingAannemen', maakPagina('UitnodigingAannemen'));
+vi.mock('../pages/Uitnodigingen', maakPagina('Uitnodigingen'));
 vi.mock('../pages/AccessibilityStatement', maakPagina('AccessibilityStatement'));
 vi.mock('../pages/Accounting', maakPagina('Accounting'));
 vi.mock('../pages/AttendanceAnalytics', maakPagina('AttendanceAnalytics'));
@@ -325,6 +327,7 @@ const VERWACHTE_ROLLEN: [pad: string, pagina: string, rollen: string[] | null][]
   ['/multi-association', 'MultiAssociation', [ROLES.ADMIN]],
   ['/entra-sync', 'EntraSync', [ROLES.ADMIN]],
   ['/onboarding', 'Onboarding', [ROLES.ADMIN]],
+  ['/uitnodigingen', 'Uitnodigingen', [ROLES.ADMIN, ROLES.BOARD]],
   ['/audit-logs', 'AuditLogs', [ROLES.ADMIN]],
   ['/health', 'HealthDashboard', [ROLES.ADMIN]],
   ['/gdpr-admin', 'GdprAdmin', [ROLES.ADMIN]],
@@ -552,6 +555,7 @@ describe('App - publieke routes zonder inloggen', () => {
     ['/tickets/42', 'PublicTicketSale'],
     ['/tickets/orders/99/mock-payment', 'MockPayment'],
     ['/tickets/transfer/accept/NEP-CODE-1234', 'AcceptTransfer'],
+    ['/invite/0000000000000000000000000000000000000000000000000000000000000000', 'UitnodigingAannemen'],
     ['/calendar/harmonie-sint-cecilia', 'PublicCalendar'],
     ['/info-screen/harmonie-sint-cecilia', 'InfoScreen'],
     ['/share-target', 'ShareTarget'],

@@ -6,6 +6,7 @@ All notable changes to this application are documented here.
 
 ### Added
 
+- **Inviting by link works end to end.** The invitee receives an e-mail with the link (nl, en, de), the link is also shown on screen to copy, and `/invite/…` is a page where you accept the invitation - also if you still need to log in. Admins and board members find invitations under **Admin → Invitations**; before, they were only on a page for super admins, no e-mail was sent and the link led nowhere. An invitation is for someone who already has an account.
 - **Guide for a pilot association** (`docs/PILOT_ONBOARDING.md`, in Dutch): who does what in the first week, how members get access, the order of imports, what to arrange for privacy beforehand, and what is not there yet. With a template for the pilot report (`docs/templates/PILOT_FEEDBACK.md`).
 - **GDPR administration, Associations and Your data are in the menu.** The pages existed but could only be reached by typing the address. Associations is shown to super admins only; Privacy and Your data are now also in the mobile menu.
 

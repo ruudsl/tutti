@@ -252,6 +252,7 @@ const navGroups: SidebarNavGroup[] = [
       '/entra-sync',
       '/importeren',
       '/onboarding',
+      '/uitnodigingen',
       '/theme',
       '/changelog',
       '/audit-logs',
@@ -264,6 +265,7 @@ const navGroups: SidebarNavGroup[] = [
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
       { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
+      { path: '/uitnodigingen', labelKey: 'nav.uitnodigingen', roles: [ROLES.ADMIN, ROLES.BOARD] },
       { path: '/orchestras', labelKey: 'nav.orchestras', roles: [ROLES.ADMIN] },
       { path: '/custom-fields', labelKey: 'nav.customFields', roles: [ROLES.ADMIN] },
       { path: '/accounting', labelKey: 'nav.accounting', roles: [ROLES.ADMIN] },

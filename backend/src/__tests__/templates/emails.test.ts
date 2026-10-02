@@ -19,6 +19,7 @@ import {
   getPollNotificationEmail,
   getTaskAssignmentEmail,
   getAccountVerificationEmail,
+  getUitnodigingEmail,
   EmailContent,
   EmailLanguage,
 } from '../../templates/emails';
@@ -254,5 +255,26 @@ describe('account verification e-mail', () => {
     expectWellFormed(content);
     expect(content.text).toContain(data.verificationUrl);
     expect(content.html).toContain(data.verificationUrl);
+  });
+});
+
+describe('uitnodiging om lid te worden', () => {
+  const gegevens = {
+    verenigingsnaam: 'Harmonie Concordia',
+    uitnodiger: 'Anne de Wit',
+    aannameUrl: 'https://tutti.test/invite/abc123',
+    dagenGeldig: 7,
+  };
+
+  it.each(LANGUAGES)('noemt vereniging, uitnodiger, link en geldigheid in %s', (taal) => {
+    const inhoud = getUitnodigingEmail(gegevens, taal);
+
+    expectWellFormed(inhoud);
+    expect(inhoud.subject).toContain('Harmonie Concordia');
+    for (const deel of [inhoud.text, inhoud.html]) {
+      expect(deel).toContain('Anne de Wit');
+      expect(deel).toContain(gegevens.aannameUrl);
+      expect(deel).toContain('7');
+    }
   });
 });

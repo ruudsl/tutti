@@ -122,10 +122,13 @@ vereniging tegelijk. Let op:
   voorbeeldtekst staat hieronder.
 - De rol komt uit de kolom _Rol_; zonder rol wordt het _lid_.
 
-**Uitnodigen per link** bestaat in de code, maar is voor een pilot nog niet
-bruikbaar: alleen een superbeheerder kan uitnodigen, er gaat geen mail uit en
-er is nog geen pagina om de uitnodiging aan te nemen. Gebruik een van de twee
-manieren hierboven.
+**Uitnodigen per link** - **Beheer → Uitnodigingen** (`/uitnodigingen`). Voor
+wie **al een account in Tutti heeft**, bijvoorbeeld bij een andere vereniging
+op dezelfde installatie. De uitgenodigde krijgt een mail met een link (als
+e-mail is ingesteld); de link staat ook op het scherm, om zelf door te geven.
+Aannemen kan alleen wie inlogt met het uitgenodigde adres, binnen zeven
+dagen. Daarna staat de vereniging in de verenigingskiezer bovenaan. Iemand
+zonder account maak je aan met een van de twee manieren hierboven.
 
 Voorbeeldbericht na een import:
 
@@ -203,7 +206,6 @@ Eerlijk over wat er (nog) niet is, zodat het niet halverwege de pilot opvalt:
 
 - Een vereniging kan **zelf geen reservekopie** maken (§1).
 - **Tweestapsverificatie** is niet verplicht te stellen (§2).
-- **Uitnodigen per link** werkt nog niet van begin tot eind (§3).
 - Er is **geen plek voor de privacyverklaring** in de app (§5).
 - **Concertkleding** is niet te importeren (de rest wel, §4).
 

@@ -6,6 +6,7 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
 ### Toegevoegd
 
+- **Uitnodigen per link werkt van begin tot eind.** De uitgenodigde krijgt een mail met de link (nl, en, de), de link staat ook op het scherm om te kopiëren, en `/invite/…` is een pagina waar je de uitnodiging aanneemt - ook als je nog moet inloggen. Beheerders en bestuur vinden de uitnodigingen onder **Beheer → Uitnodigingen**; eerder stonden ze alleen op een pagina voor de superbeheerder, er ging geen mail uit en de link leidde nergens heen. Een uitnodiging is voor iemand die al een account heeft.
 - **Handleiding voor een pilotvereniging** (`docs/PILOT_ONBOARDING.md`): wie wat doet in de eerste week, hoe leden toegang krijgen, in welke volgorde je importeert, wat je vooraf met privacy regelt, en wat er nog niet is. Met een sjabloon voor het pilotverslag (`docs/templates/PILOT_FEEDBACK.md`).
 - **AVG-beheer, Verenigingen en Jouw gegevens staan in het menu.** De pagina's bestonden, maar waren alleen te vinden door het adres te typen. Verenigingen ziet alleen een superbeheerder; Privacy en Jouw gegevens staan nu ook in het mobiele menu.
 

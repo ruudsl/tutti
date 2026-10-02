@@ -284,7 +284,8 @@
     "importeren": "Importieren",
     "gdprAdmin": "DSGVO",
     "dataExport": "Ihre Daten",
-    "multiAssociation": "Vereine"
+    "multiAssociation": "Vereine",
+    "uitnodigingen": "Einladungen"
   },
   "roles": {
     "admin": "Administrator",
@@ -2236,7 +2237,9 @@
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
     "importeren": "$t(nav.importeren)",
-    "instrumenten": "$t(nav.instruments)"
+    "instrumenten": "$t(nav.instruments)",
+    "uitnodiging": "Einladung",
+    "uitnodigingen": "Einladungen"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -6247,5 +6250,24 @@
     "andereNamen": "Andere Namen",
     "geen": "Keine Instrumente gefunden.",
     "uitleg": "Standardinstrumente gelten für alle Vereine. Passt eines nicht, blenden Sie es aus und legen Sie ein eigenes Instrument an."
+  },
+  "uitnodiging": {
+    "uitleg": "Eine Einladung ist für jemanden, der bereits ein Tutti-Konto hat, zum Beispiel bei einem anderen Verein. Ein neues Mitglied legen Sie unter Mitglieder an.",
+    "linkKlaar": "Einladung erstellt. Wenn E-Mail eingerichtet ist, erhält {{email}} eine Nachricht mit dem Link. Sie können ihn auch selbst weitergeben:",
+    "link": "Link der Einladung",
+    "kopieer": "Link kopieren",
+    "gekopieerd": "Link kopiert",
+    "kopierenMislukt": "Kopieren fehlgeschlagen; markieren Sie den Link und kopieren Sie ihn selbst.",
+    "tekst": "Sie wurden eingeladen, Mitglied von {{vereniging}} zu werden, als {{rol}}.",
+    "voorEmail": "Die Einladung ist für {{email}}.",
+    "geldigTot": "Gültig bis {{datum}}.",
+    "inloggen": "Anmelden, um anzunehmen",
+    "geenAccount": "Noch kein Konto? Bitten Sie den Verein, eines für Sie anzulegen.",
+    "aannemen": "Einladung annehmen",
+    "anderAccount": "Sie sind als {{huidig}} angemeldet, aber diese Einladung ist für {{email}}.",
+    "anderAccountInloggen": "Abmelden und mit der richtigen Adresse anmelden",
+    "gelukt": "Sie sind jetzt Mitglied von {{vereniging}}. Wechseln Sie oben auf dem Bildschirm zum Verein.",
+    "naarDashboard": "Zum Dashboard",
+    "nietGevonden": "Diese Einladung existiert nicht, wurde bereits verwendet oder ist abgelaufen. Bitten Sie den Verein um eine neue."
   }
 }

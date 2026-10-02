@@ -20,6 +20,7 @@ import {
   getConcertReminderEmail,
   getTaskAssignmentEmail,
   getPollNotificationEmail,
+  getUitnodigingEmail,
   EmailLanguage,
 } from '../../templates/emails';
 import { sendTicketConfirmationEmail } from '../../services/ticketing';
@@ -49,6 +50,15 @@ describe('html-versie van e-mails ontsnapt ingevoerde namen', () => {
     expect(inhoud.subject).toContain(NAAM);
     expect(inhoud.html).toContain('href="https://tutti.test/login?a=1&amp;b=2"');
     expect(inhoud.text).toContain('https://tutti.test/login?a=1&b=2');
+  });
+
+  it.each(TALEN)('uitnodiging met een gevaarlijke naam van vereniging en uitnodiger (%s)', (taal) => {
+    const inhoud = getUitnodigingEmail(
+      { verenigingsnaam: NAAM, uitnodiger: NAAM, aannameUrl: 'https://tutti.test/invite/abc', dagenGeldig: 7 },
+      taal,
+    );
+    verwachtOntsnapt(inhoud);
+    expect(inhoud.subject).toContain(NAAM);
   });
 
   it.each(TALEN)('taakmail met een gevaarlijke naam van wie toewees (%s)', (taal) => {

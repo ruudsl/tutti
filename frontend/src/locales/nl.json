@@ -284,7 +284,8 @@
     "importeren": "Importeren",
     "gdprAdmin": "AVG-beheer",
     "dataExport": "Jouw gegevens",
-    "multiAssociation": "Verenigingen"
+    "multiAssociation": "Verenigingen",
+    "uitnodigingen": "Uitnodigingen"
   },
   "roles": {
     "admin": "Beheerder",
@@ -3305,7 +3306,9 @@
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
     "importeren": "$t(nav.importeren)",
-    "instrumenten": "$t(nav.instruments)"
+    "instrumenten": "$t(nav.instruments)",
+    "uitnodiging": "Uitnodiging",
+    "uitnodigingen": "Uitnodigingen"
   },
   "seating": {
     "title": "Orkestopstelling",
@@ -6247,5 +6250,24 @@
     "andereNamen": "Andere namen",
     "geen": "Geen instrumenten gevonden.",
     "uitleg": "Standaardinstrumenten gelden voor alle verenigingen. Past er een niet, verberg het dan en maak een eigen instrument."
+  },
+  "uitnodiging": {
+    "uitleg": "Een uitnodiging is voor iemand die al een account in Tutti heeft, bijvoorbeeld bij een andere vereniging. Een nieuw lid maak je aan onder Leden.",
+    "linkKlaar": "Uitnodiging gemaakt. Als e-mail is ingesteld, krijgt {{email}} een mail met de link. Je kunt hem ook zelf doorgeven:",
+    "link": "Link van de uitnodiging",
+    "kopieer": "Kopieer link",
+    "gekopieerd": "Link gekopieerd",
+    "kopierenMislukt": "Kopiëren lukte niet; selecteer de link en kopieer hem zelf.",
+    "tekst": "Je bent uitgenodigd om lid te worden van {{vereniging}}, als {{rol}}.",
+    "voorEmail": "De uitnodiging is voor {{email}}.",
+    "geldigTot": "Geldig tot {{datum}}.",
+    "inloggen": "Inloggen om aan te nemen",
+    "geenAccount": "Nog geen account? Vraag de vereniging om er een voor je aan te maken.",
+    "aannemen": "Uitnodiging aannemen",
+    "anderAccount": "Je bent ingelogd als {{huidig}}, maar deze uitnodiging is voor {{email}}.",
+    "anderAccountInloggen": "Uitloggen en inloggen met het juiste adres",
+    "gelukt": "Je bent nu lid van {{vereniging}}. Wissel bovenaan het scherm naar de vereniging.",
+    "naarDashboard": "Naar het dashboard",
+    "nietGevonden": "Deze uitnodiging bestaat niet, is al gebruikt of is verlopen. Vraag de vereniging om een nieuwe."
   }
 }

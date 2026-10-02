@@ -12,9 +12,6 @@ import {
   useSuperAdmins,
   useAddSuperAdmin,
   useRemoveSuperAdmin,
-  useInvitations,
-  useCreateInvitation,
-  useDeleteInvitation,
   usePartnerships,
   usePartnerMusic,
   usePartnerEvents,
@@ -28,9 +25,10 @@ import {
 } from '../hooks/useMultiAssociation';
 import { Icon } from '../components/Icon';
 import { AchtergrondtakenBeheer } from '../components/AchtergrondtakenBeheer';
+import { UitnodigingenBeheer } from '../components/UitnodigingenBeheer';
 import { FormModal } from '../components/FormModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { Association, Invitation, Partnership, AssociationMember, SuperAdmin } from '../api/multi-association';
+import { Association, Partnership, AssociationMember, SuperAdmin } from '../api/multi-association';
 
 const MB = 1024 * 1024;
 
@@ -105,7 +103,7 @@ export default function MultiAssociation() {
       </div>
 
       {activeTab === 'associations' && <AssociationsTab />}
-      {activeTab === 'invitations' && <InvitationsTab />}
+      {activeTab === 'invitations' && <UitnodigingenBeheer />}
       {activeTab === 'partnerships' && <PartnershipsTab />}
       {activeTab === 'members' && <MembersTab />}
       {activeTab === 'superadmins' && <SuperAdminsTab />}
@@ -683,127 +681,6 @@ function SubscriptionModal({
         </label>
       </div>
     </FormModal>
-  );
-}
-
-function InvitationsTab() {
-  const { t } = useTranslation();
-  const { data: invitations, isLoading } = useInvitations();
-  const createInvitation = useCreateInvitation();
-  const deleteInvitation = useDeleteInvitation();
-
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newInvite, setNewInvite] = useState({ email: '', role: 'member' as const });
-
-  const handleCreate = async () => {
-    await createInvitation.mutateAsync(newInvite);
-    setNewInvite({ email: '', role: 'member' });
-    setShowAddForm(false);
-  };
-
-  if (isLoading) {
-    return (
-      <div role="status" className="text-center py-12 text-gray-500">
-        {t('common.loading')}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="page-header">
-        <h2 className="text-lg font-semibold">{t('multiAssociation.invitations.title')}</h2>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Icon name="plus" className="w-5 h-5" />
-          {t('multiAssociation.invitations.invite')}
-        </button>
-      </div>
-
-      {showAddForm && (
-        <div className="mb-4 p-4 border rounded-lg bg-gray-50">
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="col-span-2">
-              <input
-                type="email"
-                placeholder={t('multiAssociation.invitations.emailPlaceholder')}
-                value={newInvite.email}
-                onChange={(e) => setNewInvite((prev) => ({ ...prev, email: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <select
-              value={newInvite.role}
-              onChange={(e) => setNewInvite((prev) => ({ ...prev, role: e.target.value as any }))}
-              className="px-3 py-2 border rounded-lg"
-            >
-              <option value="member">{t('multiAssociation.roles.member')}</option>
-              <option value="board">{t('multiAssociation.roles.board')}</option>
-              <option value="admin">{t('multiAssociation.roles.admin')}</option>
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleCreate}
-              disabled={!newInvite.email || createInvitation.isPending}
-              className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg disabled:opacity-50"
-            >
-              {t('common.submit')}
-            </button>
-            <button onClick={() => setShowAddForm(false)} className="px-3 py-1.5 border text-sm rounded-lg">
-              {t('common.cancel')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!invitations || invitations.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <Icon name="envelope" className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>{t('multiAssociation.invitations.noInvitations')}</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {invitations.map((invite: Invitation) => (
-            <div key={invite.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
-              <div>
-                <div className="font-medium">{invite.email}</div>
-                <div className="text-sm text-gray-500">
-                  {`${t('multiAssociation.roleLabel')}: ${invite.role} | ${t('multiAssociation.invitations.invitedBy')}: ${invite.invitedBy}`}
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    invite.status === 'accepted'
-                      ? 'bg-green-100 text-green-800'
-                      : invite.status === 'expired'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                  }`}
-                >
-                  {invite.status === 'accepted'
-                    ? t('multiAssociation.invitations.status.accepted')
-                    : invite.status === 'expired'
-                      ? t('multiAssociation.invitations.status.expired')
-                      : t('multiAssociation.invitations.status.pending')}
-                </span>
-                {invite.status === 'pending' && (
-                  <button
-                    onClick={() => deleteInvitation.mutate(invite.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Icon name="trash" className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 

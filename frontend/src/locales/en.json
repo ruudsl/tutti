@@ -284,7 +284,8 @@
     "importeren": "Import",
     "gdprAdmin": "GDPR",
     "dataExport": "Your data",
-    "multiAssociation": "Associations"
+    "multiAssociation": "Associations",
+    "uitnodigingen": "Invitations"
   },
   "roles": {
     "admin": "Administrator",
@@ -2262,7 +2263,9 @@
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
     "importeren": "$t(nav.importeren)",
-    "instrumenten": "$t(nav.instruments)"
+    "instrumenten": "$t(nav.instruments)",
+    "uitnodiging": "Invitation",
+    "uitnodigingen": "Invitations"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -6247,5 +6250,24 @@
     "andereNamen": "Other names",
     "geen": "No instruments found.",
     "uitleg": "Standard instruments apply to all associations. If one doesn't fit, hide it and create your own instrument."
+  },
+  "uitnodiging": {
+    "uitleg": "An invitation is for someone who already has a Tutti account, for example with another association. Create a new member under Members.",
+    "linkKlaar": "Invitation created. If e-mail is set up, {{email}} receives a message with the link. You can also pass it on yourself:",
+    "link": "Invitation link",
+    "kopieer": "Copy link",
+    "gekopieerd": "Link copied",
+    "kopierenMislukt": "Copying failed; select the link and copy it yourself.",
+    "tekst": "You have been invited to join {{vereniging}} as {{rol}}.",
+    "voorEmail": "The invitation is for {{email}}.",
+    "geldigTot": "Valid until {{datum}}.",
+    "inloggen": "Log in to accept",
+    "geenAccount": "No account yet? Ask the association to create one for you.",
+    "aannemen": "Accept invitation",
+    "anderAccount": "You are logged in as {{huidig}}, but this invitation is for {{email}}.",
+    "anderAccountInloggen": "Log out and log in with the right address",
+    "gelukt": "You are now a member of {{vereniging}}. Switch to the association at the top of the screen.",
+    "naarDashboard": "Go to the dashboard",
+    "nietGevonden": "This invitation does not exist, has already been used or has expired. Ask the association for a new one."
   }
 }

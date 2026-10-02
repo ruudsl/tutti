@@ -235,6 +235,14 @@ describe('welke menu-onderdelen een rol ziet', () => {
     expect(await menuPaden(gebruiker)).toContain('/gdpr-admin');
   });
 
+  it('geeft de beheerder de uitnodigingen in het menu', async () => {
+    huidigeRol = ROLES.ADMIN;
+    const gebruiker = userEvent.setup({ delay: null });
+    toon();
+
+    expect(await menuPaden(gebruiker)).toContain('/uitnodigingen');
+  });
+
   it('toont Verenigingen alleen aan een superbeheerder', async () => {
     huidigeRol = ROLES.ADMIN;
     const gebruiker = userEvent.setup({ delay: null });

@@ -175,6 +175,8 @@ const InfoScreen = lui(() => import('./pages/InfoScreen'));
 const MockPayment = lui(() => import('./pages/MockPayment'));
 const TicketTransfer = lui(() => import('./pages/TicketTransfer'));
 const AcceptTransfer = lui(() => import('./pages/AcceptTransfer'));
+const UitnodigingAannemen = lui(() => import('./pages/UitnodigingAannemen'));
+const Uitnodigingen = lui(() => import('./pages/Uitnodigingen'));
 
 // Stage Layout Designer
 const StageDesigner = lui(() => import('./pages/StageDesigner'));
@@ -302,6 +304,9 @@ function AppRoutes() {
         <Route path="/tickets/orders/:orderId/mock-payment" element={<MockPayment />} />
         {/* Accept ticket transfer - accessible without login (handles redirect) */}
         <Route path="/tickets/transfer/accept/:code" element={<AcceptTransfer />} />
+        {/* De link uit een uitnodigingsmail; werkt ook uitgelogd en stuurt
+            dan naar het inlogscherm, met de weg terug hierheen. */}
+        <Route path="/invite/:token" element={<UitnodigingAannemen />} />
         {/* Public calendar embed and info screen */}
         <Route path="/calendar/:slug" element={<PublicCalendar />} />
         {/* Dedicated info screen for lobby displays */}
@@ -718,6 +723,14 @@ function AppRoutes() {
             element={
               <PrivateRoute roles={[ROLES.ADMIN]}>
                 <Onboarding />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="uitnodigingen"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.BOARD]}>
+                <Uitnodigingen />
               </PrivateRoute>
             }
           />
