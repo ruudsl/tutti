@@ -20,6 +20,7 @@
  * @property associationName - Display name of the user's association
  * @property mfaEnabled - Whether multi-factor authentication is enabled
  * @property mustChangePassword - Het lid heeft nog het tijdelijke wachtwoord van de aanmelding en moet eerst een eigen kiezen
+ * @property tweestapInstellenVerplicht - De vereniging verplicht tweestapsverificatie en het lid heeft die nog niet
  * @property lastLogin - ISO timestamp of last successful login
  * @property photoUrl - URL to the user's profile photo
  * @property instruments - List of instruments the user plays
@@ -35,6 +36,7 @@ export interface User {
   associationName?: string;
   mfaEnabled?: boolean;
   mustChangePassword?: boolean;
+  tweestapInstellenVerplicht?: boolean;
   lastLogin?: string | null;
   photoUrl?: string | null;
   instruments?: Instrument[];

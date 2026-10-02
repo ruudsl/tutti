@@ -103,6 +103,7 @@ function zetApiKlaar(): void {
   vi.mocked(api.getSettings).mockResolvedValue(instellingen);
   vi.mocked(api.getMicrosoftConfig).mockResolvedValue(microsoftUit);
   vi.mocked(api.getSmtpConfig).mockResolvedValue(smtpUit);
+  vi.mocked(api.getTweestapStand).mockResolvedValue({ stand: 'uit', zelfAan: false });
   vi.mocked(api.getTelegramConfig).mockResolvedValue(telegramUit);
   vi.mocked(api.getWhatsAppConfig).mockResolvedValue(whatsappUit);
   vi.mocked(api.getM365GroupMappings).mockResolvedValue([]);

@@ -30,7 +30,8 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
   // antwoord op wat daarvoor nodig is (middleware/auth.ts). De toestemming
   // komt daarna; zonder deze uitzondering legde het scherm zich over het
   // formulier om het wachtwoord te wijzigen, met een knop die niet werkt.
-  const eerstWachtwoord = !!user?.mustChangePassword;
+  // Hetzelfde voor wie eerst tweestapsverificatie moet instellen.
+  const eerstWachtwoord = !!user?.mustChangePassword || !!user?.tweestapInstellenVerplicht;
 
   const { data: consentStatus, isLoading: consentLoading } = useQuery({
     queryKey: ['privacy-consent-check', CURRENT_CONSENT_VERSION],

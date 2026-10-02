@@ -85,9 +85,12 @@ Toelichting bij een paar stappen:
 - **E-mail eerst.** Zonder SMTP verstuurt Tutti niets: geen welkomstmail, geen
   _Wachtwoord vergeten_, geen herinneringen. Wie ooit zijn wachtwoord kwijt
   is, heeft dan de platformbeheerder nodig.
-- **Tweestapsverificatie** stel je per account in; je kunt het niet voor de
-  hele vereniging verplicht maken. Vraag in elk geval de beheerders het aan
-  te zetten.
+- **Tweestapsverificatie** zet ieder voor zich aan. Onder **Instellingen →
+  Tweestapsverificatie** kun je het verplicht stellen: voor beheerders en
+  bestuur, of voor iedereen. Wie moet en het nog niet heeft, komt na het
+  inloggen eerst op zijn profiel om het in te stellen; verder kan hij niets
+  tot dat gebeurd is. Verplichten kan alleen wie het zelf al aan heeft. Een
+  advies: begin met beheerders en bestuur; zij zien de ledengegevens.
 - **Modules.** Alles buiten de kern staat uit tot je het aanzet: boekhouding,
   kaartverkoop, inventaris (instrumenten, uniformen, apparatuur), contacten,
   peilingen, taken, wiki, aanwezigheid en meer. Uitzetten verbergt, het
@@ -205,7 +208,6 @@ eindgesprek. Het sjabloon voor het verslag staat in
 Eerlijk over wat er (nog) niet is, zodat het niet halverwege de pilot opvalt:
 
 - Een vereniging kan **zelf geen reservekopie** maken (§1).
-- **Tweestapsverificatie** is niet verplicht te stellen (§2).
 - Er is **geen plek voor de privacyverklaring** in de app (§5).
 - **Concertkleding** is niet te importeren (de rest wel, §4).
 

@@ -26,11 +26,18 @@ import { ROLES } from '../utils/constants';
  * omdat vi.mock-fabrieken boven de imports uit worden getild.
  */
 const { stand, maakPagina } = vi.hoisted(() => {
-  const stand: { rol: string | null; modules: string[]; modulesGeladen: boolean; moetWachtwoordWijzigen: boolean } = {
+  const stand: {
+    rol: string | null;
+    modules: string[];
+    modulesGeladen: boolean;
+    moetWachtwoordWijzigen: boolean;
+    moetTweestapInstellen: boolean;
+  } = {
     rol: null,
     modules: [],
     modulesGeladen: true,
     moetWachtwoordWijzigen: false,
+    moetTweestapInstellen: false,
   };
 
   /** Vervangt een pagina door een blokje met een merkteken. */
@@ -141,7 +148,13 @@ vi.mock('../context/AuthContext', () => {
       user:
         stand.rol === null
           ? null
-          : { id: 1, role: stand.rol, name: 'Testlid', mustChangePassword: stand.moetWachtwoordWijzigen },
+          : {
+              id: 1,
+              role: stand.rol,
+              name: 'Testlid',
+              mustChangePassword: stand.moetWachtwoordWijzigen,
+              tweestapInstellenVerplicht: stand.moetTweestapInstellen,
+            },
       login: vi.fn(),
       loginWithToken: vi.fn(),
       logout: vi.fn(),
@@ -276,6 +289,7 @@ beforeEach(() => {
   stand.modules = [...ALLE_MODULES];
   stand.modulesGeladen = true;
   stand.moetWachtwoordWijzigen = false;
+  stand.moetTweestapInstellen = false;
 });
 
 afterEach(() => {
@@ -514,6 +528,30 @@ describe('App - eerst een eigen wachtwoord', () => {
     bezoek('/my-music');
 
     expect(await zichtbarePagina()).toBe('MyMusic');
+  });
+});
+
+describe('App - eerst tweestapsverificatie', () => {
+  // De vereniging verplicht tweestapsverificatie en het lid heeft die nog
+  // niet. Instellen gebeurt op het profiel; tot dan komt het lid nergens anders.
+  it.each(['/', '/my-music', '/users', '/settings'])(
+    'stuurt een lid zonder verplichte tweestap van %s naar het profiel',
+    async (pad) => {
+      stand.rol = ROLES.ADMIN;
+      stand.moetTweestapInstellen = true;
+      bezoek(pad);
+
+      expect(await zichtbarePagina()).toBe('Profile');
+      expect(window.location.pathname).toBe('/profile');
+    },
+  );
+
+  it('laat het profiel zelf gewoon zien', async () => {
+    stand.rol = ROLES.MEMBER;
+    stand.moetTweestapInstellen = true;
+    bezoek('/profile');
+
+    expect(await zichtbarePagina()).toBe('Profile');
   });
 });
 

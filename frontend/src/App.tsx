@@ -221,6 +221,13 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
     return <Navigate to={WACHTWOORD_WIJZIGEN_PAD} replace />;
   }
 
+  // De vereniging verplicht tweestapsverificatie en het lid heeft die nog
+  // niet: eerst instellen, ook op het profiel. De API geeft tot dan alleen
+  // antwoord op wat daarvoor nodig is.
+  if (user.tweestapInstellenVerplicht && location.pathname !== WACHTWOORD_WIJZIGEN_PAD) {
+    return <Navigate to={WACHTWOORD_WIJZIGEN_PAD} replace />;
+  }
+
   if (roles && !roles.includes(user.role)) {
     return <Navigate to="/" />;
   }

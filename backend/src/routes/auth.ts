@@ -10,6 +10,7 @@ import {
   generateToken,
   authenticateToken,
   authenticateTokenBijTijdelijkWachtwoord,
+  authenticateTokenBijTweestapInstellen,
   AuthRequest,
   verenigingGesloten,
   MELDING_NIET_ACTIEF,
@@ -26,6 +27,7 @@ import {
   wisMislukkingen,
 } from '../utils/inlogvertraging';
 import { plaatsTaak } from '../taken/wachtrij';
+import { moetTweestapHebben, moetTweestapInstellen, tweestapStand } from '../services/tweestapVerplicht';
 import { sendPasswordResetEmail } from '../utils/email';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
@@ -361,6 +363,9 @@ router.post(
         // De frontend stuurt het lid dan eerst naar het wijzigen van zijn
         // wachtwoord; zie users.moet_wachtwoord_wijzigen.
         mustChangePassword: Boolean(user.moet_wachtwoord_wijzigen),
+        // En daarna naar het instellen van tweestapsverificatie, als de
+        // vereniging die verplicht; zie services/tweestapVerplicht.ts.
+        tweestapInstellenVerplicht: moetTweestapInstellen(Boolean(user.mfa_enabled), user.role, user.association_id),
       },
     });
   }),
@@ -491,6 +496,7 @@ router.get(
       associationName: user.association_name,
       mfaEnabled: Boolean(user.mfa_enabled),
       mustChangePassword: Boolean(user.moet_wachtwoord_wijzigen),
+      tweestapInstellenVerplicht: moetTweestapInstellen(Boolean(user.mfa_enabled), user.role, user.association_id),
       instruments,
       orchestras,
     });
@@ -599,7 +605,7 @@ router.post(
  */
 router.post(
   '/mfa/setup',
-  authenticateToken,
+  authenticateTokenBijTweestapInstellen,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db.prepare('SELECT email, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
       { email: string; mfa_enabled: boolean } | undefined;
@@ -670,7 +676,7 @@ router.post(
  */
 router.post(
   '/mfa/enable',
-  authenticateToken,
+  authenticateTokenBijTweestapInstellen,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { code } = req.body;
 
@@ -785,6 +791,12 @@ router.post(
       throw new ApiError(400, 'MFA is niet ingeschakeld.');
     }
 
+    // Verplicht de vereniging het, dan blijft het aan. Zonder deze controle zou
+    // uitzetten het lid meteen weer buitensluiten tot hij het opnieuw instelt.
+    if (moetTweestapHebben(tweestapStand(req.user!.associationId), req.user!.role)) {
+      throw new ApiError(403, 'Je vereniging verplicht tweestapsverificatie; uitzetten kan niet.');
+    }
+
     // Verify password
     const validPassword = bcrypt.compareSync(password, user.password_hash);
     if (!validPassword) {
@@ -843,7 +855,7 @@ router.post(
  */
 router.get(
   '/mfa/status',
-  authenticateToken,
+  authenticateTokenBijTweestapInstellen,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db.prepare('SELECT mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
       { mfa_enabled: boolean } | undefined;

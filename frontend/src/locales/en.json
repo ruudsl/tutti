@@ -389,7 +389,8 @@
       "disablePassword": "Password to disable MFA",
       "disableButton": "Disable MFA",
       "disabling": "Loading...",
-      "disableSuccess": "MFA has been disabled."
+      "disableSuccess": "MFA has been disabled.",
+      "verplicht": "Your association requires two-step verification. Set it up below; after that you can use Tutti as usual."
     }
   },
   "dashboard": {
@@ -1872,6 +1873,18 @@
       "userGuideDesc": "Learn how to use the app",
       "accessibility": "Accessibility",
       "accessibilityDesc": "Accessibility information"
+    },
+    "tweestap": {
+      "titel": "Two-step verification",
+      "uitleg": "With two-step verification, Tutti asks for a code from an app on your phone in addition to your password when you log in. Anyone who is required to have it and does not yet, sets it up first after logging in.",
+      "wie": "Required for",
+      "stand": {
+        "uit": "Nobody (everyone chooses)",
+        "beheer": "Admins and board",
+        "iedereen": "Everyone"
+      },
+      "eerstZelf": "First turn on two-step verification yourself (on your profile); then you can require it for others.",
+      "laadFout": "The two-step verification setting could not be loaded."
     }
   },
   "theme": {

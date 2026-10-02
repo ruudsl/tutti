@@ -389,7 +389,8 @@
       "disablePassword": "Passwort zum Deaktivieren von MFA",
       "disableButton": "MFA deaktivieren",
       "disabling": "Laden...",
-      "disableSuccess": "MFA wurde deaktiviert."
+      "disableSuccess": "MFA wurde deaktiviert.",
+      "verplicht": "Ihr Verein verlangt die Zwei-Schritt-Verifizierung. Richten Sie sie unten ein; danach können Sie Tutti wieder wie gewohnt nutzen."
     }
   },
   "dashboard": {
@@ -1890,6 +1891,18 @@
       "userGuideDesc": "Erfahren Sie, wie Sie die App nutzen",
       "accessibility": "Barrierefreiheit",
       "accessibilityDesc": "Informationen zur Barrierefreiheit"
+    },
+    "tweestap": {
+      "titel": "Zwei-Schritt-Verifizierung",
+      "uitleg": "Mit der Zwei-Schritt-Verifizierung fragt Tutti bei der Anmeldung zusätzlich zum Passwort nach einem Code aus einer App auf dem Telefon. Wer sie haben muss und noch nicht hat, richtet sie nach der Anmeldung zuerst ein.",
+      "wie": "Verpflichtend für",
+      "stand": {
+        "uit": "Niemanden (jeder entscheidet selbst)",
+        "beheer": "Administratoren und Vorstand",
+        "iedereen": "Alle"
+      },
+      "eerstZelf": "Aktivieren Sie zuerst selbst die Zwei-Schritt-Verifizierung (in Ihrem Profil); danach können Sie sie für andere verpflichtend machen.",
+      "laadFout": "Die Einstellung zur Zwei-Schritt-Verifizierung konnte nicht geladen werden."
     }
   },
   "theme": {

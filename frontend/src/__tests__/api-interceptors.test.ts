@@ -250,6 +250,16 @@ describe('de response-interceptor bij een verplichte wachtwoordwijziging', () =>
     expect(window.location.href).toBe('');
   });
 
+  it('stuurt een lid dat eerst tweestapsverificatie moet instellen ook naar het profiel', async () => {
+    localStorage.setItem('token', 'geldig-token');
+    antwoordMetFout(403, { error: 'Stel die eerst in.', code: 'TWEESTAP_INSTELLEN_VERPLICHT' });
+
+    await expect(getUsers()).rejects.toMatchObject({ response: { status: 403 } });
+
+    expect(window.location.href).toBe('/profile');
+    expect(localStorage.getItem('token')).toBe('geldig-token');
+  });
+
   it('stuurt bij een gewone 403 nergens heen', async () => {
     antwoordMetFout(403, { error: 'Onvoldoende rechten', code: 'IETS_ANDERS' });
 

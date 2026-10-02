@@ -123,6 +123,7 @@ function zetApiKlaar(): void {
   vi.mocked(api.getSettings).mockResolvedValue(instellingen);
   vi.mocked(api.getMicrosoftConfig).mockResolvedValue(microsoftUit);
   vi.mocked(api.getSmtpConfig).mockResolvedValue(smtpUit);
+  vi.mocked(api.getTweestapStand).mockResolvedValue({ stand: 'uit', zelfAan: false });
   vi.mocked(api.getTelegramConfig).mockResolvedValue(telegramUit);
   vi.mocked(api.getWhatsAppConfig).mockResolvedValue(whatsappUit);
   vi.mocked(api.getM365GroupMappings).mockResolvedValue([]);
@@ -152,7 +153,7 @@ beforeEach(() => {
 });
 
 describe('instellingenpagina - vastgelegd gedrag', () => {
-  it('toont negen sectiekoppen, in deze volgorde', async () => {
+  it('toont tien sectiekoppen, in deze volgorde', async () => {
     render(<Settings />, { wrapper: wikkel });
 
     await screen.findByText('settings.title');
@@ -162,6 +163,7 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
       'settings.logo',
       'settings.microsoft.title',
       'settings.smtp.title',
+      'settings.tweestap.titel',
       'settings.telegram.title',
       'settings.whatsapp.title',
       'offline.manager',
@@ -247,7 +249,7 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
     render(<Settings />, { wrapper: wikkel });
 
     expect(await screen.findByText('settings.title')).toBeInTheDocument();
-    expect(sectiekoppen()).toHaveLength(9);
+    expect(sectiekoppen()).toHaveLength(10);
   });
 
   it('vult de organisatienaam met wat er opgehaald is', async () => {

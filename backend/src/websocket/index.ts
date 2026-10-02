@@ -52,6 +52,10 @@ export function authenticeerSocket(socket: AuthenticatedSocket, next: (fout?: Er
     if (beoordeling.moetWachtwoordWijzigen) {
       return next(new Error('Password change required'));
     }
+    // En evenmin wie eerst tweestapsverificatie moet instellen.
+    if (beoordeling.moetTweestapInstellen) {
+      return next(new Error('Two-step verification required'));
+    }
 
     socket.userId = decoded.id;
     socket.associationId = decoded.associationId ?? undefined;

@@ -389,7 +389,8 @@
       "disablePassword": "Wachtwoord om MFA uit te schakelen",
       "disableButton": "MFA uitschakelen",
       "disabling": "Bezig...",
-      "disableSuccess": "MFA is uitgeschakeld."
+      "disableSuccess": "MFA is uitgeschakeld.",
+      "verplicht": "Je vereniging vraagt tweestapsverificatie. Stel die hieronder in; daarna kun je Tutti weer gewoon gebruiken."
     }
   },
   "dashboard": {
@@ -1844,6 +1845,18 @@
       "userGuideDesc": "Leer hoe je de app gebruikt",
       "accessibility": "Toegankelijkheid",
       "accessibilityDesc": "Informatie over toegankelijkheid"
+    },
+    "tweestap": {
+      "titel": "Tweestapsverificatie",
+      "uitleg": "Met tweestapsverificatie vraagt Tutti bij het inloggen naast het wachtwoord om een code uit een app op de telefoon. Wie het moet hebben en het nog niet heeft, stelt het na het inloggen eerst in.",
+      "wie": "Verplicht voor",
+      "stand": {
+        "uit": "Niemand (ieder kiest zelf)",
+        "beheer": "Beheerders en bestuur",
+        "iedereen": "Iedereen"
+      },
+      "eerstZelf": "Zet eerst zelf tweestapsverificatie aan (op je profiel); daarna kun je het voor anderen verplicht stellen.",
+      "laadFout": "De instelling voor tweestapsverificatie kon niet worden opgehaald."
     }
   },
   "theme": {

@@ -5,6 +5,7 @@ import db from '../database/connection';
 import logger from '../utils/logger';
 import { hashToken, findSessionByTokenHash, registerSession, updateSessionActivityByHash } from '../utils/sessionStore';
 import { verifyDownloadToken, DownloadTokenPayload, controleerBronToken, Bronsoort } from '../utils/downloadToken';
+import { moetTweestapInstellen } from '../services/tweestapVerplicht';
 
 export interface UserPayload {
   id: string;
@@ -30,12 +31,22 @@ export const MELDING_NIET_ACTIEF = 'Dit account is niet meer actief. Neem contac
 export const CODE_WACHTWOORD_WIJZIGEN_VERPLICHT = 'WACHTWOORD_WIJZIGEN_VERPLICHT';
 const MELDING_WACHTWOORD_WIJZIGEN_VERPLICHT = 'Kies eerst een eigen wachtwoord.';
 
+/**
+ * Vaste code in het 403-antwoord voor een lid dat eerst tweestapsverificatie
+ * moet instellen, omdat de vereniging dat verplicht (services/tweestapVerplicht.ts).
+ * De frontend stuurt het lid dan naar het profiel, waar het instellen gebeurt.
+ */
+export const CODE_TWEESTAP_INSTELLEN_VERPLICHT = 'TWEESTAP_INSTELLEN_VERPLICHT';
+const MELDING_TWEESTAP_INSTELLEN_VERPLICHT = 'Je vereniging vraagt tweestapsverificatie. Stel die eerst in.';
+
 /** Uitkomst van beoordeelSessie. */
 export interface Sessiebeoordeling {
   /** null als de sessie geldig is, anders de melding voor een 401. */
   fout: string | null;
   /** Het lid heeft nog een wachtwoord dat een ander heeft gekozen of gezien. */
   moetWachtwoordWijzigen: boolean;
+  /** De vereniging verplicht tweestapsverificatie en het lid heeft die nog niet. */
+  moetTweestapInstellen: boolean;
 }
 
 /**
@@ -101,9 +112,12 @@ export function validateSession(
 function beoordeelLid(
   userId: string,
   associationId: string | null,
+  rol: string | null | undefined,
 ): { beoordeling: Sessiebeoordeling; passwordChangedAt: string | null } {
   const user = db
-    .prepare('SELECT id, status, deleted_at, password_changed_at, moet_wachtwoord_wijzigen FROM users WHERE id = ?')
+    .prepare(
+      'SELECT id, status, deleted_at, password_changed_at, moet_wachtwoord_wijzigen, mfa_enabled FROM users WHERE id = ?',
+    )
     .get(userId) as
     | {
         id: string;
@@ -111,11 +125,12 @@ function beoordeelLid(
         deleted_at: string | null;
         password_changed_at: string | null;
         moet_wachtwoord_wijzigen: number | null;
+        mfa_enabled: number | null;
       }
     | undefined;
 
   const ongeldig = (fout: string) => ({
-    beoordeling: { fout, moetWachtwoordWijzigen: false },
+    beoordeling: { fout, moetWachtwoordWijzigen: false, moetTweestapInstellen: false },
     passwordChangedAt: null,
   });
 
@@ -135,7 +150,11 @@ function beoordeelLid(
   }
 
   return {
-    beoordeling: { fout: null, moetWachtwoordWijzigen: Number(user.moet_wachtwoord_wijzigen) === 1 },
+    beoordeling: {
+      fout: null,
+      moetWachtwoordWijzigen: Number(user.moet_wachtwoord_wijzigen) === 1,
+      moetTweestapInstellen: moetTweestapInstellen(Number(user.mfa_enabled) === 1, rol, associationId),
+    },
     passwordChangedAt: user.password_changed_at,
   };
 }
@@ -150,7 +169,11 @@ export function beoordeelSessie(
   decoded: DecodedToken,
   herkomst: { ip?: string; userAgent?: string },
 ): Sessiebeoordeling {
-  const ongeldig = (fout: string): Sessiebeoordeling => ({ fout, moetWachtwoordWijzigen: false });
+  const ongeldig = (fout: string): Sessiebeoordeling => ({
+    fout,
+    moetWachtwoordWijzigen: false,
+    moetTweestapInstellen: false,
+  });
   const tokenHash = hashToken(token);
   const session = findSessionByTokenHash(tokenHash);
 
@@ -166,6 +189,7 @@ export function beoordeelSessie(
   const { beoordeling: geldig, passwordChangedAt: wachtwoordGewijzigd } = beoordeelLid(
     decoded.id,
     decoded.associationId,
+    decoded.role,
   );
   if (geldig.fout) {
     return geldig;
@@ -245,17 +269,35 @@ function handleDownloadToken(req: AuthRequest, res: Response, next: NextFunction
  * kiezen gebruiken authenticateTokenBijTijdelijkWachtwoord.
  */
 export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
-  authenticeer(req, res, next, false);
+  authenticeer(req, res, next, GEEN_UITZONDERING);
 }
 
 /**
  * Als authenticateToken, maar laat ook een lid door dat eerst zijn wachtwoord
- * moet wijzigen. Alleen voor wat daarvoor nodig is: GET /auth/me,
- * POST /auth/change-password en POST /auth/logout.
+ * moet wijzigen of tweestapsverificatie moet instellen. Alleen voor wat
+ * daarvoor nodig is: GET /auth/me, POST /auth/change-password en
+ * POST /auth/logout.
  */
 export function authenticateTokenBijTijdelijkWachtwoord(req: AuthRequest, res: Response, next: NextFunction) {
-  authenticeer(req, res, next, true);
+  authenticeer(req, res, next, { wachtwoord: true, tweestap: true });
 }
+
+/**
+ * Als authenticateToken, maar laat ook een lid door dat eerst
+ * tweestapsverificatie moet instellen. Alleen voor de routes waarmee je dat
+ * doet (/auth/mfa/setup, /auth/mfa/enable, /auth/mfa/status). Een lid dat
+ * eerst zijn wachtwoord moet wijzigen, doet dat eerst.
+ */
+export function authenticateTokenBijTweestapInstellen(req: AuthRequest, res: Response, next: NextFunction) {
+  authenticeer(req, res, next, { wachtwoord: false, tweestap: true });
+}
+
+/** Wat authenticeer doorlaat van een lid dat eerst iets moet regelen. */
+interface Uitzondering {
+  wachtwoord: boolean;
+  tweestap: boolean;
+}
+const GEEN_UITZONDERING: Uitzondering = { wachtwoord: false, tweestap: false };
 
 /**
  * Aanmelden voor één downloadroute: met de Authorization-kopregel (zoals
@@ -268,7 +310,7 @@ export function authenticateTokenBijTijdelijkWachtwoord(req: AuthRequest, res: R
  */
 export function authenticateBronDownload(soort: Bronsoort, bronUitVerzoek: (req: Request) => string) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    authenticeer(req, res, next, false, { soort, id: bronUitVerzoek(req) });
+    authenticeer(req, res, next, GEEN_UITZONDERING, { soort, id: bronUitVerzoek(req) });
   };
 }
 
@@ -297,7 +339,7 @@ function handelBronTokenAf(req: AuthRequest, res: Response, next: NextFunction, 
     if (!sessie || sessie.revoked_at || sessie.user_id !== inhoud.sub) {
       return res.status(401).json({ error: 'Download-token verlopen of ongeldig.' });
     }
-    const { beoordeling } = beoordeelLid(inhoud.sub, inhoud.ver);
+    const { beoordeling } = beoordeelLid(inhoud.sub, inhoud.ver, inhoud.rol);
     if (beoordeling.fout) {
       return res.status(401).json({ error: beoordeling.fout });
     }
@@ -305,6 +347,11 @@ function handelBronTokenAf(req: AuthRequest, res: Response, next: NextFunction, 
       return res
         .status(403)
         .json({ error: MELDING_WACHTWOORD_WIJZIGEN_VERPLICHT, code: CODE_WACHTWOORD_WIJZIGEN_VERPLICHT });
+    }
+    if (beoordeling.moetTweestapInstellen) {
+      return res
+        .status(403)
+        .json({ error: MELDING_TWEESTAP_INSTELLEN_VERPLICHT, code: CODE_TWEESTAP_INSTELLEN_VERPLICHT });
     }
   } catch (error) {
     logger.error('Controle van een download-token mislukt; verzoek geweigerd:', error);
@@ -319,7 +366,7 @@ function authenticeer(
   req: AuthRequest,
   res: Response,
   next: NextFunction,
-  tijdelijkWachtwoordToegestaan: boolean,
+  uitzondering: Uitzondering,
   bron?: GevraagdeBron,
 ) {
   const authHeader = req.headers['authorization'];
@@ -365,10 +412,15 @@ function authenticeer(
     if (beoordeling.fout) {
       return res.status(401).json({ error: beoordeling.fout });
     }
-    if (beoordeling.moetWachtwoordWijzigen && !tijdelijkWachtwoordToegestaan) {
+    if (beoordeling.moetWachtwoordWijzigen && !uitzondering.wachtwoord) {
       return res
         .status(403)
         .json({ error: MELDING_WACHTWOORD_WIJZIGEN_VERPLICHT, code: CODE_WACHTWOORD_WIJZIGEN_VERPLICHT });
+    }
+    if (beoordeling.moetTweestapInstellen && !uitzondering.tweestap) {
+      return res
+        .status(403)
+        .json({ error: MELDING_TWEESTAP_INSTELLEN_VERPLICHT, code: CODE_TWEESTAP_INSTELLEN_VERPLICHT });
     }
   } catch (error) {
     // Kan de sessie niet worden nagekeken (databasefout), dan gaat het verzoek
@@ -563,7 +615,8 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
   let sessieGeldig = false;
   try {
     const beoordeling = beoordeelSessie(token, decoded, { ip: req.ip, userAgent: req.headers['user-agent'] });
-    sessieGeldig = beoordeling.fout === null && !beoordeling.moetWachtwoordWijzigen;
+    sessieGeldig =
+      beoordeling.fout === null && !beoordeling.moetWachtwoordWijzigen && !beoordeling.moetTweestapInstellen;
   } catch (error) {
     logger.error('Sessiecontrole bij optionele aanmelding mislukt; verzoek gaat anoniem verder:', error);
   }

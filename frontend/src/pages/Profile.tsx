@@ -198,8 +198,10 @@ export default function Profile() {
           API het lid alleen wat nodig is om het te wijzigen (middleware/auth.ts). */}
       {!user?.mustChangePassword && (
         <>
-          {/* Custom Fields */}
-          {user?.id && <CustomFieldsSection entityType="user" entityId={user.id} editable={true} className="mt-3" />}
+          {/* Custom Fields; niet zolang tweestap eerst moet, dan weigert de API ze. */}
+          {user?.id && !user.tweestapInstellenVerplicht && (
+            <CustomFieldsSection entityType="user" entityId={user.id} editable={true} className="mt-3" />
+          )}
 
           {/* MFA Section */}
           <div className="card mt-2">
@@ -207,6 +209,11 @@ export default function Profile() {
               <span className="card-title">{t('profile.mfa.title')}</span>
             </div>
             <div className="card-body">
+              {user?.tweestapInstellenVerplicht && (
+                <div className="alert alert-warning mb-2" role="alert">
+                  {t('profile.mfa.verplicht')}
+                </div>
+              )}
               {mfaError && <div className="alert alert-error mb-2">{mfaError}</div>}
               {mfaSuccess && <div className="alert alert-success mb-2">{mfaSuccess}</div>}
 
