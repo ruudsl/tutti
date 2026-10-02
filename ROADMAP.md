@@ -17,7 +17,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 7          | Community docs, onboarding, multilingual README | 45h              | ✅ Voltooid  |
 | 8          | CI/CD hardening + test coverage >80%            | 50h              | ✅ Voltooid¹ |
 | 9          | Community outreach (KNMO, federaties)           | 25h              | ⬜ Gepland   |
-| 10         | PWA hardening + mobile UX                       | 55h              | 🔄 Deels     |
+| 10         | PWA hardening + mobile UX                       | 55h              | ✅ Voltooid  |
 | 11         | Pilot deployments (2-3 verenigingen)            | 45h              | ⬜ Gepland   |
 | 12         | Achtergrondtaken die een herstart overleven     | 40h              | ✅ Voltooid  |
 | **Totaal** |                                                 | **540h + audit** |
