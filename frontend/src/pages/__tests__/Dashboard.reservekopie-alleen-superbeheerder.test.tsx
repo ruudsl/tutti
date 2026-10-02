@@ -58,6 +58,7 @@ vi.mock('../../components/DashboardWidgets', () => ({
 vi.mock('../../components/MfaSettings', () => ({ default: () => <div data-testid="mfa" /> }));
 vi.mock('../../components/OpslagGebruik', () => ({ default: () => <div data-testid="opslag" /> }));
 vi.mock('../../components/BackupSettings', () => ({ default: () => <div data-testid="reservekopie" /> }));
+vi.mock('../../components/VerenigingsExport', () => ({ default: () => <div data-testid="verenigingsexport" /> }));
 
 beforeEach(() => {
   stand.rol = 'admin';
@@ -70,6 +71,12 @@ describe('dashboard - reservekopie', () => {
 
     expect(screen.getByTestId('opslag')).toBeInTheDocument();
     expect(screen.queryByTestId('reservekopie')).not.toBeInTheDocument();
+  });
+
+  it('geeft een verenigingsbeheerder wel de download van de eigen vereniging', () => {
+    render(<Dashboard />);
+
+    expect(screen.getByTestId('verenigingsexport')).toBeInTheDocument();
   });
 
   it('toont de reservekopie aan een beheerder die ook superbeheerder is', () => {
@@ -85,5 +92,6 @@ describe('dashboard - reservekopie', () => {
 
     expect(screen.queryByTestId('opslag')).not.toBeInTheDocument();
     expect(screen.queryByTestId('reservekopie')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('verenigingsexport')).not.toBeInTheDocument();
   });
 });

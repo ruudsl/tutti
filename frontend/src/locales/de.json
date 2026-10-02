@@ -6310,5 +6310,13 @@
     "gelukt": "Sie sind jetzt Mitglied von {{vereniging}}. Wechseln Sie oben auf dem Bildschirm zum Verein.",
     "naarDashboard": "Zum Dashboard",
     "nietGevonden": "Diese Einladung existiert nicht, wurde bereits verwendet oder ist abgelaufen. Bitten Sie den Verein um eine neue."
+  },
+  "verenigingsExport": {
+    "titel": "Daten des Vereins",
+    "uitleg": "Laden Sie eine Kopie aller Daten und Dateien Ihres Vereins herunter: eine JSON-Datei pro Bereich, dazu Noten, Aufnahmen und Anhänge. Passwörter und andere Geheimnisse sind nicht enthalten. Ein Zurückspielen in Tutti ist damit nicht möglich; dafür erstellt der Administrator der Installation eine Sicherung.",
+    "privacy": "Das Archiv enthält personenbezogene Daten von Mitgliedern. Bewahren Sie es sorgfältig auf.",
+    "knop": "Herunterladen (ZIP)",
+    "bezig": "Wird zusammengestellt…",
+    "gedownload": "Die Daten wurden heruntergeladen."
   }
 }

@@ -44,6 +44,26 @@ export const downloadBackup = async (): Promise<void> => {
   window.URL.revokeObjectURL(url);
 };
 
+/**
+ * De gegevens van de eigen vereniging als ZIP (GET /backup/vereniging): per
+ * tabel een JSON-bestand en de bijbehorende bestanden, zonder geheimen. Voor
+ * de beheerder van de vereniging; terugzetten kan hiermee niet.
+ */
+export const downloadVerenigingsExport = async (): Promise<void> => {
+  const response = await api.get('/backup/vereniging', { responseType: 'blob', timeout: 300000 });
+
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
+  const link = document.createElement('a');
+  link.href = url;
+  const kop = String(response.headers['content-disposition'] ?? '');
+  const naam = kop.match(/filename="(.+)"/)?.[1] ?? `tutti-vereniging-${new Date().toISOString().slice(0, 10)}.zip`;
+  link.setAttribute('download', naam);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 export const restoreBackup = async (file: File): Promise<void> => {
   const formData = new FormData();
   formData.append('backup', file);

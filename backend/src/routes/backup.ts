@@ -6,7 +6,7 @@ import { pipeline } from 'stream/promises';
 import { ZipArchive } from 'archiver';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
-import { authenticateToken, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import { FileValidationError } from '../utils/errors';
@@ -17,6 +17,8 @@ import db from '../database/connection';
 import { logAuditEvent } from './audit-logs';
 import { getPreRestoreDir, schrijfDatabasekopie } from '../scheduler/backup';
 import { schrijfPriveBestand } from '../utils/priveBestand';
+import { bijlageKopregel } from '../utils/contentDisposition';
+import { bestandenVoor, LEESMIJ, maakExportPlan, rijenVoor } from '../services/verenigingsExport';
 import {
   heeftEigenSleutel,
   isVersleuteldBestand,
@@ -222,6 +224,83 @@ router.get(
     );
 
     logger.info(`Backup completed: ${filename}`);
+  }),
+);
+
+/**
+ * GET /backup/vereniging - Een kopie van de gegevens van de eigen vereniging,
+ * voor de beheerder (services/verenigingsExport.ts).
+ *
+ * Anders dan de reservekopie hierboven: alleen deze vereniging, geen
+ * geheimen, als leesbare JSON en bestanden, en niet terug te zetten. Niet
+ * versleuteld: de beheerder moet hem zelf kunnen openen, en de sleutel van de
+ * installatie heeft hij niet. Achter dezelfde IP-witlijst als de reservekopie.
+ */
+router.get(
+  '/vereniging',
+  authenticateToken,
+  requireRole('admin'),
+  ipWhitelistMiddleware,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+      throw new ApiError(404, 'Geen vereniging.');
+    }
+    const vereniging = db.prepare('SELECT name FROM associations WHERE id = ?').get(associationId) as
+      { name: string } | undefined;
+    if (!vereniging) {
+      throw new ApiError(404, 'Vereniging niet gevonden.');
+    }
+
+    // Eerst alles verzamelen, dan pas versturen: een fout halverwege wordt
+    // zo een nette foutmelding in plaats van een afgebroken download.
+    const plan = maakExportPlan();
+    const tellingen: Record<string, number> = {};
+    const gegevens: { naam: string; inhoud: string }[] = [];
+    for (const { tabel, voorwaarde } of plan.tabellen) {
+      const rijen = rijenVoor(tabel, voorwaarde, associationId);
+      if (rijen.length === 0) continue;
+      tellingen[tabel] = rijen.length;
+      gegevens.push({ naam: `gegevens/${tabel}.json`, inhoud: JSON.stringify(rijen, null, 2) });
+    }
+    const bestanden = bestandenVoor(associationId);
+
+    const datum = new Date().toISOString();
+    const manifest = {
+      versie: 1,
+      vereniging: { id: associationId, naam: vereniging.name },
+      gemaakt: datum,
+      tabellen: tellingen,
+      bestanden: bestanden.length,
+      nietMeegenomen: plan.overgeslagen,
+    };
+
+    const bestandsnaam = `tutti-vereniging-${datum.slice(0, 10)}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', bijlageKopregel(bestandsnaam));
+
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+    archive.on('error', (fout: Error) => {
+      logger.error('Export van de vereniging mislukt tijdens het versturen', { error: fout.message });
+      res.destroy(fout);
+    });
+    archive.pipe(res);
+    archive.append(LEESMIJ, { name: 'LEESMIJ.txt' });
+    archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
+    for (const { naam, inhoud } of gegevens) archive.append(inhoud, { name: naam });
+    for (const { bron, naam } of bestanden) archive.file(bron, { name: naam });
+    await archive.finalize();
+
+    logAuditEvent(
+      req.user!.id,
+      'download',
+      'association_export',
+      associationId,
+      'Gegevens van de vereniging gedownload',
+      { tabellen: Object.keys(tellingen).length, bestanden: bestanden.length },
+      req.ip,
+      req.get('user-agent'),
+    );
   }),
 );
 

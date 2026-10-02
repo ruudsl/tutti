@@ -6310,5 +6310,13 @@
     "gelukt": "Je bent nu lid van {{vereniging}}. Wissel bovenaan het scherm naar de vereniging.",
     "naarDashboard": "Naar het dashboard",
     "nietGevonden": "Deze uitnodiging bestaat niet, is al gebruikt of is verlopen. Vraag de vereniging om een nieuwe."
+  },
+  "verenigingsExport": {
+    "titel": "Gegevens van de vereniging",
+    "uitleg": "Download een kopie van alle gegevens en bestanden van je vereniging: per onderdeel een JSON-bestand, plus bladmuziek, opnames en bijlagen. Wachtwoorden en andere geheimen zitten er niet in. Terugzetten in Tutti kan hiermee niet; daarvoor maakt de beheerder van de installatie een reservekopie.",
+    "privacy": "Het archief bevat persoonsgegevens van leden. Bewaar het zorgvuldig.",
+    "knop": "Download (ZIP)",
+    "bezig": "Bezig met samenstellen…",
+    "gedownload": "De gegevens zijn gedownload."
   }
 }

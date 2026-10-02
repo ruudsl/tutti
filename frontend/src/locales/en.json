@@ -6310,5 +6310,13 @@
     "gelukt": "You are now a member of {{vereniging}}. Switch to the association at the top of the screen.",
     "naarDashboard": "Go to the dashboard",
     "nietGevonden": "This invitation does not exist, has already been used or has expired. Ask the association for a new one."
+  },
+  "verenigingsExport": {
+    "titel": "Association data",
+    "uitleg": "Download a copy of all data and files of your association: a JSON file per part, plus sheet music, recordings and attachments. Passwords and other secrets are not included. This cannot be restored into Tutti; for that, the administrator of the installation makes a backup.",
+    "privacy": "The archive contains personal data of members. Keep it safe.",
+    "knop": "Download (ZIP)",
+    "bezig": "Putting it together…",
+    "gedownload": "The data has been downloaded."
   }
 }

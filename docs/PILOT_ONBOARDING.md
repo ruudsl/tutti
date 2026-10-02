@@ -53,9 +53,11 @@ Er is geen zelfregistratie: een vereniging kan zich niet zelf aanmelden.
 
 - **Reservekopieën.** Een reservekopie bevat de hele installatie, alle
   verenigingen samen. Daarom kan alleen de superbeheerder er een maken of
-  terugzetten. Een vereniging kan zelf geen kopie van alleen haar eigen
-  gegevens maken; spreek af hoe vaak de platformbeheerder er een maakt en waar
-  hij ze bewaart. Zie [BACKUP_RESTORE.md](./BACKUP_RESTORE.md).
+  terugzetten; spreek af hoe vaak hij dat doet en waar hij ze bewaart. De
+  beheerder van een vereniging kan zelf wel een **kopie van de eigen
+  gegevens** downloaden (Dashboard → Beheer → _Gegevens van de vereniging_):
+  per onderdeel een JSON-bestand en de bestanden, zonder geheimen. Terugzetten
+  kan daarmee niet. Zie [BACKUP_RESTORE.md](./BACKUP_RESTORE.md).
 - **Een buitengesloten beheerder** weer binnenlaten, als _Wachtwoord vergeten_
   niet werkt. Zie [SELF_HOSTING.md](./SELF_HOSTING.md#reset-admin-password).
 - **Het IP-filter voor beheerpagina's** (`IP_WHITELIST_ENABLED`). Dat staat in
@@ -207,7 +209,7 @@ eindgesprek. Het sjabloon voor het verslag staat in
 
 Eerlijk over wat er (nog) niet is, zodat het niet halverwege de pilot opvalt:
 
-- Een vereniging kan **zelf geen reservekopie** maken (§1).
+- Een vereniging kan haar eigen gegevens downloaden, maar **niet zelf terugzetten** (§1).
 - Er is **geen plek voor de privacyverklaring** in de app (§5).
 - **Concertkleding** is niet te importeren (de rest wel, §4).
 

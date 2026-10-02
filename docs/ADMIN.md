@@ -94,7 +94,9 @@ Users can belong to multiple associations:
 Een reservekopie omvat de hele installatie: alle verenigingen samen. Daarom
 kan alleen een **superbeheerder** er een maken of terugzetten
 (`requireSuperAdmin` in `backend/src/routes/backup.ts`). Een
-verenigingsbeheerder kan dat niet, ook niet voor alleen de eigen vereniging.
+verenigingsbeheerder kan wel de gegevens van de eigen vereniging downloaden,
+zonder geheimen en niet om terug te zetten; zie
+[BACKUP_RESTORE.md](./BACKUP_RESTORE.md#gegevens-van-één-vereniging).
 
 ### Creating Backups
 
