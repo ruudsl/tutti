@@ -170,6 +170,7 @@ export const MODULES: ModuleDefinition[] = [
       '/import/instrumenten',
       '/import/uniformen',
       '/import/apparatuur',
+      '/import/kleding',
     ],
     navPaths: ['/instrument-assets', '/uniforms', '/equipment', '/outfits'],
   },

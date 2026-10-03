@@ -217,3 +217,20 @@ export function telKortingscodeAlsGebruikt(orderId: string): void {
 export function geefKortingscodeVrij(orderId: string): void {
   db.prepare('DELETE FROM discount_code_usage WHERE order_id = ?').run(orderId);
 }
+
+/**
+ * De betaalde bestelling is terugbetaald: de code telt niet meer als gebruikt
+ * en de koper mag hem opnieuw gebruiken. Code en bedrag blijven op de
+ * bestelling staan, voor de administratie.
+ *
+ * `uses_count` gaat alleen omlaag als er ook een gebruiksrij wegging; zo telt
+ * een tweede aanroep voor dezelfde bestelling niet nog eens af.
+ */
+export function zetKortingscodeTerug(orderId: string): void {
+  const weg = db.prepare('DELETE FROM discount_code_usage WHERE order_id = ?').run(orderId);
+  if (weg.changes === 0) return;
+  db.prepare(
+    `UPDATE discount_codes SET uses_count = MAX(uses_count - 1, 0)
+     WHERE id = (SELECT discount_code_id FROM ticket_orders WHERE id = ?)`,
+  ).run(orderId);
+}

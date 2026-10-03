@@ -8,7 +8,7 @@
  *   kaarten, niet over de servicekosten) en bewaart code en bedrag;
  * - een ongeldige code geeft een 400 met de reden in `code`;
  * - de code wordt bij het bestellen gereserveerd en telt bij betalen als
- *   gebruikt; een verlopen bestelling geeft hem weer vrij;
+ *   gebruikt; een verlopen of terugbetaalde bestelling geeft hem weer vrij;
  * - het maximum, ook per koper, houdt stand;
  * - niets te betalen: de bestelling is meteen betaald, zonder betaaldienst.
  */
@@ -41,10 +41,12 @@ app.use(errorHandler);
 let associationId: string;
 let concertId: string;
 let kaartsoortId: string;
+let beheerderToken: string;
 
 beforeEach(() => {
   const omgeving = createTestEnvironment();
   associationId = omgeving.association.id;
+  beheerderToken = omgeving.adminToken;
   db.prepare(
     `INSERT INTO association_modules (id, association_id, module_key, enabled, updated_by)
      VALUES (?, ?, 'ticketing', 1, ?)
@@ -217,6 +219,32 @@ describe('kortingscode bij een bestelling', () => {
     expect(betalen.status).toBe(400);
     expect(db.prepare('SELECT 1 FROM discount_code_usage WHERE order_id = ?').get(body.orderId)).toBeUndefined();
     expect(gebruik(codeId)).toBe(1);
+  });
+
+  it('geeft de code vrij als de bestelling wordt terugbetaald, één keer', async () => {
+    const codeId = maakCode({ max_uses: 1, max_uses_per_user: 1 });
+    const { body } = await bestel({ code: 'LENTE10', email: 'a@voorbeeld.nl' });
+    await request(app).post('/api/tickets/webhooks/payment').send({ orderId: body.orderId });
+    db.prepare("UPDATE ticket_orders SET payment_id = 'tr_test' WHERE id = ?").run(body.orderId);
+    expect(gebruikt(codeId)).toBe(1);
+
+    const terug = await request(app)
+      .post(`/api/tickets/orders/${body.orderId}/refund`)
+      .set('Authorization', `Bearer ${beheerderToken}`)
+      .send({});
+
+    expect(terug.status, JSON.stringify(terug.body)).toBe(200);
+    expect(gebruikt(codeId)).toBe(0);
+    expect(gebruik(codeId)).toBe(0);
+    // Code en bedrag blijven op de bestelling, voor de administratie.
+    expect(bestelling(body.orderId)).toMatchObject({
+      status: 'refunded',
+      discount_code_id: codeId,
+      discount_amount: 4,
+    });
+
+    // Dezelfde koper mag hem weer gebruiken, en het maximum is weer vrij.
+    expect((await bestel({ code: 'LENTE10', email: 'a@voorbeeld.nl' })).status).toBe(201);
   });
 
   it('rekent bij een code voor één kaartsoort alleen die kaarten mee', async () => {

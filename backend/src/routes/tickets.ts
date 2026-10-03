@@ -25,6 +25,7 @@ import {
   kaartsoortenVanCode,
   reserveerKortingscode,
   telKortingscodeAlsGebruikt,
+  zetKortingscodeTerug,
   type KortingscodeRij,
 } from '../services/kortingscodes';
 import { getSalesPredictionSummary } from '../services/salesPredictions';
@@ -3451,6 +3452,9 @@ router.post(
           releaseTickets(ticket.ticket_type_id, 1);
         }
       }
+
+      // Een terugbetaalde bestelling telt niet meer voor de kortingscode.
+      zetKortingscodeTerug(orderId);
     });
 
     updateRefund();
