@@ -30,6 +30,7 @@ import { ROLES } from '../../utils/constants';
 const uitloggen = vi.fn();
 let huidigeRol: string = ROLES.MEMBER;
 let aanstaandeModules: string[] = [];
+let superbeheerder = false;
 
 /** Alle modulesleutels uit utils/modules.ts; standaard staat alles aan. */
 const ALLE_MODULES = [
@@ -113,6 +114,10 @@ vi.mock('../NotificationCenter', () => ({ NotificationBell: () => null }));
 vi.mock('../RecentItems', () => ({ RecentItems: () => null }));
 vi.mock('../SyncStatusIndicator', () => ({ SyncStatusIndicator: () => null }));
 vi.mock('../AssociationSwitcher', () => ({ AssociationSwitcher: () => null }));
+// Dezelfde vorm als het antwoord van GET /multi-association/am-i-super-admin.
+vi.mock('../../hooks/useMultiAssociation', () => ({
+  useIsSuperAdmin: () => ({ data: { isSuperAdmin: superbeheerder } }),
+}));
 vi.mock('../KeyboardShortcutsHelp', () => ({
   KeyboardShortcutsHelp: () => null,
   SequenceIndicator: () => null,
@@ -132,6 +137,7 @@ import { getSettings } from '../../api/settings';
 beforeEach(() => {
   huidigeRol = ROLES.MEMBER;
   aanstaandeModules = [...ALLE_MODULES];
+  superbeheerder = false;
   uitloggen.mockClear();
   localStorage.clear();
 });
@@ -184,9 +190,11 @@ describe('welke menu-onderdelen een rol ziet', () => {
         '/wiki',
         '/outfits',
         '/performances',
-        // De twee vaste voetlinks van het menu.
+        // De vaste voetlinks van het menu.
         '/user-guide',
         '/profile',
+        '/privacy-settings',
+        '/data-export',
       ].sort(),
     );
   });
@@ -215,6 +223,36 @@ describe('welke menu-onderdelen een rol ziet', () => {
     );
     // En wat het lid al zag, blijft staan.
     expect(paden).toEqual(expect.arrayContaining(['/', '/my-music', '/rehearsals', '/members']));
+  });
+
+  it('wijst de beheerder de weg naar het AVG-beheer', async () => {
+    // De pagina bestond, maar stond in geen enkel menu: bewaartermijnen en
+    // verwijderverzoeken waren alleen te vinden door het adres te typen.
+    huidigeRol = ROLES.ADMIN;
+    const gebruiker = userEvent.setup({ delay: null });
+    toon();
+
+    expect(await menuPaden(gebruiker)).toContain('/gdpr-admin');
+  });
+
+  it('geeft de beheerder de uitnodigingen in het menu', async () => {
+    huidigeRol = ROLES.ADMIN;
+    const gebruiker = userEvent.setup({ delay: null });
+    toon();
+
+    expect(await menuPaden(gebruiker)).toContain('/uitnodigingen');
+  });
+
+  it('toont Verenigingen alleen aan een superbeheerder', async () => {
+    huidigeRol = ROLES.ADMIN;
+    const gebruiker = userEvent.setup({ delay: null });
+    const { unmount } = toon();
+    expect(await menuPaden(gebruiker)).not.toContain('/multi-association');
+    unmount();
+
+    superbeheerder = true;
+    toon();
+    expect(await menuPaden(gebruiker)).toContain('/multi-association');
   });
 
   it('geeft de dirigent het orkestblok maar niet het beheerblok', async () => {
@@ -254,6 +292,7 @@ describe('uitgezette modules', () => {
 
     expect(paden).not.toContain('/my-tickets');
     expect(paden).not.toContain('/ticket-sales');
+    expect(paden).not.toContain('/kortingscodes');
     expect(paden).not.toContain('/ticket-scanner');
     expect(paden).not.toContain('/payment-settings');
     // De rest van de agenda blijft gewoon staan.
@@ -373,6 +412,16 @@ describe('de kop en de zijbalk', () => {
     await gebruiker.click(screen.getByRole('button', { name: 'Start rondleiding' }));
 
     expect(screen.getByText('rondleiding')).toBeInTheDocument();
+  });
+
+  it('stuurt feedback naar de issues van deze repository', () => {
+    // De link wees naar ruudsl/harmonie, de naam van vóór Tutti.
+    toon();
+
+    expect(screen.getByRole('link', { name: nl.feedback.linkText })).toHaveAttribute(
+      'href',
+      'https://github.com/ruudsl/tutti/issues',
+    );
   });
 });
 

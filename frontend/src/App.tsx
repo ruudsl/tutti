@@ -175,6 +175,9 @@ const InfoScreen = lui(() => import('./pages/InfoScreen'));
 const MockPayment = lui(() => import('./pages/MockPayment'));
 const TicketTransfer = lui(() => import('./pages/TicketTransfer'));
 const AcceptTransfer = lui(() => import('./pages/AcceptTransfer'));
+const UitnodigingAannemen = lui(() => import('./pages/UitnodigingAannemen'));
+const Kortingscodes = lui(() => import('./pages/Kortingscodes'));
+const Uitnodigingen = lui(() => import('./pages/Uitnodigingen'));
 
 // Stage Layout Designer
 const StageDesigner = lui(() => import('./pages/StageDesigner'));
@@ -216,6 +219,13 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
   // aanmeldde), dus verder dan het profiel, waar het gewijzigd wordt, gaat
   // het lid niet.
   if (user.mustChangePassword && location.pathname !== WACHTWOORD_WIJZIGEN_PAD) {
+    return <Navigate to={WACHTWOORD_WIJZIGEN_PAD} replace />;
+  }
+
+  // De vereniging verplicht tweestapsverificatie en het lid heeft die nog
+  // niet: eerst instellen, ook op het profiel. De API geeft tot dan alleen
+  // antwoord op wat daarvoor nodig is.
+  if (user.tweestapInstellenVerplicht && location.pathname !== WACHTWOORD_WIJZIGEN_PAD) {
     return <Navigate to={WACHTWOORD_WIJZIGEN_PAD} replace />;
   }
 
@@ -302,6 +312,9 @@ function AppRoutes() {
         <Route path="/tickets/orders/:orderId/mock-payment" element={<MockPayment />} />
         {/* Accept ticket transfer - accessible without login (handles redirect) */}
         <Route path="/tickets/transfer/accept/:code" element={<AcceptTransfer />} />
+        {/* De link uit een uitnodigingsmail; werkt ook uitgelogd en stuurt
+            dan naar het inlogscherm, met de weg terug hierheen. */}
+        <Route path="/invite/:token" element={<UitnodigingAannemen />} />
         {/* Public calendar embed and info screen */}
         <Route path="/calendar/:slug" element={<PublicCalendar />} />
         {/* Dedicated info screen for lobby displays */}
@@ -721,6 +734,14 @@ function AppRoutes() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="uitnodigingen"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.BOARD]}>
+                <Uitnodigingen />
+              </PrivateRoute>
+            }
+          />
           <Route path="members" element={<MemberDirectory />} />
           <Route path="user-guide" element={<UserGuide />} />
           <Route path="accessibility" element={<AccessibilityStatement />} />
@@ -756,6 +777,14 @@ function AppRoutes() {
             element={
               <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
                 <TicketSales />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="kortingscodes"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+                <Kortingscodes />
               </PrivateRoute>
             }
           />

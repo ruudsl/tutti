@@ -65,6 +65,9 @@ vi.mock('../NotificationCenter', () => ({ NotificationBell: () => null }));
 vi.mock('../RecentItems', () => ({ RecentItems: () => null }));
 vi.mock('../SyncStatusIndicator', () => ({ SyncStatusIndicator: () => null }));
 vi.mock('../AssociationSwitcher', () => ({ AssociationSwitcher: () => null }));
+vi.mock('../../hooks/useMultiAssociation', () => ({
+  useIsSuperAdmin: () => ({ data: { isSuperAdmin: false } }),
+}));
 vi.mock('../KeyboardShortcutsHelp', () => ({ KeyboardShortcutsHelp: () => null, SequenceIndicator: () => null }));
 vi.mock('../GlobalSearch', () => ({
   GlobalSearch: () => null,

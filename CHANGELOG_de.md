@@ -2,6 +2,25 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [Unveröffentlicht]
+
+### Hinzugefügt
+
+- **Daten des Vereins herunterladen.** Der Administrator eines Vereins kann im Dashboard ein ZIP mit allen Daten und Dateien des eigenen Vereins herunterladen: eine JSON-Datei pro Bereich, dazu Noten, Aufnahmen und Anhänge. Passwörter und andere Geheimnisse sind nicht enthalten, und von einem anderen Verein nie etwas. Zurückspielen ist damit nicht möglich; das bleibt die Sicherung der ganzen Installation beim Super-Admin.
+- **Rabattcodes für den Kartenverkauf.** Unter **Rabattcodes** legen Administratoren und Musikkommission Codes an: ein Prozentsatz oder fester Betrag, wahlweise mit Höchstzahl, Grenze pro Käufer, Enddatum und einem Konzert. Der Käufer gibt den Code bei der Bestellung ein und sieht den Rabatt sofort in der Übersicht; der Rabatt gilt für die Karten, nicht für die Servicegebühr. Die Höchstzahl hält auch, wenn zwei Personen gleichzeitig bestellen, und eine abgelaufene Bestellung gibt den Code wieder frei. Ist nichts mehr zu zahlen, ist die Bestellung sofort abgeschlossen. Die Prüfung eines Codes ist auf zwanzig Versuche pro Minute begrenzt.
+- **Zwei-Schritt-Verifizierung verpflichtend machen.** Unter **Einstellungen → Zwei-Schritt-Verifizierung** wählt der Administrator: niemand (wie bisher), Administratoren und Vorstand, oder alle. Wer sie haben muss und noch nicht hat, landet nach der Anmeldung zuerst im Profil, um sie einzurichten; bis dahin beantwortet die API nur, was dafür nötig ist, und Ausschalten wird abgelehnt, solange sie verpflichtend ist. Verpflichtend machen kann nur ein Administrator, der sie selbst aktiviert hat. Standardmäßig aus.
+- **Einladen per Link funktioniert von Anfang bis Ende.** Die eingeladene Person erhält eine E-Mail mit dem Link (nl, en, de), der Link steht auch auf dem Bildschirm zum Kopieren, und `/invite/…` ist eine Seite, auf der man die Einladung annimmt - auch wenn man sich erst anmelden muss. Administratoren und Vorstand finden die Einladungen unter **Verwaltung → Einladungen**; vorher standen sie nur auf einer Seite für Super-Admins, es ging keine E-Mail hinaus und der Link führte ins Leere. Eine Einladung ist für jemanden, der bereits ein Konto hat.
+- **Anleitung für einen Pilotverein** (`docs/PILOT_ONBOARDING.md`, auf Niederländisch): wer in der ersten Woche was tut, wie Mitglieder Zugang bekommen, in welcher Reihenfolge importiert wird, was vorab zum Datenschutz zu regeln ist, und was es noch nicht gibt. Mit einer Vorlage für den Pilotbericht (`docs/templates/PILOT_FEEDBACK.md`).
+- **DSGVO-Verwaltung, Vereine und Ihre Daten stehen im Menü.** Die Seiten gab es, sie waren aber nur über die eingetippte Adresse erreichbar. Vereine sehen nur Super-Admins; Datenschutz und Ihre Daten stehen jetzt auch im mobilen Menü.
+
+### Behoben
+
+- **Ticketrechnungen** zweier Vereine am selben Tag erhielten dieselbe Nummer, und die zweite scheiterte mit einem Datenbankfehler statt einer Rechnung. Die Nummer ist jetzt pro Verein eindeutig. Das schlief noch: Ticketrechnungen werden noch nicht automatisch erstellt.
+- **Genres und Instrumente:** Ein gewöhnlicher Administrator bekam bei einem Standardeintrag die Schaltflächen Bearbeiten und Löschen, die der Server danach ablehnte. Diese Schaltflächen sind wieder nur für Super-Admins.
+- **Die Sicherungskarte auf dem Dashboard** erscheint nur noch bei Super-Admins. Eine Sicherung umfasst die ganze Installation; ein Vereinsadministrator sah die Karte und danach eine Fehlermeldung.
+- **Der Feedback-Link** unten auf jeder Seite zeigte auf den alten Namen des Repositorys.
+- **Das Notfallskript für das Administratorpasswort** (`backend/scripts/reset-admin-password.js`) setzt ohne Argument nicht mehr `admin123`, sondern ein zufälliges Passwort, das es einmal anzeigt. Es lehnt ein zu kurzes Passwort ab, kann ein anderes Konto zurücksetzen, und der Benutzer muss das Passwort bei der nächsten Anmeldung ändern. `docs/SELF_HOSTING.md` erklärt jetzt die Verwendung mit Docker; die alte Anleitung setzte `sqlite3` im Image voraus, das dort nicht enthalten ist.
+
 ## [1.19.0] - 2026-09-28
 
 Diese Version dreht sich fast ganz um Sicherheit: Der Rest der eigenen Sicherheitsprüfung vom September ist in drei Runden umgesetzt. Wer Tutti selbst betreibt, muss vor dem Aktualisieren ein `ENCRYPTION_SECRET` setzen; ohne dieses Geheimnis startet der Server nicht. Außerdem: Ein aus einer anderen App geteiltes PDF kommt jetzt wirklich an, Google Kalender lässt sich verbinden, und ein Verein kann eine Speichergrenze bekommen.

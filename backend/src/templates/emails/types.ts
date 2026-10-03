@@ -96,3 +96,13 @@ export interface AccountVerificationEmailData {
   userName: string;
   verificationUrl: string;
 }
+
+/** Gegevens voor de uitnodiging om lid te worden van een vereniging. */
+export interface UitnodigingEmailData {
+  verenigingsnaam: string;
+  /** Naam van wie uitnodigt. */
+  uitnodiger: string;
+  /** Het adres van de pagina waar de uitnodiging wordt aangenomen. */
+  aannameUrl: string;
+  dagenGeldig: number;
+}

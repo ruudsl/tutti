@@ -26,11 +26,18 @@ import { ROLES } from '../utils/constants';
  * omdat vi.mock-fabrieken boven de imports uit worden getild.
  */
 const { stand, maakPagina } = vi.hoisted(() => {
-  const stand: { rol: string | null; modules: string[]; modulesGeladen: boolean; moetWachtwoordWijzigen: boolean } = {
+  const stand: {
+    rol: string | null;
+    modules: string[];
+    modulesGeladen: boolean;
+    moetWachtwoordWijzigen: boolean;
+    moetTweestapInstellen: boolean;
+  } = {
     rol: null,
     modules: [],
     modulesGeladen: true,
     moetWachtwoordWijzigen: false,
+    moetTweestapInstellen: false,
   };
 
   /** Vervangt een pagina door een blokje met een merkteken. */
@@ -46,6 +53,8 @@ const { stand, maakPagina } = vi.hoisted(() => {
 
 // --- de pagina's, allemaal weggemockt -------------------------------------
 vi.mock('../pages/AcceptTransfer', maakPagina('AcceptTransfer'));
+vi.mock('../pages/UitnodigingAannemen', maakPagina('UitnodigingAannemen'));
+vi.mock('../pages/Uitnodigingen', maakPagina('Uitnodigingen'));
 vi.mock('../pages/AccessibilityStatement', maakPagina('AccessibilityStatement'));
 vi.mock('../pages/Accounting', maakPagina('Accounting'));
 vi.mock('../pages/AttendanceAnalytics', maakPagina('AttendanceAnalytics'));
@@ -117,6 +126,7 @@ vi.mock('../pages/Statistics', maakPagina('Statistics'));
 vi.mock('../pages/Tasks', maakPagina('Tasks'));
 vi.mock('../pages/ThemeSettings', maakPagina('ThemeSettings'));
 vi.mock('../pages/TicketSales', maakPagina('TicketSales'));
+vi.mock('../pages/Kortingscodes', maakPagina('Kortingscodes'));
 vi.mock('../pages/TicketScanner', maakPagina('TicketScanner'));
 vi.mock('../pages/TicketTransfer', maakPagina('TicketTransfer'));
 vi.mock('../pages/Tools', maakPagina('Tools'));
@@ -139,7 +149,13 @@ vi.mock('../context/AuthContext', () => {
       user:
         stand.rol === null
           ? null
-          : { id: 1, role: stand.rol, name: 'Testlid', mustChangePassword: stand.moetWachtwoordWijzigen },
+          : {
+              id: 1,
+              role: stand.rol,
+              name: 'Testlid',
+              mustChangePassword: stand.moetWachtwoordWijzigen,
+              tweestapInstellenVerplicht: stand.moetTweestapInstellen,
+            },
       login: vi.fn(),
       loginWithToken: vi.fn(),
       logout: vi.fn(),
@@ -274,6 +290,7 @@ beforeEach(() => {
   stand.modules = [...ALLE_MODULES];
   stand.modulesGeladen = true;
   stand.moetWachtwoordWijzigen = false;
+  stand.moetTweestapInstellen = false;
 });
 
 afterEach(() => {
@@ -325,6 +342,7 @@ const VERWACHTE_ROLLEN: [pad: string, pagina: string, rollen: string[] | null][]
   ['/multi-association', 'MultiAssociation', [ROLES.ADMIN]],
   ['/entra-sync', 'EntraSync', [ROLES.ADMIN]],
   ['/onboarding', 'Onboarding', [ROLES.ADMIN]],
+  ['/uitnodigingen', 'Uitnodigingen', [ROLES.ADMIN, ROLES.BOARD]],
   ['/audit-logs', 'AuditLogs', [ROLES.ADMIN]],
   ['/health', 'HealthDashboard', [ROLES.ADMIN]],
   ['/gdpr-admin', 'GdprAdmin', [ROLES.ADMIN]],
@@ -361,6 +379,7 @@ const VERWACHTE_ROLLEN: [pad: string, pagina: string, rollen: string[] | null][]
   ['/lists/3/7', 'MusicListManager', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/music-sharing', 'MusicSharing', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/ticket-sales', 'TicketSales', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
+  ['/kortingscodes', 'Kortingscodes', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
   ['/concerts/12/guest-list', 'GuestList', [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]],
 
   // Beheerder, muziekcommissie en dirigent
@@ -514,6 +533,30 @@ describe('App - eerst een eigen wachtwoord', () => {
   });
 });
 
+describe('App - eerst tweestapsverificatie', () => {
+  // De vereniging verplicht tweestapsverificatie en het lid heeft die nog
+  // niet. Instellen gebeurt op het profiel; tot dan komt het lid nergens anders.
+  it.each(['/', '/my-music', '/users', '/settings'])(
+    'stuurt een lid zonder verplichte tweestap van %s naar het profiel',
+    async (pad) => {
+      stand.rol = ROLES.ADMIN;
+      stand.moetTweestapInstellen = true;
+      bezoek(pad);
+
+      expect(await zichtbarePagina()).toBe('Profile');
+      expect(window.location.pathname).toBe('/profile');
+    },
+  );
+
+  it('laat het profiel zelf gewoon zien', async () => {
+    stand.rol = ROLES.MEMBER;
+    stand.moetTweestapInstellen = true;
+    bezoek('/profile');
+
+    expect(await zichtbarePagina()).toBe('Profile');
+  });
+});
+
 describe('App - uitgelogde bezoeker', () => {
   it.each(['/', '/profile', '/users', '/my-music', '/concerts'])(
     'stuurt een uitgelogde bezoeker van %s naar de inlogpagina',
@@ -552,6 +595,7 @@ describe('App - publieke routes zonder inloggen', () => {
     ['/tickets/42', 'PublicTicketSale'],
     ['/tickets/orders/99/mock-payment', 'MockPayment'],
     ['/tickets/transfer/accept/NEP-CODE-1234', 'AcceptTransfer'],
+    ['/invite/0000000000000000000000000000000000000000000000000000000000000000', 'UitnodigingAannemen'],
     ['/calendar/harmonie-sint-cecilia', 'PublicCalendar'],
     ['/info-screen/harmonie-sint-cecilia', 'InfoScreen'],
     ['/share-target', 'ShareTarget'],
@@ -633,6 +677,14 @@ describe('App - uitgezette modules', () => {
     stand.rol = ROLES.ADMIN;
     stand.modules = ALLE_MODULES.filter((m) => m !== 'ticketing');
     bezoek('/ticket-sales');
+
+    expect(await zichtbarePagina()).toBe('Dashboard');
+  });
+
+  it('houdt de kortingscodes weg als kaartverkoop uit staat', async () => {
+    stand.rol = ROLES.ADMIN;
+    stand.modules = ALLE_MODULES.filter((m) => m !== 'ticketing');
+    bezoek('/kortingscodes');
 
     expect(await zichtbarePagina()).toBe('Dashboard');
   });

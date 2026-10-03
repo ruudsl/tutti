@@ -4,15 +4,21 @@ import { useAuth } from '../context/AuthContext';
 import MfaSettings from '../components/MfaSettings';
 import BackupSettings from '../components/BackupSettings';
 import OpslagGebruik from '../components/OpslagGebruik';
+import VerenigingsExport from '../components/VerenigingsExport';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { useDashboardWidgets } from '../hooks/useDashboardWidgets';
+import { useIsSuperAdmin } from '../hooks/useMultiAssociation';
 import { WidgetContainer, DashboardEditToggle } from '../components/DashboardWidgets';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.dashboard');
+  // De reservekopie gaat over de hele installatie, alle verenigingen samen;
+  // de server laat hem alleen aan een superbeheerder (routes/backup.ts). Een
+  // verenigingsbeheerder kreeg de kaart wel te zien, en daarna een 403.
+  const isSuperbeheerder = useIsSuperAdmin().data?.isSuperAdmin === true;
 
   const {
     widgets,
@@ -70,7 +76,8 @@ export default function Dashboard() {
         <div className="mt-3">
           <h2 className="mb-2">{t('dashboard.administration')}</h2>
           <OpslagGebruik />
-          <BackupSettings />
+          <VerenigingsExport />
+          {isSuperbeheerder && <BackupSettings />}
         </div>
       )}
     </div>

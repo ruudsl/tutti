@@ -281,7 +281,12 @@
     "replacementRequests": "Replacement Requests",
     "musicSharing": "Share music",
     "mobileMenu": "Menu",
-    "importeren": "Import"
+    "importeren": "Import",
+    "gdprAdmin": "GDPR",
+    "dataExport": "Your data",
+    "multiAssociation": "Associations",
+    "uitnodigingen": "Invitations",
+    "kortingscodes": "Discount codes"
   },
   "roles": {
     "admin": "Administrator",
@@ -385,7 +390,8 @@
       "disablePassword": "Password to disable MFA",
       "disableButton": "Disable MFA",
       "disabling": "Loading...",
-      "disableSuccess": "MFA has been disabled."
+      "disableSuccess": "MFA has been disabled.",
+      "verplicht": "Your association requires two-step verification. Set it up below; after that you can use Tutti as usual."
     }
   },
   "dashboard": {
@@ -1868,6 +1874,18 @@
       "userGuideDesc": "Learn how to use the app",
       "accessibility": "Accessibility",
       "accessibilityDesc": "Accessibility information"
+    },
+    "tweestap": {
+      "titel": "Two-step verification",
+      "uitleg": "With two-step verification, Tutti asks for a code from an app on your phone in addition to your password when you log in. Anyone who is required to have it and does not yet, sets it up first after logging in.",
+      "wie": "Required for",
+      "stand": {
+        "uit": "Nobody (everyone chooses)",
+        "beheer": "Admins and board",
+        "iedereen": "Everyone"
+      },
+      "eerstZelf": "First turn on two-step verification yourself (on your profile); then you can require it for others.",
+      "laadFout": "The two-step verification setting could not be loaded."
     }
   },
   "theme": {
@@ -2259,7 +2277,10 @@
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
     "importeren": "$t(nav.importeren)",
-    "instrumenten": "$t(nav.instruments)"
+    "instrumenten": "$t(nav.instruments)",
+    "uitnodiging": "Invitation",
+    "uitnodigingen": "Invitations",
+    "kortingscodes": "Discount codes"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -2873,7 +2894,24 @@
       "lookForward": "We look forward to seeing you!"
     },
     "offlineMode": "Offline mode",
-    "onlineMode": "Online mode"
+    "onlineMode": "Online mode",
+    "kortingscode": {
+      "veld": "Discount code",
+      "toepassen": "Apply",
+      "weghalen": "Remove",
+      "korting": "Discount ({{code}})",
+      "reden": {
+        "onbekend": "We do not recognise this discount code.",
+        "inactief": "This discount code is no longer active.",
+        "nog_niet_geldig": "This discount code is not valid yet.",
+        "verlopen": "This discount code has expired.",
+        "op": "This discount code has been used up.",
+        "koper": "You have already used this discount code as often as allowed.",
+        "minimum": "Your order is too small for this discount code.",
+        "concert": "This discount code is not valid for this concert.",
+        "kaartsoort": "This discount code is not valid for the selected tickets."
+      }
+    }
   },
   "offlineScanner": {
     "title": "Offline Scanner",
@@ -4341,7 +4379,16 @@
     "applyCode": "Apply code",
     "codeApplied": "Discount code applied",
     "invalidCode": "Invalid discount code",
-    "discount": "Discount"
+    "discount": "Discount",
+    "aangemaakt": "Discount code created",
+    "uitleg": "Buyers enter the code when ordering. The discount comes off the tickets, not off the service fee. Rather turn off a code that has been used than delete it.",
+    "onbeperkt": "Unlimited",
+    "perKoper": "Maximum per buyer",
+    "concert": "Only for concert",
+    "alleConcerten": "All concerts",
+    "geenCodes": "There are no discount codes yet.",
+    "verwijderTitel": "Delete discount code",
+    "verwijderVraag": "Delete discount code {{code}}? Who used it is erased as well."
   },
   "serviceFee": {
     "serviceFee": "Service fee",
@@ -6244,5 +6291,32 @@
     "andereNamen": "Other names",
     "geen": "No instruments found.",
     "uitleg": "Standard instruments apply to all associations. If one doesn't fit, hide it and create your own instrument."
+  },
+  "uitnodiging": {
+    "uitleg": "An invitation is for someone who already has a Tutti account, for example with another association. Create a new member under Members.",
+    "linkKlaar": "Invitation created. If e-mail is set up, {{email}} receives a message with the link. You can also pass it on yourself:",
+    "link": "Invitation link",
+    "kopieer": "Copy link",
+    "gekopieerd": "Link copied",
+    "kopierenMislukt": "Copying failed; select the link and copy it yourself.",
+    "tekst": "You have been invited to join {{vereniging}} as {{rol}}.",
+    "voorEmail": "The invitation is for {{email}}.",
+    "geldigTot": "Valid until {{datum}}.",
+    "inloggen": "Log in to accept",
+    "geenAccount": "No account yet? Ask the association to create one for you.",
+    "aannemen": "Accept invitation",
+    "anderAccount": "You are logged in as {{huidig}}, but this invitation is for {{email}}.",
+    "anderAccountInloggen": "Log out and log in with the right address",
+    "gelukt": "You are now a member of {{vereniging}}. Switch to the association at the top of the screen.",
+    "naarDashboard": "Go to the dashboard",
+    "nietGevonden": "This invitation does not exist, has already been used or has expired. Ask the association for a new one."
+  },
+  "verenigingsExport": {
+    "titel": "Association data",
+    "uitleg": "Download a copy of all data and files of your association: a JSON file per part, plus sheet music, recordings and attachments. Passwords and other secrets are not included. This cannot be restored into Tutti; for that, the administrator of the installation makes a backup.",
+    "privacy": "The archive contains personal data of members. Keep it safe.",
+    "knop": "Download (ZIP)",
+    "bezig": "Putting it together…",
+    "gedownload": "The data has been downloaded."
   }
 }

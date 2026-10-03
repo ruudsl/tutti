@@ -2,6 +2,25 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [Nog niet uitgebracht]
+
+### Toegevoegd
+
+- **Gegevens van de vereniging downloaden.** De beheerder van een vereniging kan op het dashboard een ZIP downloaden met alle gegevens en bestanden van de eigen vereniging: per onderdeel een JSON-bestand, plus bladmuziek, opnames en bijlagen. Wachtwoorden en andere geheimen zitten er niet in, en van een andere vereniging nooit iets. Terugzetten kan hiermee niet; dat blijft de reservekopie van de hele installatie, bij de superbeheerder.
+- **Kortingscodes voor de kaartverkoop.** Onder **Kortingscodes** maken beheerder en muziekcommissie codes aan: een percentage of vast bedrag, met desgewenst een maximum, een grens per koper, een einddatum en één concert. De koper vult de code in bij het bestellen en ziet de korting meteen in het overzicht; de korting gaat van de kaarten af, niet van de servicekosten. Het maximum houdt ook stand als twee mensen tegelijk bestellen, en een verlopen bestelling geeft de code weer vrij. Is er niets meer te betalen, dan is de bestelling meteen rond. De controle van een code is begrensd tot twintig pogingen per minuut.
+- **Tweestapsverificatie verplicht stellen.** Onder **Instellingen → Tweestapsverificatie** kiest de beheerder: niemand (zoals het was), beheerders en bestuur, of iedereen. Wie moet en het nog niet heeft, komt na het inloggen eerst op zijn profiel om het in te stellen; de API geeft tot dan alleen antwoord op wat daarvoor nodig is, en uitzetten kan niet zolang het verplicht is. Verplichten kan alleen een beheerder die het zelf al aan heeft. Staat standaard uit.
+- **Uitnodigen per link werkt van begin tot eind.** De uitgenodigde krijgt een mail met de link (nl, en, de), de link staat ook op het scherm om te kopiëren, en `/invite/…` is een pagina waar je de uitnodiging aanneemt - ook als je nog moet inloggen. Beheerders en bestuur vinden de uitnodigingen onder **Beheer → Uitnodigingen**; eerder stonden ze alleen op een pagina voor de superbeheerder, er ging geen mail uit en de link leidde nergens heen. Een uitnodiging is voor iemand die al een account heeft.
+- **Handleiding voor een pilotvereniging** (`docs/PILOT_ONBOARDING.md`): wie wat doet in de eerste week, hoe leden toegang krijgen, in welke volgorde je importeert, wat je vooraf met privacy regelt, en wat er nog niet is. Met een sjabloon voor het pilotverslag (`docs/templates/PILOT_FEEDBACK.md`).
+- **AVG-beheer, Verenigingen en Jouw gegevens staan in het menu.** De pagina's bestonden, maar waren alleen te vinden door het adres te typen. Verenigingen ziet alleen een superbeheerder; Privacy en Jouw gegevens staan nu ook in het mobiele menu.
+
+### Gerepareerd
+
+- **Kaartfacturen** van twee verenigingen op dezelfde dag kregen hetzelfde nummer, en de tweede gaf een databasefout in plaats van een factuur. Het nummer is nu uniek per vereniging. Dit sliep nog: kaartfacturen worden nog niet automatisch gemaakt.
+- **Genres en instrumenten:** een gewone beheerder kreeg bij een standaarditem de knoppen bewerken en verwijderen, die de server daarna weigerde. Die knoppen zijn weer alleen voor de superbeheerder.
+- **De reservekopiekaart op het dashboard** staat alleen nog bij de superbeheerder. Een reservekopie omvat de hele installatie; een verenigingsbeheerder kreeg de kaart te zien en daarna een foutmelding.
+- **De feedbacklink** onderaan elke pagina wees naar de oude naam van de repository.
+- **Het noodscript voor het beheerderswachtwoord** (`backend/scripts/reset-admin-password.js`) zet zonder argument niet meer `admin123`, maar een willekeurig wachtwoord dat het één keer toont. Het weigert een te kort wachtwoord, herstelt desgewenst een ander account, en de gebruiker moet het wachtwoord bij het volgende inloggen wijzigen. `docs/SELF_HOSTING.md` beschrijft nu hoe je het bij Docker gebruikt; de oude aanwijzing ging uit van `sqlite3` in de image, en dat zit er niet in.
+
 ## [1.19.0] - 2026-09-28
 
 Deze versie gaat bijna helemaal over veiligheid: de rest van de eigen beveiligingsreview van september is verwerkt, in drie rondes. Wie Tutti zelf beheert, moet vóór het bijwerken een `ENCRYPTION_SECRET` instellen; zonder dat geheim start de server niet. Verder: een PDF delen vanuit een andere app komt nu echt aan, Google Agenda koppelen werkt, en een vereniging kan een opslaglimiet krijgen.

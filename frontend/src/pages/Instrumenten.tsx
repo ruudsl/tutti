@@ -40,7 +40,7 @@ export default function Instrumenten() {
   useDocumentTitle('pageTitle.instrumenten');
   const { user } = useAuth();
   const isAdmin = user?.role === ROLES.ADMIN;
-  const { data: isSuperAdmin = false } = useIsSuperAdmin();
+  const isSuperAdmin = useIsSuperAdmin().data?.isSuperAdmin === true;
   const magBeheren = (instrument: Instrument) => !instrument.standaard || isSuperAdmin;
 
   const { data: instrumenten = [], isLoading } = useInstruments(true);

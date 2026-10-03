@@ -1,9 +1,11 @@
 import { Router, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, optionalAuth, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { z } from 'zod';
+import { beoordeelKortingscode } from '../services/kortingscodes';
 import logger from '../utils/logger';
 import { wijzigingsschema } from '../utils/schema';
 
@@ -143,21 +145,6 @@ function formatDiscountCode(row: DiscountCodeRow) {
     createdAt: row.created_at,
     createdBy: row.created_by,
   };
-}
-
-function calculateDiscount(
-  discountType: 'percentage' | 'fixed_amount',
-  discountValue: number,
-  orderTotal: number,
-): number {
-  if (discountType === 'percentage') {
-    const korting = Math.round(((orderTotal * discountValue) / 100) * 100) / 100;
-    // Nooit meer korting dan de order zelf. De vaste-bedragtak deed dit al;
-    // zonder deze grens levert een percentage boven de honderd een negatief
-    // te betalen bedrag op, oftewel geld terug.
-    return Math.min(korting, orderTotal);
-  }
-  return Math.min(discountValue, orderTotal);
 }
 
 // =============================================
@@ -725,8 +712,22 @@ router.get(
  *       200:
  *         description: Validation result
  */
+/**
+ * De controle is openbaar (de bestelpagina vraagt hem zonder inloggen). Zonder
+ * eigen grens is een code te raden door ze een voor een te proberen; twintig
+ * pogingen per minuut is ruim voor een koper die een tikfout herstelt.
+ */
+const controleLimiet = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Te veel pogingen. Probeer het over een minuut opnieuw.', code: 'RATE_LIMITED' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.post(
   '/validate',
+  controleLimiet,
   optionalAuth,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const validation = validateDiscountCodeSchema.safeParse(req.body);
@@ -761,146 +762,39 @@ router.post(
       });
     }
 
-    // Find the discount code
-    const discountCode = db
-      .prepare(
-        `
-        SELECT * FROM discount_codes
-        WHERE association_id = ? AND UPPER(code) = UPPER(?)
-    `,
-      )
-      .get(concert.association_id, code) as DiscountCodeRow | undefined;
+    // Dezelfde regel als bij het bestellen zelf (services/kortingscodes.ts).
+    // Het bedrag hier komt van de koper en dient alleen om vooraf te tonen
+    // wat de korting wordt; de bestelling rekent hem opnieuw uit.
+    const oordeel = beoordeelKortingscode({
+      associationId: concert.association_id,
+      code,
+      concertId,
+      bedrag: orderTotal,
+      kaartsoorten: ticketTypeIds,
+      koperEmail: buyerEmail || req.user?.email,
+    });
 
-    if (!discountCode) {
+    if (!oordeel.geldig) {
       return res.json({
         valid: false,
         discountType: null,
         discountValue: 0,
         discountAmount: 0,
-        message: 'Invalid discount code',
+        message: oordeel.melding,
+        reden: oordeel.reden,
       });
     }
 
-    // Check if active
-    if (discountCode.is_active !== 1) {
-      return res.json({
-        valid: false,
-        discountType: null,
-        discountValue: 0,
-        discountAmount: 0,
-        message: 'This discount code is no longer active',
-      });
-    }
-
-    const now = new Date().toISOString();
-
-    // Check validity period
-    if (discountCode.valid_from && discountCode.valid_from > now) {
-      return res.json({
-        valid: false,
-        discountType: null,
-        discountValue: 0,
-        discountAmount: 0,
-        message: 'This discount code is not yet valid',
-      });
-    }
-
-    if (discountCode.valid_until && discountCode.valid_until < now) {
-      return res.json({
-        valid: false,
-        discountType: null,
-        discountValue: 0,
-        discountAmount: 0,
-        message: 'This discount code has expired',
-      });
-    }
-
-    // Check max uses
-    if (discountCode.max_uses !== null && discountCode.uses_count >= discountCode.max_uses) {
-      return res.json({
-        valid: false,
-        discountType: null,
-        discountValue: 0,
-        discountAmount: 0,
-        message: 'This discount code has reached its maximum number of uses',
-      });
-    }
-
-    // Check per-user limit
-    const emailToCheck = buyerEmail || req.user?.email;
-    if (emailToCheck && discountCode.max_uses_per_user > 0) {
-      const userUsageCount = db
-        .prepare(
-          `
-            SELECT COUNT(*) as count FROM discount_code_usage
-            WHERE discount_code_id = ? AND LOWER(user_email) = LOWER(?)
-        `,
-        )
-        .get(discountCode.id, emailToCheck) as { count: number };
-
-      if (userUsageCount.count >= discountCode.max_uses_per_user) {
-        return res.json({
-          valid: false,
-          discountType: null,
-          discountValue: 0,
-          discountAmount: 0,
-          message: 'You have already used this discount code the maximum number of times',
-        });
-      }
-    }
-
-    // Check minimum order amount
-    if (orderTotal < discountCode.min_order_amount) {
-      return res.json({
-        valid: false,
-        discountType: null,
-        discountValue: 0,
-        discountAmount: 0,
-        message: `Minimum order amount of ${discountCode.min_order_amount.toFixed(2)} required for this discount code`,
-      });
-    }
-
-    // Check concert restrictions
-    if (discountCode.concert_ids) {
-      const allowedConcerts = JSON.parse(discountCode.concert_ids) as string[];
-      if (!allowedConcerts.includes(concertId)) {
-        return res.json({
-          valid: false,
-          discountType: null,
-          discountValue: 0,
-          discountAmount: 0,
-          message: 'This discount code is not valid for this concert',
-        });
-      }
-    }
-
-    // Check ticket type restrictions
-    if (discountCode.ticket_type_ids && ticketTypeIds && ticketTypeIds.length > 0) {
-      const allowedTypes = JSON.parse(discountCode.ticket_type_ids) as string[];
-      const hasAllowedType = ticketTypeIds.some((typeId) => allowedTypes.includes(typeId));
-      if (!hasAllowedType) {
-        return res.json({
-          valid: false,
-          discountType: null,
-          discountValue: 0,
-          discountAmount: 0,
-          message: 'This discount code is not valid for the selected ticket types',
-        });
-      }
-    }
-
-    // Calculate discount
-    const discountAmount = calculateDiscount(discountCode.discount_type, discountCode.discount_value, orderTotal);
-
+    const { code: kortingscode, korting } = oordeel;
     res.json({
       valid: true,
-      discountType: discountCode.discount_type,
-      discountValue: discountCode.discount_value,
-      discountAmount,
+      discountType: kortingscode.discount_type,
+      discountValue: kortingscode.discount_value,
+      discountAmount: korting,
       message:
-        discountCode.discount_type === 'percentage'
-          ? `${discountCode.discount_value}% discount applied`
-          : `${discountCode.discount_value.toFixed(2)} discount applied`,
+        kortingscode.discount_type === 'percentage'
+          ? `${kortingscode.discount_value}% discount applied`
+          : `${kortingscode.discount_value.toFixed(2)} discount applied`,
     });
   }),
 );

@@ -8,6 +8,7 @@ import { OrganisatieSectie } from './OrganisatieSectie';
 import { LogoSectie } from './LogoSectie';
 import { MicrosoftSectie } from './MicrosoftSectie';
 import { M365GroepenSectie } from './M365GroepenSectie';
+import { TweestapSectie } from './TweestapSectie';
 import { SmtpSectie } from './SmtpSectie';
 import { TelegramSectie } from './TelegramSectie';
 import { WhatsAppSectie } from './WhatsAppSectie';
@@ -98,6 +99,7 @@ export default function Settings() {
       <MicrosoftSectie config={msConfig} />
       <M365GroepenSectie microsoftIngesteld={Boolean(msConfig?.configured)} />
       <SmtpSectie />
+      <TweestapSectie />
       <TelegramSectie />
       <WhatsAppSectie />
       <GoogleDriveSettings />

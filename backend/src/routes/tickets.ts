@@ -18,6 +18,15 @@ import {
   getConcertTicketStats,
   exportAttendeeList,
 } from '../services/ticketing';
+import {
+  beoordeelKortingscode,
+  berekenKorting,
+  geefKortingscodeVrij,
+  kaartsoortenVanCode,
+  reserveerKortingscode,
+  telKortingscodeAlsGebruikt,
+  type KortingscodeRij,
+} from '../services/kortingscodes';
 import { getSalesPredictionSummary } from '../services/salesPredictions';
 import {
   createPayment,
@@ -123,6 +132,8 @@ const createOrderSchema = z.object({
   notes: z.string().optional(),
   captchaToken: z.string().optional(),
   language: z.enum(['nl', 'en', 'de']).default('nl'),
+  // Een kortingscode (services/kortingscodes.ts). Leeg telt als geen code.
+  discountCode: z.string().trim().max(50).optional(),
 });
 
 const payOrderSchema = z.object({
@@ -274,6 +285,7 @@ router.post(
       notes,
       captchaToken,
       language,
+      discountCode,
     } = validation.data;
 
     // Regels met dezelfde kaartsoort worden eerst bij elkaar opgeteld. De
@@ -399,7 +411,35 @@ router.post(
       subtotal += ticketType.price * item.quantity;
       totalServiceFee += serviceFee * item.quantity;
     }
-    const total = subtotal + totalServiceFee;
+
+    // Kortingscode: dezelfde regel als de controle vooraf. De korting gaat van
+    // de kaarten af, niet van de servicekosten; een code die alleen voor
+    // bepaalde kaartsoorten geldt, telt alleen die kaarten. Een ongeldige code
+    // is een 400 met de reden, zodat de koper weet waarom.
+    let korting = 0;
+    let kortingscode: KortingscodeRij | null = null;
+    if (discountCode) {
+      const oordeel = beoordeelKortingscode({
+        associationId: concert.association_id,
+        code: discountCode,
+        concertId,
+        bedrag: subtotal,
+        kaartsoorten: orderItems.map((item) => item.ticketTypeId),
+        koperEmail: buyerEmail,
+      });
+      if (!oordeel.geldig) {
+        throw new ApiError(400, oordeel.melding, true, `KORTINGSCODE_${oordeel.reden.toUpperCase()}`);
+      }
+      const soorten = kaartsoortenVanCode(oordeel.code);
+      const bedragGeldig = soorten
+        ? orderItems
+            .filter((item) => soorten.includes(item.ticketTypeId))
+            .reduce((som, item) => som + item.unitPrice * item.quantity, 0)
+        : subtotal;
+      kortingscode = oordeel.code;
+      korting = berekenKorting(oordeel.code.discount_type, oordeel.code.discount_value, bedragGeldig);
+    }
+    const total = Math.round((subtotal - korting + totalServiceFee) * 100) / 100;
 
     // CAPTCHA verification
     let captchaVerified = false;
@@ -431,8 +471,8 @@ router.post(
       // Create order
       db.prepare(
         `
-            INSERT INTO ticket_orders (id, user_id, concert_id, total, status, buyer_name, buyer_email, buyer_phone, notes, expires_at, captcha_verified, ip_address, user_agent, language)
-            VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO ticket_orders (id, user_id, concert_id, total, status, buyer_name, buyer_email, buyer_phone, notes, expires_at, captcha_verified, ip_address, user_agent, language, discount_code_id, discount_amount)
+            VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
       ).run(
         orderId,
@@ -448,7 +488,16 @@ router.post(
         clientIp,
         userAgent,
         language,
+        kortingscode?.id ?? null,
+        korting,
       );
+
+      // De code reserveren, in dezelfde transactie als de kaarten: lukt het
+      // niet (net op, of de koper zit al aan zijn maximum), dan gaat de hele
+      // bestelling terug.
+      if (kortingscode && !reserveerKortingscode(kortingscode, orderId, buyerEmail, korting)) {
+        throw new ApiError(409, 'This discount code has just been used up', true, 'KORTINGSCODE_OP');
+      }
 
       // Create order items
       for (const item of orderItems) {
@@ -474,12 +523,23 @@ router.post(
       throw new ApiError(500, 'Failed to create order');
     }
 
+    // Niets te betalen (een code van honderd procent, zonder servicekosten):
+    // geen betaalprovider, de bestelling is meteen betaald en de kaarten
+    // gaan uit zoals na een betaling.
+    let status: 'pending' | 'paid' = 'pending';
+    if (total === 0) {
+      await processPaymentUpdate(orderId, 'paid');
+      status = 'paid';
+    }
+
     // Check if any item shows service fee separately
     const showServiceFeeSeparate = orderItems.some((item) => item.showServiceFeeSeparate);
 
     res.status(201).json({
       orderId,
+      status,
       subtotal,
+      discount: korting,
       serviceFee: totalServiceFee,
       total,
       showServiceFeeSeparate,
@@ -735,6 +795,7 @@ router.post(
       for (const item of items) {
         releaseTickets(item.ticket_type_id, item.quantity);
       }
+      geefKortingscodeVrij(orderId);
 
       db.prepare(`UPDATE ticket_orders SET status = 'expired' WHERE id = ?`).run(orderId);
       throw new ApiError(400, 'Order has expired');
@@ -976,6 +1037,9 @@ async function processPaymentUpdate(orderId: string, status: string): Promise<vo
                 WHERE id = ?
             `,
       ).run(orderId);
+
+      // Een gereserveerde kortingscode telt nu als gebruikt.
+      telKortingscodeAlsGebruikt(orderId);
     });
 
     try {
@@ -1037,6 +1101,8 @@ async function processPaymentUpdate(orderId: string, status: string): Promise<vo
     for (const item of items) {
       releaseTickets(item.ticket_type_id, item.quantity);
     }
+    // En de kortingscode, als die gereserveerd was.
+    geefKortingscodeVrij(orderId);
 
     db.prepare(
       `

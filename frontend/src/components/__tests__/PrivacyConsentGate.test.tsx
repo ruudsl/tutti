@@ -50,7 +50,9 @@ vi.mock('../Icon', () => ({
   Icon: ({ name }: { name: string }) => <span data-testid={`icoon-${name}`} />,
 }));
 
-const auth = vi.hoisted(() => ({ gebruiker: null as { id: string; mustChangePassword?: boolean } | null }));
+const auth = vi.hoisted(() => ({
+  gebruiker: null as { id: string; mustChangePassword?: boolean; tweestapInstellenVerplicht?: boolean } | null,
+}));
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ user: auth.gebruiker }) }));
 
 const toestemmingNagaan = vi.mocked(checkConsent);
@@ -151,6 +153,15 @@ describe('PrivacyConsentGate, wie er doorgelaten wordt', () => {
     // Zonder deze uitzondering lag de toestemmingsvraag over het formulier
     // om het wachtwoord te wijzigen, en werkte de knop daarop niet.
     auth.gebruiker = { id: 'lid-1', mustChangePassword: true };
+    toon();
+
+    expect(await screen.findByText('de applicatie')).toBeInTheDocument();
+    expect(screen.queryByText('privacy.consentTitle')).not.toBeInTheDocument();
+    expect(toestemmingNagaan).not.toHaveBeenCalled();
+  });
+
+  it('laat een lid dat eerst tweestapsverificatie moet instellen ook door', async () => {
+    auth.gebruiker = { id: 'lid-1', tweestapInstellenVerplicht: true };
     toon();
 
     expect(await screen.findByText('de applicatie')).toBeInTheDocument();

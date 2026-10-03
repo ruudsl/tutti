@@ -81,28 +81,28 @@ Alle modules staan standaard uit. Een vereniging die niets instelt houdt het
 kleine menu; wie een onderdeel gebruikt, zet het in twee klikken aan onder
 **Beheer → Modules**.
 
-| Groep           | Sleutel        | Naam                    | Verbergt                                                                             |
-| --------------- | -------------- | ----------------------- | ------------------------------------------------------------------------------------ |
-| `music`         | `stage`        | Podium en opstelling    | `/seating`, `/voice-parts`, `/occupancy`, `/neighbor-preferences`, `/stage-designer` |
-|                 | `practice`     | Thuis oefenen           | `/practice`, `/practice-schedules`                                                   |
-|                 | `externals`    | Invallers en vervangers | `/external-musicians`, `/replacement-requests`                                       |
-|                 | `performances` | Uitvoeringshistorie     | `/performances`                                                                      |
-|                 | `attendance`   | Aanwezigheidsanalyse    | `/attendance-analytics`                                                              |
-| `planning`      | `seasons`      | Seizoensplanning        | `/season-planner`                                                                    |
-|                 | `projects`     | Projecten en reizen     | `/projects`, `/tours`                                                                |
-|                 | `resources`    | Ruimtes reserveren      | `/resources`                                                                         |
-|                 | `tasks`        | Taken                   | `/tasks`                                                                             |
-|                 | `workflows`    | Workflow-automatisering | `/workflows`                                                                         |
-|                 | `spond`        | Spond-koppeling         | _geen menu-item_ — de kaart op het repetitiescherm                                   |
-| `communication` | `posts`        | Nieuwsberichten         | `/posts`                                                                             |
-|                 | `mailings`     | Mailings                | `/email-campaigns`                                                                   |
-|                 | `polls`        | Peilingen               | `/polls`                                                                             |
-|                 | `wiki`         | Wiki                    | `/wiki`                                                                              |
-|                 | `contacts`     | Externe contacten       | `/contacts`                                                                          |
-| `assets`        | `inventory`    | Inventaris              | `/instrument-assets`, `/uniforms`, `/equipment`, `/outfits`                          |
-|                 | `issues`       | Meldingen               | `/issues`                                                                            |
-| `finance`       | `accounting`   | Boekhouding             | `/accounting`                                                                        |
-|                 | `ticketing`    | Kaartverkoop            | `/my-tickets`, `/ticket-sales`, `/ticket-scanner`, `/payment-settings`               |
+| Groep           | Sleutel        | Naam                    | Verbergt                                                                                 |
+| --------------- | -------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `music`         | `stage`        | Podium en opstelling    | `/seating`, `/voice-parts`, `/occupancy`, `/neighbor-preferences`, `/stage-designer`     |
+|                 | `practice`     | Thuis oefenen           | `/practice`, `/practice-schedules`                                                       |
+|                 | `externals`    | Invallers en vervangers | `/external-musicians`, `/replacement-requests`                                           |
+|                 | `performances` | Uitvoeringshistorie     | `/performances`                                                                          |
+|                 | `attendance`   | Aanwezigheidsanalyse    | `/attendance-analytics`                                                                  |
+| `planning`      | `seasons`      | Seizoensplanning        | `/season-planner`                                                                        |
+|                 | `projects`     | Projecten en reizen     | `/projects`, `/tours`                                                                    |
+|                 | `resources`    | Ruimtes reserveren      | `/resources`                                                                             |
+|                 | `tasks`        | Taken                   | `/tasks`                                                                                 |
+|                 | `workflows`    | Workflow-automatisering | `/workflows`                                                                             |
+|                 | `spond`        | Spond-koppeling         | _geen menu-item_ — de kaart op het repetitiescherm                                       |
+| `communication` | `posts`        | Nieuwsberichten         | `/posts`                                                                                 |
+|                 | `mailings`     | Mailings                | `/email-campaigns`                                                                       |
+|                 | `polls`        | Peilingen               | `/polls`                                                                                 |
+|                 | `wiki`         | Wiki                    | `/wiki`                                                                                  |
+|                 | `contacts`     | Externe contacten       | `/contacts`                                                                              |
+| `assets`        | `inventory`    | Inventaris              | `/instrument-assets`, `/uniforms`, `/equipment`, `/outfits`                              |
+|                 | `issues`       | Meldingen               | `/issues`                                                                                |
+| `finance`       | `accounting`   | Boekhouding             | `/accounting`                                                                            |
+|                 | `ticketing`    | Kaartverkoop            | `/my-tickets`, `/ticket-sales`, `/kortingscodes`, `/ticket-scanner`, `/payment-settings` |
 
 ### Spond is de uitzondering
 

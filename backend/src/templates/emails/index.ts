@@ -23,6 +23,7 @@ import {
   PollNotificationEmailData,
   TaskAssignmentEmailData,
   AccountVerificationEmailData,
+  UitnodigingEmailData,
 } from './types';
 
 import { getPasswordResetEmailContent as passwordResetNl } from './password-reset.nl';
@@ -56,6 +57,10 @@ import { getTaskAssignmentEmailContent as taskAssignmentDe } from './task-assign
 import { getAccountVerificationEmailContent as accountVerificationNl } from './account-verification.nl';
 import { getAccountVerificationEmailContent as accountVerificationEn } from './account-verification.en';
 import { getAccountVerificationEmailContent as accountVerificationDe } from './account-verification.de';
+
+import { getUitnodigingEmailContent as uitnodigingNl } from './uitnodiging.nl';
+import { getUitnodigingEmailContent as uitnodigingEn } from './uitnodiging.en';
+import { getUitnodigingEmailContent as uitnodigingDe } from './uitnodiging.de';
 
 import { renderVeilig } from './htmlVeilig';
 
@@ -126,4 +131,9 @@ export function getAccountVerificationEmail(
     data,
     language,
   );
+}
+
+/** De uitnodiging om lid te worden van een vereniging (POST /multi-association/invitations). */
+export function getUitnodigingEmail(data: UitnodigingEmailData, language?: string | null): EmailContent {
+  return renderTemplate({ nl: uitnodigingNl, en: uitnodigingEn, de: uitnodigingDe }, data, language);
 }

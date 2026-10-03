@@ -12,6 +12,8 @@ import { bewaakLedenLimiet } from '../services/abonnementLimieten';
 import { validate } from '../middleware/validate';
 import { haalGedeeldeMuziek, haalGedeeldeConcerten, haalPartners } from '../services/partnerschappen';
 import { z } from 'zod';
+import { sendEmail } from '../utils/email';
+import { getUitnodigingEmail } from '../templates/emails';
 
 const router = Router();
 
@@ -42,6 +44,9 @@ const createAssociationSchema = z.object({
 
 const VERENIGINGSROLLEN = ['member', 'board', 'admin'] as const;
 type Verenigingsrol = (typeof VERENIGINGSROLLEN)[number];
+
+/** Hoe lang een uitnodiging geldig is. */
+const UITNODIGING_DAGEN_GELDIG = 7;
 
 const inviteUserSchema = z.object({
   email: z.string().email('Ongeldig e-mailadres'),
@@ -663,7 +668,7 @@ router.post(
 
     const id = uuidv4();
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + UITNODIGING_DAGEN_GELDIG * 24 * 60 * 60 * 1000).toISOString();
 
     db.prepare(
       `
@@ -682,9 +687,35 @@ router.post(
       invitedBy: req.user!.id,
     });
 
+    // De link gaat per mail naar de uitgenodigde, en komt ook in het antwoord:
+    // zonder ingestelde e-mail (of als de mail in een spamfilter blijft
+    // hangen) geeft de uitnodiger hem zelf door. Versturen is best effort; de
+    // uitnodiging staat er hoe dan ook.
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+    const inviteUrl = `${frontendUrl}/invite/${token}`;
+    try {
+      const gegevens = db
+        .prepare(
+          `SELECT a.name AS vereniging, u.first_name, u.last_name
+           FROM associations a, users u
+           WHERE a.id = ? AND u.id = ?`,
+        )
+        .get(req.user!.associationId, req.user!.id) as
+        { vereniging: string; first_name: string | null; last_name: string | null } | undefined;
+      const { subject, text, html } = getUitnodigingEmail({
+        verenigingsnaam: gegevens?.vereniging ?? '',
+        uitnodiger: [gegevens?.first_name, gegevens?.last_name].filter(Boolean).join(' ') || req.user!.email || '',
+        aannameUrl: inviteUrl,
+        dagenGeldig: UITNODIGING_DAGEN_GELDIG,
+      });
+      await sendEmail({ to: data.email, subject, text, html, associationId: req.user!.associationId });
+    } catch (fout) {
+      logger.warn('Uitnodigingsmail niet verstuurd', { invitationId: id, error: (fout as Error).message });
+    }
+
     res.status(201).json({
       id,
-      inviteUrl: `/invite/${token}`,
+      inviteUrl,
       message: 'Uitnodiging verstuurd.',
     });
   }),

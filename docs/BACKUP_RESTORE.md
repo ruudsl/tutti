@@ -12,6 +12,34 @@ Harmonie uses SQLite as its database, which stores all application data in a sin
 
 Backups are created as ZIP archives with maximum compression.
 
+## Gegevens van één vereniging
+
+Naast de reservekopie van de hele installatie (hieronder) kan de beheerder van
+een vereniging een kopie van **alleen de eigen gegevens** downloaden:
+Dashboard → Beheer → _Gegevens van de vereniging_, of `GET /api/backup/vereniging`
+(rol `admin`, achter de IP-witlijst). Zie `backend/src/services/verenigingsExport.ts`.
+
+```
+tutti-vereniging-JJJJ-MM-DD.zip
+├── LEESMIJ.txt
+├── manifest.json          # vereniging, datum, rijen per tabel, niet meegenomen tabellen
+├── gegevens/<tabel>.json  # de rijen van deze vereniging
+└── bestanden/             # bladmuziek, mp3, opnames, wiki- en mailbijlagen, logo, profielfoto's
+```
+
+- Welke rijen meegaan, volgt uit de database: een tabel met `association_id`
+  filtert daarop, een tabel zonder volgt zijn foreign keys (verplichte eerst)
+  tot zo'n tabel. Een tabel zonder weg gaat niet mee en staat in het manifest.
+- Persoonlijke tabellen die alleen via een lid bij de vereniging horen
+  (meldingen, activiteit, zoekgeschiedenis) gaan niet mee: een lid kan bij
+  meer verenigingen horen. Wel: instrumenten, afwezigheid, privacytoestemming.
+- Geen geheimen: kolommen met wachtwoorden, tokens, sleutels en kaartcodes
+  vallen weg, en tabellen als sessies en herstelcodes gaan niet mee.
+- Bestanden alleen als een rij van de vereniging ernaar wijst, uit de map
+  waar ze horen.
+- Niet versleuteld (de beheerder moet het zelf kunnen openen) en niet terug te
+  zetten in Tutti.
+
 ## Backup Contents
 
 A backup ZIP file contains:

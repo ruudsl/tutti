@@ -281,7 +281,12 @@
     "replacementRequests": "Invalverzoeken",
     "musicSharing": "Muziek delen",
     "mobileMenu": "Menu",
-    "importeren": "Importeren"
+    "importeren": "Importeren",
+    "gdprAdmin": "AVG-beheer",
+    "dataExport": "Jouw gegevens",
+    "multiAssociation": "Verenigingen",
+    "uitnodigingen": "Uitnodigingen",
+    "kortingscodes": "Kortingscodes"
   },
   "roles": {
     "admin": "Beheerder",
@@ -385,7 +390,8 @@
       "disablePassword": "Wachtwoord om MFA uit te schakelen",
       "disableButton": "MFA uitschakelen",
       "disabling": "Bezig...",
-      "disableSuccess": "MFA is uitgeschakeld."
+      "disableSuccess": "MFA is uitgeschakeld.",
+      "verplicht": "Je vereniging vraagt tweestapsverificatie. Stel die hieronder in; daarna kun je Tutti weer gewoon gebruiken."
     }
   },
   "dashboard": {
@@ -1840,6 +1846,18 @@
       "userGuideDesc": "Leer hoe je de app gebruikt",
       "accessibility": "Toegankelijkheid",
       "accessibilityDesc": "Informatie over toegankelijkheid"
+    },
+    "tweestap": {
+      "titel": "Tweestapsverificatie",
+      "uitleg": "Met tweestapsverificatie vraagt Tutti bij het inloggen naast het wachtwoord om een code uit een app op de telefoon. Wie het moet hebben en het nog niet heeft, stelt het na het inloggen eerst in.",
+      "wie": "Verplicht voor",
+      "stand": {
+        "uit": "Niemand (ieder kiest zelf)",
+        "beheer": "Beheerders en bestuur",
+        "iedereen": "Iedereen"
+      },
+      "eerstZelf": "Zet eerst zelf tweestapsverificatie aan (op je profiel); daarna kun je het voor anderen verplicht stellen.",
+      "laadFout": "De instelling voor tweestapsverificatie kon niet worden opgehaald."
     }
   },
   "theme": {
@@ -2717,7 +2735,24 @@
       "lookForward": "We kijken ernaar uit u te zien!"
     },
     "offlineMode": "Offline modus",
-    "onlineMode": "Online modus"
+    "onlineMode": "Online modus",
+    "kortingscode": {
+      "veld": "Kortingscode",
+      "toepassen": "Toepassen",
+      "weghalen": "Weghalen",
+      "korting": "Korting ({{code}})",
+      "reden": {
+        "onbekend": "Deze kortingscode kennen we niet.",
+        "inactief": "Deze kortingscode is niet meer actief.",
+        "nog_niet_geldig": "Deze kortingscode is nog niet geldig.",
+        "verlopen": "Deze kortingscode is verlopen.",
+        "op": "Deze kortingscode is op.",
+        "koper": "Je hebt deze kortingscode al zo vaak gebruikt als mag.",
+        "minimum": "Je bestelling is te klein voor deze kortingscode.",
+        "concert": "Deze kortingscode geldt niet voor dit concert.",
+        "kaartsoort": "Deze kortingscode geldt niet voor de gekozen kaarten."
+      }
+    }
   },
   "ticketDashboard": {
     "title": "Ticket Dashboard",
@@ -3302,7 +3337,10 @@
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
     "importeren": "$t(nav.importeren)",
-    "instrumenten": "$t(nav.instruments)"
+    "instrumenten": "$t(nav.instruments)",
+    "uitnodiging": "Uitnodiging",
+    "uitnodigingen": "Uitnodigingen",
+    "kortingscodes": "Kortingscodes"
   },
   "seating": {
     "title": "Orkestopstelling",
@@ -4319,7 +4357,16 @@
     "applyCode": "Code toepassen",
     "codeApplied": "Kortingscode toegepast",
     "invalidCode": "Ongeldige kortingscode",
-    "discount": "Korting"
+    "discount": "Korting",
+    "aangemaakt": "Kortingscode aangemaakt",
+    "uitleg": "De koper vult de code in bij het bestellen. De korting gaat van de kaarten af, niet van de servicekosten. Een code die al gebruikt is, zet je liever uit dan dat je hem verwijdert.",
+    "onbeperkt": "Onbeperkt",
+    "perKoper": "Maximaal per koper",
+    "concert": "Alleen voor concert",
+    "alleConcerten": "Alle concerten",
+    "geenCodes": "Er zijn nog geen kortingscodes.",
+    "verwijderTitel": "Kortingscode verwijderen",
+    "verwijderVraag": "Kortingscode {{code}} verwijderen? Ook wie hem gebruikte, wordt gewist."
   },
   "serviceFee": {
     "serviceFee": "Servicekosten",
@@ -6244,5 +6291,32 @@
     "andereNamen": "Andere namen",
     "geen": "Geen instrumenten gevonden.",
     "uitleg": "Standaardinstrumenten gelden voor alle verenigingen. Past er een niet, verberg het dan en maak een eigen instrument."
+  },
+  "uitnodiging": {
+    "uitleg": "Een uitnodiging is voor iemand die al een account in Tutti heeft, bijvoorbeeld bij een andere vereniging. Een nieuw lid maak je aan onder Leden.",
+    "linkKlaar": "Uitnodiging gemaakt. Als e-mail is ingesteld, krijgt {{email}} een mail met de link. Je kunt hem ook zelf doorgeven:",
+    "link": "Link van de uitnodiging",
+    "kopieer": "Kopieer link",
+    "gekopieerd": "Link gekopieerd",
+    "kopierenMislukt": "Kopiëren lukte niet; selecteer de link en kopieer hem zelf.",
+    "tekst": "Je bent uitgenodigd om lid te worden van {{vereniging}}, als {{rol}}.",
+    "voorEmail": "De uitnodiging is voor {{email}}.",
+    "geldigTot": "Geldig tot {{datum}}.",
+    "inloggen": "Inloggen om aan te nemen",
+    "geenAccount": "Nog geen account? Vraag de vereniging om er een voor je aan te maken.",
+    "aannemen": "Uitnodiging aannemen",
+    "anderAccount": "Je bent ingelogd als {{huidig}}, maar deze uitnodiging is voor {{email}}.",
+    "anderAccountInloggen": "Uitloggen en inloggen met het juiste adres",
+    "gelukt": "Je bent nu lid van {{vereniging}}. Wissel bovenaan het scherm naar de vereniging.",
+    "naarDashboard": "Naar het dashboard",
+    "nietGevonden": "Deze uitnodiging bestaat niet, is al gebruikt of is verlopen. Vraag de vereniging om een nieuwe."
+  },
+  "verenigingsExport": {
+    "titel": "Gegevens van de vereniging",
+    "uitleg": "Download een kopie van alle gegevens en bestanden van je vereniging: per onderdeel een JSON-bestand, plus bladmuziek, opnames en bijlagen. Wachtwoorden en andere geheimen zitten er niet in. Terugzetten in Tutti kan hiermee niet; daarvoor maakt de beheerder van de installatie een reservekopie.",
+    "privacy": "Het archief bevat persoonsgegevens van leden. Bewaar het zorgvuldig.",
+    "knop": "Download (ZIP)",
+    "bezig": "Bezig met samenstellen…",
+    "gedownload": "De gegevens zijn gedownload."
   }
 }

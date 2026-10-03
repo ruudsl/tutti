@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS associations (
     google_drive_api_key TEXT,
     google_drive_enabled BOOLEAN DEFAULT 0,
     opslag_limiet_bytes INTEGER, -- Opslaggrens van de super-admin; NULL = volgens abonnement, 0 = onbeperkt
+    tweestap_verplicht TEXT NOT NULL DEFAULT 'uit' CHECK (tweestap_verplicht IN ('uit', 'beheer', 'iedereen')), -- Wie tweestapsverificatie moet hebben
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

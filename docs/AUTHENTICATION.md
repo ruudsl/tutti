@@ -211,6 +211,43 @@ GET /api/auth/mfa/status
 Authorization: Bearer <token>
 ```
 
+### Tweestapsverificatie verplicht per vereniging
+
+Een beheerder kan tweestapsverificatie verplicht stellen
+(`associations.tweestap_verplicht`, zie `backend/src/services/tweestapVerplicht.ts`):
+
+| Stand      | Wie moet                  |
+| ---------- | ------------------------- |
+| `uit`      | niemand (standaard)       |
+| `beheer`   | rollen `admin` en `board` |
+| `iedereen` | elk lid                   |
+
+```
+GET /api/settings/tweestap          -> { "stand": "uit", "zelfAan": true }
+PUT /api/settings/tweestap          { "stand": "beheer" }
+```
+
+Beide alleen voor de beheerder. Aanzetten (`beheer` of `iedereen`) geeft 400
+als de beheerder het zelf nog niet heeft.
+
+Wie moet en het nog niet heeft:
+
+- krijgt bij het inloggen en van `GET /auth/me` het veld
+  `tweestapInstellenVerplicht: true`;
+- krijgt van elke andere route een 403 met `code: "TWEESTAP_INSTELLEN_VERPLICHT"`,
+  behalve `GET /auth/me`, `POST /auth/logout`, `POST /auth/change-password`,
+  `POST /auth/mfa/setup`, `POST /auth/mfa/enable` en `GET /auth/mfa/status`;
+- krijgt geen websocketverbinding.
+
+Moet het lid ook nog een eigen wachtwoord kiezen
+(`WACHTWOORD_WIJZIGEN_VERPLICHT`), dan gaat dat voor. Zolang de vereniging het
+verplicht, geeft `POST /auth/mfa/disable` een 403. De rol is die uit het token,
+dus de rol in de vereniging waar het verzoek over gaat.
+
+Inloggen via Microsoft vraagt in Tutti geen tweede factor (die zit bij
+Microsoft); de plicht geldt ook voor wie zo inlogt, omdat hetzelfde account
+meestal ook met een wachtwoord kan inloggen.
+
 ## Microsoft Entra ID (SSO)
 
 ### Configuration

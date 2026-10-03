@@ -55,6 +55,13 @@ export const CODE_WACHTWOORD_WIJZIGEN_VERPLICHT = 'WACHTWOORD_WIJZIGEN_VERPLICHT
 export const WACHTWOORD_WIJZIGEN_PAD = '/profile';
 
 /**
+ * De vaste code in het 403-antwoord voor een lid dat eerst
+ * tweestapsverificatie moet instellen (backend: services/tweestapVerplicht.ts).
+ * Dat gebeurt op hetzelfde profiel.
+ */
+export const CODE_TWEESTAP_INSTELLEN_VERPLICHT = 'TWEESTAP_INSTELLEN_VERPLICHT';
+
+/**
  * De vaste code die de server meestuurt als een upload de opslaggrens van de
  * vereniging overschrijdt (413). De melding van de server is Nederlands; met
  * de code maakt de client er de melding in de taal van de gebruiker van, op de
@@ -74,7 +81,8 @@ api.interceptors.response.use(
       window.location.href = '/login';
     } else if (
       error.response?.status === 403 &&
-      error.response?.data?.code === CODE_WACHTWOORD_WIJZIGEN_VERPLICHT &&
+      (error.response?.data?.code === CODE_WACHTWOORD_WIJZIGEN_VERPLICHT ||
+        error.response?.data?.code === CODE_TWEESTAP_INSTELLEN_VERPLICHT) &&
       window.location.pathname !== WACHTWOORD_WIJZIGEN_PAD
     ) {
       // Niet opnieuw laden als het lid er al is: het profiel zelf doet ook

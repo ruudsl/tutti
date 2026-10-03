@@ -17,6 +17,9 @@ import { gecontroleerdeSmtpVerbinding, SmtpVerbinding } from '../utils/smtpVerbi
 import { logAuditEvent } from './audit-logs';
 import { ontsleutelGeheim, versleutelGeheim } from '../utils/encryption';
 import { opslagGebruik, opslagLimiet } from '../services/abonnementLimieten';
+import { validate } from '../middleware/validate';
+import { z } from 'zod';
+import { TWEESTAP_STANDEN, tweestapStand } from '../services/tweestapVerplicht';
 
 const router = Router();
 
@@ -165,6 +168,64 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     res.json({ gebruik: opslagGebruik(associationId), limiet: opslagLimiet(associationId) });
+  }),
+);
+
+/**
+ * GET /settings/tweestap - Wie tweestapsverificatie moet hebben (beheerder),
+ * en of de beheerder het zelf aan heeft: zonder kan hij het niet verplichten.
+ * Zie services/tweestapVerplicht.ts.
+ */
+router.get(
+  '/tweestap',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json({ stand: tweestapStand(req.user!.associationId), zelfAan: heeftZelfTweestap(req.user!.id) });
+  }),
+);
+
+function heeftZelfTweestap(userId: string): boolean {
+  const rij = db.prepare('SELECT mfa_enabled FROM users WHERE id = ?').get(userId) as
+    { mfa_enabled: number | null } | undefined;
+  return Number(rij?.mfa_enabled) === 1;
+}
+
+const tweestapSchema = z.object({ stand: z.enum(TWEESTAP_STANDEN) });
+
+/**
+ * PUT /settings/tweestap - Tweestapsverificatie verplicht stellen (beheerder).
+ *
+ * Aanzetten mag alleen een beheerder die het zelf al heeft. Anders sluit hij
+ * zichzelf bij het volgende verzoek buiten zijn eigen instellingen tot hij
+ * het heeft ingesteld - met als enige uitweg het instellen zelf.
+ */
+router.put(
+  '/tweestap',
+  authenticateToken,
+  requireRole('admin'),
+  validate(tweestapSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { stand } = req.body as z.infer<typeof tweestapSchema>;
+
+    if (stand !== 'uit' && !heeftZelfTweestap(req.user!.id)) {
+      throw new ApiError(400, 'Zet eerst zelf tweestapsverificatie aan.');
+    }
+
+    db.prepare('UPDATE associations SET tweestap_verplicht = ? WHERE id = ?').run(stand, req.user!.associationId);
+
+    logAuditEvent(
+      req.user!.id,
+      'update',
+      'settings',
+      req.user!.associationId || '',
+      'Tweestapsverificatie verplicht',
+      { stand },
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({ stand });
   }),
 );
 

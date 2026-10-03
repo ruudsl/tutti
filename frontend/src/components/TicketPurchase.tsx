@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
-import { getConcertTickets, createTicketOrder, payTicketOrder, mockPayment } from '../api';
+import { getConcertTickets, createTicketOrder, payTicketOrder, mockPayment, controleerKortingscode } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { TicketType } from '../types';
@@ -31,6 +31,15 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
   const [orderId, setOrderId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>('ideal');
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  // Kortingscode: wat de koper intypt, en de korting zoals de server die
+  // vooraf berekende. Het echte bedrag rekent de bestelling zelf uit.
+  const [codeInvoer, setCodeInvoer] = useState('');
+  const [korting, setKorting] = useState<{ code: string; bedrag: number } | null>(null);
+  const [kortingsfout, setKortingsfout] = useState<string | null>(null);
+  const [controleertCode, setControleertCode] = useState(false);
+  // Het bedrag dat de server bij de bestelling uitrekende.
+  const [teBetalen, setTeBetalen] = useState<number | null>(null);
+  const kortingscodeId = useId();
 
   // Fetch concert ticket info
   const { data: ticketInfo, isLoading: isLoadingTickets } = useQuery({
@@ -60,16 +69,66 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
         buyerEmail: buyerInfo.email,
         buyerPhone: buyerInfo.phone || undefined,
         captchaToken: captchaToken || undefined,
+        discountCode: korting?.code,
       });
     },
     onSuccess: (data) => {
       setOrderId(data.orderId);
+      setTeBetalen(data.total);
+      // Niets te betalen (een code van honderd procent): de bestelling is al
+      // betaald en de kaarten zijn verstuurd.
+      if (data.status === 'paid') {
+        showSuccess(t('tickets.paymentSuccess'));
+        setStep('complete');
+        onSuccess?.(data.orderId);
+        return;
+      }
       setStep('payment');
     },
     onError: (error) => {
+      // Een code die intussen niet meer geldig is (net op, bijvoorbeeld):
+      // de korting gaat eraf en de koper ziet waarom.
+      const code = (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      if (code?.startsWith('KORTINGSCODE_')) {
+        setKorting(null);
+        setKortingsfout(t(`tickets.kortingscode.reden.${code.slice('KORTINGSCODE_'.length).toLowerCase()}`));
+        return;
+      }
       showError(getErrorMessage(error));
     },
   });
+
+  const pasCodeToe = async () => {
+    const code = codeInvoer.trim();
+    if (!code) return;
+    setControleertCode(true);
+    setKortingsfout(null);
+    try {
+      const uitkomst = await controleerKortingscode({
+        code,
+        concertId,
+        orderTotal: subtotal,
+        ticketTypeIds: selectedItems.map(({ ticketType }) => ticketType.id),
+        buyerEmail: buyerInfo.email || undefined,
+      });
+      if (uitkomst.valid) {
+        setKorting({ code, bedrag: uitkomst.discountAmount });
+      } else {
+        setKorting(null);
+        setKortingsfout(t(`tickets.kortingscode.reden.${uitkomst.reden ?? 'onbekend'}`));
+      }
+    } catch (fout) {
+      setKortingsfout(getErrorMessage(fout));
+    } finally {
+      setControleertCode(false);
+    }
+  };
+
+  const haalCodeWeg = () => {
+    setKorting(null);
+    setCodeInvoer('');
+    setKortingsfout(null);
+  };
 
   // Pay order mutation
   const payOrderMutation = useMutation({
@@ -150,6 +209,8 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
   const handleQuantityChange = (ticketTypeId: string, quantity: number, maxAvailable: number, maxPerOrder: number) => {
     const maxQty = Math.min(maxAvailable, maxPerOrder);
     const newQty = Math.max(0, Math.min(quantity, maxQty));
+    // Een andere keuze kan een andere korting geven: opnieuw toepassen.
+    setKorting(null);
     setSelectedTickets((prev) => ({
       ...prev,
       [ticketTypeId]: newQty,
@@ -420,6 +481,45 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
             />
           </FormField>
 
+          {/* Kortingscode */}
+          <div className="form-group">
+            <label className="form-label" htmlFor={kortingscodeId}>
+              {t('tickets.kortingscode.veld')}
+            </label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                id={kortingscodeId}
+                type="text"
+                className="form-control"
+                value={codeInvoer}
+                onChange={(e) => setCodeInvoer(e.target.value)}
+                disabled={!!korting}
+                maxLength={50}
+                autoComplete="off"
+                aria-describedby={kortingsfout ? `${kortingscodeId}-fout` : undefined}
+              />
+              {korting ? (
+                <button type="button" className="btn btn-outline" onClick={haalCodeWeg}>
+                  {t('tickets.kortingscode.weghalen')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={pasCodeToe}
+                  disabled={!codeInvoer.trim() || controleertCode}
+                >
+                  {controleertCode ? t('common.loading') : t('tickets.kortingscode.toepassen')}
+                </button>
+              )}
+            </div>
+            {kortingsfout && (
+              <small id={`${kortingscodeId}-fout`} role="alert" style={{ color: 'var(--danger)' }}>
+                {kortingsfout}
+              </small>
+            )}
+          </div>
+
           {/* Order Summary */}
           <div
             className="card"
@@ -458,12 +558,18 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
                   </div>
                 </>
               )}
+              {korting && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span>{t('tickets.kortingscode.korting', { code: korting.code.toUpperCase() })}</span>
+                  <span>- EUR {korting.bedrag.toFixed(2)}</span>
+                </div>
+              )}
               <hr />
               <div
                 style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.125rem' }}
               >
                 <span>{t('tickets.total')}</span>
-                <span>EUR {totalPrice.toFixed(2)}</span>
+                <span>EUR {Math.max(0, totalPrice - (korting?.bedrag ?? 0)).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -532,7 +638,7 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
                 style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.125rem' }}
               >
                 <span>{t('tickets.totalToPay')}</span>
-                <span>EUR {totalPrice.toFixed(2)}</span>
+                <span>EUR {(teBetalen ?? totalPrice).toFixed(2)}</span>
               </div>
             </div>
           </div>

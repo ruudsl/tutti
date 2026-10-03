@@ -117,7 +117,8 @@ export function useWebSocket() {
   // (websocket/index.ts), en na zo'n weigering probeert socket.io het niet
   // opnieuw. Dus pas verbinden als het lid een eigen wachtwoord heeft; het
   // verse profiel na het wijzigen zet dit dan vanzelf op true.
-  const isAuthenticated = user !== null && !user.mustChangePassword;
+  // Hetzelfde voor wie eerst tweestapsverificatie moet instellen.
+  const isAuthenticated = user !== null && !user.mustChangePassword && !user.tweestapInstellenVerplicht;
 
   const connect = useCallback(() => {
     const token = localStorage.getItem('token');

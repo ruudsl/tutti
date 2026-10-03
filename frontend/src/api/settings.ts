@@ -34,6 +34,19 @@ export const updateSettings = async (settings: { displayName?: string }): Promis
   await api.put('/settings', settings);
 };
 
+/** Wie tweestapsverificatie moet hebben: niemand, beheerders en bestuur, of iedereen. */
+export type TweestapStand = 'uit' | 'beheer' | 'iedereen';
+
+/** De stand van de vereniging, en of de vragende beheerder het zelf aan heeft. */
+export const getTweestapStand = async (): Promise<{ stand: TweestapStand; zelfAan: boolean }> => {
+  const { data } = await api.get('/settings/tweestap');
+  return data;
+};
+
+export const zetTweestapStand = async (stand: TweestapStand): Promise<void> => {
+  await api.put('/settings/tweestap', { stand });
+};
+
 export const uploadLogo = async (file: File): Promise<{ logoUrl: string }> => {
   const formData = new FormData();
   formData.append('logo', file);

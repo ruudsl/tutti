@@ -281,7 +281,12 @@
     "stageDesigner": "Bühnenaufstellung",
     "musicSharing": "Musik teilen",
     "mobileMenu": "Menü",
-    "importeren": "Importieren"
+    "importeren": "Importieren",
+    "gdprAdmin": "DSGVO",
+    "dataExport": "Ihre Daten",
+    "multiAssociation": "Vereine",
+    "uitnodigingen": "Einladungen",
+    "kortingscodes": "Rabattcodes"
   },
   "roles": {
     "admin": "Administrator",
@@ -385,7 +390,8 @@
       "disablePassword": "Passwort zum Deaktivieren von MFA",
       "disableButton": "MFA deaktivieren",
       "disabling": "Laden...",
-      "disableSuccess": "MFA wurde deaktiviert."
+      "disableSuccess": "MFA wurde deaktiviert.",
+      "verplicht": "Ihr Verein verlangt die Zwei-Schritt-Verifizierung. Richten Sie sie unten ein; danach können Sie Tutti wieder wie gewohnt nutzen."
     }
   },
   "dashboard": {
@@ -1886,6 +1892,18 @@
       "userGuideDesc": "Erfahren Sie, wie Sie die App nutzen",
       "accessibility": "Barrierefreiheit",
       "accessibilityDesc": "Informationen zur Barrierefreiheit"
+    },
+    "tweestap": {
+      "titel": "Zwei-Schritt-Verifizierung",
+      "uitleg": "Mit der Zwei-Schritt-Verifizierung fragt Tutti bei der Anmeldung zusätzlich zum Passwort nach einem Code aus einer App auf dem Telefon. Wer sie haben muss und noch nicht hat, richtet sie nach der Anmeldung zuerst ein.",
+      "wie": "Verpflichtend für",
+      "stand": {
+        "uit": "Niemanden (jeder entscheidet selbst)",
+        "beheer": "Administratoren und Vorstand",
+        "iedereen": "Alle"
+      },
+      "eerstZelf": "Aktivieren Sie zuerst selbst die Zwei-Schritt-Verifizierung (in Ihrem Profil); danach können Sie sie für andere verpflichtend machen.",
+      "laadFout": "Die Einstellung zur Zwei-Schritt-Verifizierung konnte nicht geladen werden."
     }
   },
   "theme": {
@@ -2233,7 +2251,10 @@
     "wiki": "$t(nav.wiki)",
     "workflows": "$t(nav.workflows)",
     "importeren": "$t(nav.importeren)",
-    "instrumenten": "$t(nav.instruments)"
+    "instrumenten": "$t(nav.instruments)",
+    "uitnodiging": "Einladung",
+    "uitnodigingen": "Einladungen",
+    "kortingscodes": "Rabattcodes"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -3518,7 +3539,24 @@
     "refund": "Erstattung",
     "exportSuccess": "Export erfolgreich heruntergeladen.",
     "offlineMode": "Offline-Modus",
-    "onlineMode": "Online-Modus"
+    "onlineMode": "Online-Modus",
+    "kortingscode": {
+      "veld": "Rabattcode",
+      "toepassen": "Anwenden",
+      "weghalen": "Entfernen",
+      "korting": "Rabatt ({{code}})",
+      "reden": {
+        "onbekend": "Diesen Rabattcode kennen wir nicht.",
+        "inactief": "Dieser Rabattcode ist nicht mehr aktiv.",
+        "nog_niet_geldig": "Dieser Rabattcode ist noch nicht gültig.",
+        "verlopen": "Dieser Rabattcode ist abgelaufen.",
+        "op": "Dieser Rabattcode ist aufgebraucht.",
+        "koper": "Sie haben diesen Rabattcode bereits so oft verwendet wie erlaubt.",
+        "minimum": "Ihre Bestellung ist für diesen Rabattcode zu klein.",
+        "concert": "Dieser Rabattcode gilt nicht für dieses Konzert.",
+        "kaartsoort": "Dieser Rabattcode gilt nicht für die gewählten Karten."
+      }
+    }
   },
   "bulk": {
     "title": "Massenaktionen",
@@ -4299,27 +4337,36 @@
     "yesCancel": "Ja, Übertragung Abbrechen"
   },
   "discountCodes": {
-    "title": "Kortingscodes",
-    "addCode": "Code Toevoegen",
-    "editCode": "Code Bewerken",
+    "title": "Rabattcodes",
+    "addCode": "Code hinzufügen",
+    "editCode": "Code bearbeiten",
     "code": "Code",
-    "description": "Beschrijving",
-    "discountType": "Kortingstype",
-    "percentage": "Prozentsatz",
-    "fixedAmount": "Vast bedrag",
-    "discountValue": "Kortingswaarde",
-    "minOrderAmount": "Minimaal bestelbedrag",
-    "maxUses": "Maximum gebruik",
-    "usesCount": "Aantal keer gebruikt",
-    "validFrom": "Geldig vanaf",
-    "validUntil": "Geldig tot",
-    "isActive": "Actief",
-    "usage": "Gebruik",
-    "noUsage": "Nog niet gebruikt",
-    "applyCode": "Code toepassen",
-    "codeApplied": "Kortingscode toegepast",
-    "invalidCode": "Ongeldige kortingscode",
-    "discount": "Korting"
+    "description": "Beschreibung",
+    "discountType": "Rabattart",
+    "percentage": "Prozent",
+    "fixedAmount": "Fester Betrag",
+    "discountValue": "Rabattwert",
+    "minOrderAmount": "Mindestbestellwert",
+    "maxUses": "Maximale Nutzung",
+    "usesCount": "Anzahl verwendet",
+    "validFrom": "Gültig ab",
+    "validUntil": "Gültig bis",
+    "isActive": "Aktiv",
+    "usage": "Nutzung",
+    "noUsage": "Noch nicht verwendet",
+    "applyCode": "Code anwenden",
+    "codeApplied": "Rabattcode angewendet",
+    "invalidCode": "Ungültiger Rabattcode",
+    "discount": "Rabatt",
+    "aangemaakt": "Rabattcode erstellt",
+    "uitleg": "Käufer geben den Code bei der Bestellung ein. Der Rabatt gilt für die Karten, nicht für die Servicegebühr. Einen bereits verwendeten Code besser deaktivieren als löschen.",
+    "onbeperkt": "Unbegrenzt",
+    "perKoper": "Höchstens pro Käufer",
+    "concert": "Nur für Konzert",
+    "alleConcerten": "Alle Konzerte",
+    "geenCodes": "Es gibt noch keine Rabattcodes.",
+    "verwijderTitel": "Rabattcode löschen",
+    "verwijderVraag": "Rabattcode {{code}} löschen? Auch wer ihn verwendet hat, wird gelöscht."
   },
   "serviceFee": {
     "serviceFee": "Servicekosten",
@@ -6244,5 +6291,32 @@
     "andereNamen": "Andere Namen",
     "geen": "Keine Instrumente gefunden.",
     "uitleg": "Standardinstrumente gelten für alle Vereine. Passt eines nicht, blenden Sie es aus und legen Sie ein eigenes Instrument an."
+  },
+  "uitnodiging": {
+    "uitleg": "Eine Einladung ist für jemanden, der bereits ein Tutti-Konto hat, zum Beispiel bei einem anderen Verein. Ein neues Mitglied legen Sie unter Mitglieder an.",
+    "linkKlaar": "Einladung erstellt. Wenn E-Mail eingerichtet ist, erhält {{email}} eine Nachricht mit dem Link. Sie können ihn auch selbst weitergeben:",
+    "link": "Link der Einladung",
+    "kopieer": "Link kopieren",
+    "gekopieerd": "Link kopiert",
+    "kopierenMislukt": "Kopieren fehlgeschlagen; markieren Sie den Link und kopieren Sie ihn selbst.",
+    "tekst": "Sie wurden eingeladen, Mitglied von {{vereniging}} zu werden, als {{rol}}.",
+    "voorEmail": "Die Einladung ist für {{email}}.",
+    "geldigTot": "Gültig bis {{datum}}.",
+    "inloggen": "Anmelden, um anzunehmen",
+    "geenAccount": "Noch kein Konto? Bitten Sie den Verein, eines für Sie anzulegen.",
+    "aannemen": "Einladung annehmen",
+    "anderAccount": "Sie sind als {{huidig}} angemeldet, aber diese Einladung ist für {{email}}.",
+    "anderAccountInloggen": "Abmelden und mit der richtigen Adresse anmelden",
+    "gelukt": "Sie sind jetzt Mitglied von {{vereniging}}. Wechseln Sie oben auf dem Bildschirm zum Verein.",
+    "naarDashboard": "Zum Dashboard",
+    "nietGevonden": "Diese Einladung existiert nicht, wurde bereits verwendet oder ist abgelaufen. Bitten Sie den Verein um eine neue."
+  },
+  "verenigingsExport": {
+    "titel": "Daten des Vereins",
+    "uitleg": "Laden Sie eine Kopie aller Daten und Dateien Ihres Vereins herunter: eine JSON-Datei pro Bereich, dazu Noten, Aufnahmen und Anhänge. Passwörter und andere Geheimnisse sind nicht enthalten. Ein Zurückspielen in Tutti ist damit nicht möglich; dafür erstellt der Administrator der Installation eine Sicherung.",
+    "privacy": "Das Archiv enthält personenbezogene Daten von Mitgliedern. Bewahren Sie es sorgfältig auf.",
+    "knop": "Herunterladen (ZIP)",
+    "bezig": "Wird zusammengestellt…",
+    "gedownload": "Die Daten wurden heruntergeladen."
   }
 }

@@ -51,7 +51,14 @@ class NepSocket {
 const { sockets, io, aanmelding } = vi.hoisted(() => ({
   sockets: [] as any[],
   io: vi.fn(),
-  aanmelding: { user: null as { id: string; role: string; mustChangePassword?: boolean } | null },
+  aanmelding: {
+    user: null as {
+      id: string;
+      role: string;
+      mustChangePassword?: boolean;
+      tweestapInstellenVerplicht?: boolean;
+    } | null,
+  },
 }));
 
 vi.mock('socket.io-client', () => ({
@@ -166,6 +173,18 @@ describe('verbinden', () => {
     expect(io).not.toHaveBeenCalled();
 
     aanmelding.user = { id: 'gebruiker-1', role: 'member', mustChangePassword: false };
+    rerender();
+
+    expect(io).toHaveBeenCalledTimes(1);
+  });
+
+  it('verbindt pas als het lid de verplichte tweestapsverificatie heeft ingesteld', async () => {
+    aanmelding.user = { id: 'gebruiker-1', role: 'member', tweestapInstellenVerplicht: true };
+    const { useWebSocket } = await import('../useWebSocket');
+    const { rerender } = renderHook(() => useWebSocket());
+    expect(io).not.toHaveBeenCalled();
+
+    aanmelding.user = { id: 'gebruiker-1', role: 'member', tweestapInstellenVerplicht: false };
     rerender();
 
     expect(io).toHaveBeenCalledTimes(1);
