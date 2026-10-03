@@ -157,9 +157,10 @@ binnen. Daarom deze volgorde:
 3. **Muziektitels** - koppelt aan genres.
 4. **Uniformen** - _Uitgegeven aan_ koppelt aan het e-mailadres van een lid,
    dus na de leden.
-5. **Instrumenten in bezit, apparatuur, contacten** - in willekeurige
-   volgorde. Instrumenten, uniformen en apparatuur vragen de module
-   _Inventaris_, contacten de module _Externe contacten_.
+5. **Instrumenten in bezit, apparatuur, concertkleding, contacten** - in
+   willekeurige volgorde. Instrumenten, uniformen, apparatuur en
+   concertkleding vragen de module _Inventaris_, contacten de module
+   _Externe contacten_.
 
 Kolomnamen, synoniemen in drie talen en wat er (nog) niet kan:
 [IMPORTEREN.md](./IMPORTEREN.md).
@@ -211,7 +212,8 @@ Eerlijk over wat er (nog) niet is, zodat het niet halverwege de pilot opvalt:
 
 - Een vereniging kan haar eigen gegevens downloaden, maar **niet zelf terugzetten** (§1).
 - Er is **geen plek voor de privacyverklaring** in de app (§5).
-- **Concertkleding** is niet te importeren (de rest wel, §4).
+- **Concertkleding** is te importeren, maar welk tenue bij welk concert hoort
+  kies je daarna met de hand (§4).
 
 Loopt de pilot hier tegenaan, zet het dan in het feedbackverslag. Dat bepaalt
 wat er na de pilot het eerst gebouwd wordt.

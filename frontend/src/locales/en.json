@@ -6118,7 +6118,8 @@
       "instrumenten": "Instruments owned",
       "contacten": "Contacts",
       "uniformen": "Uniforms",
-      "apparatuur": "Equipment"
+      "apparatuur": "Equipment",
+      "kleding": "Concert attire"
     },
     "uitleg": {
       "leden": "Read members from a CSV file. You first see what happens to each row; nothing changes until you click import. Members who already exist are skipped.",
@@ -6126,7 +6127,8 @@
       "instrumenten": "Read the association's instruments from a CSV file. You first see what happens to each row; nothing changes until you click import. An instrument with the same serial number, or without a serial number and with the same name, is skipped.",
       "contacten": "Read contacts from a CSV file: suppliers, venues, sponsors. You first see what happens to each row; nothing changes until you click import. A contact with the same name is skipped.",
       "uniformen": "Read uniform items from a CSV file, with a quantity per row or with the email address of the member who wears it. You first see what happens to each row; nothing changes until you click import. Items have no number: if there are already as many of the same type, size, colour and wearer, the row is skipped. Importing the same file twice therefore duplicates nothing.",
-      "apparatuur": "Read equipment from a CSV file: sound, lighting, music stands, a trailer. You first see what happens to each row; nothing changes until you click import. Equipment with the same inventory number, serial number or (without those two) the same name is skipped. An item without an inventory number is given one."
+      "apparatuur": "Read equipment from a CSV file: sound, lighting, music stands, a trailer. You first see what happens to each row; nothing changes until you click import. Equipment with the same inventory number, serial number or (without those two) the same name is skipped. An item without an inventory number is given one.",
+      "kleding": "Import the outfits for concerts from a CSV file, with colour and pieces. You first see per row what will happen; nothing changes until you click import. An outfit with the same name is skipped. A colour can be a colour code (#1b2a49) or a colour name; an unknown colour is added to the description."
     },
     "kiesBestand": "Choose a CSV file",
     "sjabloon": "Download example file",
@@ -6189,7 +6191,10 @@
       "inventarisnummer": "Inventory number",
       "uniformStatus": "Status",
       "apparatuurStatus": "Status",
-      "apparatuurSoort": "Type"
+      "apparatuurSoort": "Type",
+      "omschrijving": "Description",
+      "onderdelen": "Pieces",
+      "standaard": "Default"
     },
     "instrumentStatus": {
       "available": "Available",
@@ -6260,7 +6265,10 @@
       "iban": "IBAN",
       "website": "Website",
       "kvk": "Chamber of Commerce number",
-      "btw": "VAT number"
+      "btw": "VAT number",
+      "omschrijving": "Description",
+      "kleur": "Colour",
+      "onderdelen": "Pieces"
     }
   },
   "catalogus": {
