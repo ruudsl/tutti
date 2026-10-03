@@ -123,6 +123,34 @@ describe('facturen', () => {
       expect(factuur.serviceFee + factuur.serviceFeeVat).toBeCloseTo(3, 2);
     });
 
+    it('zet een kortingscode als eigen regel en houdt de servicekosten heel', async () => {
+      // 2 x 20 = 40, korting 4, servicekosten 2: betaald 38.
+      const codeId = uuidv4();
+      testDb
+        .prepare(
+          `INSERT INTO discount_codes (id, association_id, code, discount_type, discount_value)
+           VALUES (?, ?, 'LENTE10', 'percentage', 10)`,
+        )
+        .run(codeId, vereniging.id);
+      const orderId = maakBestelling({ aantal: 2, stukprijs: 20, servicekosten: 2 - 4 });
+      testDb
+        .prepare('UPDATE ticket_orders SET discount_code_id = ?, discount_amount = 4 WHERE id = ?')
+        .run(codeId, orderId);
+
+      const factuur = await createInvoice(orderId);
+
+      expect(factuur.total).toBeCloseTo(38, 2);
+      expect(factuur.serviceFee + factuur.serviceFeeVat).toBeCloseTo(2, 2);
+      const kortingsregel = factuur.lineItems.find((r) => r.description === 'Korting (LENTE10)');
+      expect(kortingsregel).toBeDefined();
+      expect(kortingsregel!.totalPrice + kortingsregel!.vatAmount).toBeCloseTo(-4, 2);
+      const som = factuur.subtotal + factuur.vatAmount + factuur.serviceFee + factuur.serviceFeeVat;
+      expect(som).toBeCloseTo(38, 2);
+
+      // En na opnieuw inlezen staat de regel er nog.
+      expect(getInvoice(factuur.id)!.lineItems.map((r) => r.description)).toContain('Korting (LENTE10)');
+    });
+
     it('rekent geen servicekosten wanneer die er niet zijn', async () => {
       const factuur = await createInvoice(maakBestelling({ servicekosten: 0 }));
       expect(factuur.serviceFee).toBe(0);

@@ -69,6 +69,8 @@ interface OrderData {
   total: number;
   status: string;
   paidAt: string | null;
+  discountAmount: number | null;
+  discountCode: string | null;
 }
 
 interface OrderItem {
@@ -303,10 +305,13 @@ export async function createInvoice(orderId: string, businessDetails?: BusinessD
             o.total,
             o.status,
             o.paid_at as paidAt,
+            o.discount_amount as discountAmount,
+            dc.code as discountCode,
             c.name as concertName,
             c.association_id as associationId
         FROM ticket_orders o
         JOIN concerts c ON o.concert_id = c.id
+        LEFT JOIN discount_codes dc ON dc.id = o.discount_code_id AND dc.association_id = c.association_id
         WHERE o.id = ?
     `,
     )
@@ -359,6 +364,23 @@ export async function createInvoice(orderId: string, businessDetails?: BusinessD
       vatAmount: naarCenten(brutoRegel - nettoRegel),
     };
   });
+
+  // Een kortingscode verlaagt het kaartbedrag. Op de factuur staat hij als
+  // eigen, negatieve regel met dezelfde btw als de kaarten. Zonder die regel
+  // telde de factuur het volle kaartbedrag, en verdween het verschil met wat
+  // er betaald is uit de servicekosten - die dan op nul uitkwamen.
+  const korting = naarCenten(order.discountAmount ?? 0);
+  if (korting > 0) {
+    const nettoKorting = naarCenten(korting / (1 + VAT_RATE));
+    lineItems.push({
+      description: order.discountCode ? `Korting (${order.discountCode})` : 'Korting',
+      quantity: 1,
+      unitPrice: -nettoKorting,
+      totalPrice: -nettoKorting,
+      vatRate: VAT_RATE,
+      vatAmount: -naarCenten(korting - nettoKorting),
+    });
+  }
 
   // Calculate totals
   const subtotal = naarCenten(lineItems.reduce((sum, item) => sum + item.totalPrice, 0));
