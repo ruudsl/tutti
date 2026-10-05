@@ -16,6 +16,15 @@ All notable changes to this application are documented here.
 
 ### Fixed
 
+- **First login with a temporary password.** The tour covered the form for choosing your own password and caught every click; it now comes afterwards. Until the password is chosen (or two-step verification set up) the app shows only the profile, without menu, search and notifications that could not load anyway, and the header shows the association's name instead of "Tutti".
+- **Music committee and conductor saw no members** in seating, occupancy, neighbour preferences, a concert's stage and "Add several members" on a concert. Those pages requested the admin's member list; they now have their own list with only name, instruments and orchestras.
+- **Dashboard:** a member saw a downloads counter that was always zero, and without the Practice module there was a practice counter; behind the scenes both failed every time. They now only appear when they have something to show. The shortcut to issue reports disappears when that module is off.
+- **Transferring tickets** (`/tickets/transfer`) stayed reachable with ticket sales switched off, showing an empty page.
+- **Ticket sales:** without orders two counters stayed empty instead of showing 0.
+- **Ticket page:** in Dutch the date read "Zaterdag 21 November 2026"; the month is now lower case as it should be.
+- **Rehearsal:** the "Additional fields" card was shown even when the association has no additional fields.
+- **Login screen:** the language selector overlapped the association's name and the heading of the password screens.
+- **Log:** a wrong password or an invalid discount code was logged as an error with a full stack trace, among the real failures. User errors are now warnings.
 - **Ticket invoices with a discount** showed the full ticket amount as the total, and the service fee disappeared. The discount is now a separate line on the invoice, and the total is what the buyer paid.
 - **Ticket invoices** from two associations on the same day got the same number, and the second one failed with a database error instead of an invoice. The number is now unique per association. This was dormant: ticket invoices are not yet created automatically.
 - **Genres and instruments:** an ordinary admin got edit and delete buttons on standard items, which the server then refused. Those buttons are for super admins only again.

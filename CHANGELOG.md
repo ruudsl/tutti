@@ -16,6 +16,15 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
 ### Gerepareerd
 
+- **De eerste keer inloggen met een tijdelijk wachtwoord.** De rondleiding legde zich over het formulier voor het eigen wachtwoord en ving elke klik af; hij komt nu pas daarna. Tot het wachtwoord gekozen is (of tweestapsverificatie ingesteld) toont de app alleen het profiel, zonder menu, zoeken en meldingen die toch niets konden laden, en de kop toont de naam van de vereniging in plaats van "Tutti".
+- **Muziekcommissie en dirigent zagen geen leden** bij de opstelling, de bezetting, de buurvoorkeuren, het podium van een concert en "Meerdere leden toevoegen" bij een concert. Die pagina's vroegen de ledenlijst van de beheerder op; ze hebben nu een eigen lijst met alleen naam, instrumenten en orkesten.
+- **Dashboard:** een lid zag een downloadteller die altijd op nul stond, en zonder module Oefenen stond er een oefenteller; achter de schermen gaven die elke keer een foutmelding. Ze verschijnen nu alleen als ze iets kunnen tonen. De snelkoppeling naar de meldkamer valt weg als die module uit staat.
+- **Kaartjes overdragen** (`/tickets/transfer`) bleef bereikbaar als de kaartverkoop uit stond, met een lege pagina.
+- **Ticketverkoop:** zonder bestellingen bleven twee tellers leeg in plaats van 0.
+- **Kaartpagina:** de datum stond er als "Zaterdag 21 November 2026"; nu "Zaterdag 21 november 2026".
+- **Repetitie:** de kaart "Extra velden" stond er ook als de vereniging geen extra velden heeft.
+- **Inlogscherm:** de taalkeuze viel over de naam van de vereniging en over de kop van de wachtwoordschermen.
+- **Logboek:** een verkeerd wachtwoord of een ongeldige kortingscode kwam als fout met volledige stacktrace in het logboek, tussen de echte storingen. Fouten van de gebruiker zijn nu een waarschuwing.
 - **Kaartfacturen met korting** noemden het volle kaartbedrag als totaal, en de servicekosten verdwenen. De korting staat nu als eigen regel op de factuur, en het totaal is wat de koper betaald heeft.
 - **Kaartfacturen** van twee verenigingen op dezelfde dag kregen hetzelfde nummer, en de tweede gaf een databasefout in plaats van een factuur. Het nummer is nu uniek per vereniging. Dit sliep nog: kaartfacturen worden nog niet automatisch gemaakt.
 - **Genres en instrumenten:** een gewone beheerder kreeg bij een standaarditem de knoppen bewerken en verwijderen, die de server daarna weigerde. Die knoppen zijn weer alleen voor de superbeheerder.

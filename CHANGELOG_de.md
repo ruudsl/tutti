@@ -16,6 +16,15 @@ Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
 ### Behoben
 
+- **Erste Anmeldung mit einem vorläufigen Passwort.** Die Tour lag über dem Formular für das eigene Passwort und fing jeden Klick ab; sie kommt jetzt erst danach. Bis das Passwort gewählt (oder die Zwei-Faktor-Authentifizierung eingerichtet) ist, zeigt die App nur das Profil, ohne Menü, Suche und Benachrichtigungen, die ohnehin nichts laden konnten, und die Kopfzeile zeigt den Namen des Vereins statt "Tutti".
+- **Musikkommission und Dirigent sahen keine Mitglieder** bei Sitzordnung, Besetzung, Nachbarwünschen, der Bühne eines Konzerts und "Mehrere Mitglieder hinzufügen" bei einem Konzert. Diese Seiten fragten die Mitgliederliste der Administratoren ab; sie haben jetzt eine eigene Liste mit nur Name, Instrumenten und Orchestern.
+- **Dashboard:** Ein Mitglied sah einen Download-Zähler, der immer auf null stand, und ohne das Modul Üben gab es einen Übungszähler; im Hintergrund schlugen beide jedes Mal fehl. Sie erscheinen jetzt nur, wenn sie etwas zeigen können. Die Verknüpfung zu den Fehlermeldungen entfällt, wenn dieses Modul aus ist.
+- **Karten übertragen** (`/tickets/transfer`) blieb bei ausgeschaltetem Kartenverkauf erreichbar, mit einer leeren Seite.
+- **Kartenverkauf:** Ohne Bestellungen blieben zwei Zähler leer statt 0 zu zeigen.
+- **Kartenseite:** Auf Niederländisch stand der Monat mit großem Anfangsbuchstaben im Datum; jetzt richtig klein.
+- **Probe:** Die Karte "Zusätzliche Felder" erschien auch, wenn der Verein keine zusätzlichen Felder hat.
+- **Anmeldebildschirm:** Die Sprachauswahl lag über dem Vereinsnamen und der Überschrift der Passwortseiten.
+- **Protokoll:** Ein falsches Passwort oder ein ungültiger Rabattcode wurde als Fehler mit vollständigem Stacktrace protokolliert, zwischen den echten Störungen. Fehler der Benutzer sind jetzt Warnungen.
 - **Kartenrechnungen mit Rabatt** nannten den vollen Kartenbetrag als Summe, und die Servicegebühr verschwand. Der Rabatt steht jetzt als eigene Zeile auf der Rechnung, und die Summe ist das, was der Käufer bezahlt hat.
 - **Ticketrechnungen** zweier Vereine am selben Tag erhielten dieselbe Nummer, und die zweite scheiterte mit einem Datenbankfehler statt einer Rechnung. Die Nummer ist jetzt pro Verein eindeutig. Das schlief noch: Ticketrechnungen werden noch nicht automatisch erstellt.
 - **Genres und Instrumente:** Ein gewöhnlicher Administrator bekam bei einem Standardeintrag die Schaltflächen Bearbeiten und Löschen, die der Server danach ablehnte. Diese Schaltflächen sind wieder nur für Super-Admins.
