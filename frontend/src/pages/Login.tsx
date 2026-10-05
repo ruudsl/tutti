@@ -107,7 +107,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+        <div className="login-taalkeuze">
           <LanguageSwitcher compact />
         </div>
         <div className="login-logo">

@@ -877,6 +877,23 @@ body {
 }
 
 /* Language Switcher */
+
+/*
+ * De taalkeuze op het inlogscherm en de wachtwoordschermen. Hij stond
+ * absoluut gepositioneerd rechtsboven in de kaart en viel zo over de naam van
+ * de vereniging en over de kop ("E-mail verzonden"). Nu staat hij in de
+ * stroom, op een eigen regel boven de kop.
+ */
+.login-taalkeuze {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.75rem -0.75rem 0.25rem 0;
+}
+
+.login-taalkeuze .language-switcher-compact {
+  margin-right: 0;
+}
+
 .language-switcher-compact {
   display: flex;
   gap: 0.25rem;

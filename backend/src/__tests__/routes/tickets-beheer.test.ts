@@ -140,6 +140,20 @@ function andereVereniging() {
 }
 
 describe('Verkoopoverzicht', () => {
+  it('telt nul, niet niets, als er nog geen bestellingen zijn', async () => {
+    // SUM over nul rijen is NULL; de tellers op de pagina Ticketverkoop
+    // bleven dan leeg.
+    const res = await alsAdmin('get', '/tickets/sales');
+
+    expect(res.body.summary).toEqual({
+      totalOrders: 0,
+      paidOrders: 0,
+      totalRevenue: 0,
+      pendingOrders: 0,
+      refundedOrders: 0,
+    });
+  });
+
   it('toont alleen bestellingen van de eigen vereniging', async () => {
     maakBestelling();
     const elders = andereVereniging();

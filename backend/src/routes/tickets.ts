@@ -2230,11 +2230,13 @@ router.get(
       .prepare(
         `
         SELECT
+            -- SUM over nul rijen is NULL; de tellers toonden dan niets in
+            -- plaats van 0.
             COUNT(*) as total_orders,
-            SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END) as paid_orders,
-            SUM(CASE WHEN o.status = 'paid' THEN o.total ELSE 0 END) as total_revenue,
-            SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
-            SUM(CASE WHEN o.status = 'refunded' THEN 1 ELSE 0 END) as refunded_orders
+            COALESCE(SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END), 0) as paid_orders,
+            COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total ELSE 0 END), 0) as total_revenue,
+            COALESCE(SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END), 0) as pending_orders,
+            COALESCE(SUM(CASE WHEN o.status = 'refunded' THEN 1 ELSE 0 END), 0) as refunded_orders
         FROM ticket_orders o
         JOIN concerts c ON o.concert_id = c.id
         WHERE ${whereClause}

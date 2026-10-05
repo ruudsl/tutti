@@ -5,7 +5,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
-import { getOrchestras, getSeatingNeighbors, createSeatingNeighbor, deleteSeatingNeighbor, getUsers } from '../api';
+import {
+  getOrchestras,
+  getSeatingNeighbors,
+  createSeatingNeighbor,
+  deleteSeatingNeighbor,
+  getBezettingsLeden,
+} from '../api';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 
@@ -30,8 +36,8 @@ export default function NeighborPreferences() {
   });
 
   const { data: users = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => getUsers(),
+    queryKey: ['bezettingsleden'],
+    queryFn: getBezettingsLeden,
     enabled: !!isManager,
     staleTime: 5 * 60 * 1000,
   });

@@ -107,7 +107,7 @@ function zetApiKlaar(): void {
     concertsPerType: [],
     mostPlayedPieces: [],
   });
-  vi.mocked(api.getUsers).mockResolvedValue([]);
+  vi.mocked(api.getBezettingsLeden).mockResolvedValue([]);
   vi.mocked(api.getMusicTitles).mockResolvedValue([]);
   vi.mocked(api.getPieceHistory).mockResolvedValue({
     title: '',

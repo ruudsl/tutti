@@ -105,7 +105,7 @@ function zetApiKlaar(): void {
     concertsPerType: [],
     mostPlayedPieces: [],
   });
-  vi.mocked(api.getUsers).mockResolvedValue([]);
+  vi.mocked(api.getBezettingsLeden).mockResolvedValue([]);
   vi.mocked(api.getMusicTitles).mockResolvedValue([]);
   vi.mocked(api.getPieceHistory).mockResolvedValue({
     title: '',
@@ -206,7 +206,7 @@ describe('concertpagina - vastgelegd gedrag vóór het opknippen', () => {
       expect(api.getConcertTypes).toHaveBeenCalled();
       expect(api.getConcertYears).toHaveBeenCalled();
       expect(api.getConcertStatistics).toHaveBeenCalled();
-      expect(api.getUsers).toHaveBeenCalled();
+      expect(api.getBezettingsLeden).toHaveBeenCalled();
       expect(api.getMusicTitles).toHaveBeenCalled();
     });
   });
