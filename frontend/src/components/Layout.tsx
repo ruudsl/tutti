@@ -350,7 +350,14 @@ export default function Layout() {
     }
   };
 
+  // Wie eerst een eigen wachtwoord of tweestapsverificatie moet regelen, kan
+  // alleen naar zijn profiel; de server weigert tot dan bijna elk verzoek.
+  // Menu, zoeken, meldingen en de verenigingskiezer blijven dan weg: ze konden
+  // niets laden en gaven elk een 403, en de huisstijl viel terug op "Tutti".
+  const beperkt = !!user?.mustChangePassword || !!user?.tweestapInstellenVerplicht;
+
   const loadBrandSettings = () => {
+    if (beperkt) return;
     getSettings()
       .then(setBrandSettings)
       .catch((error) => {
@@ -365,7 +372,8 @@ export default function Layout() {
     const handler = () => loadBrandSettings();
     window.addEventListener('settings-updated', handler);
     return () => window.removeEventListener('settings-updated', handler);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- opnieuw laden zodra de beperking eraf is
+  }, [beperkt]);
 
   const handleLogout = () => {
     logout();
@@ -374,7 +382,7 @@ export default function Layout() {
 
   const userRole = user?.role || '';
   const { enabled: enabledModules } = useModules();
-  const isSuperbeheerder = useIsSuperAdmin().data?.isSuperAdmin === true;
+  const isSuperbeheerder = useIsSuperAdmin({ enabled: !beperkt }).data?.isSuperAdmin === true;
 
   // Filter nav groups op rol en op de modules die deze vereniging aan heeft.
   // Een groep waarvan alles wegvalt, verdwijnt zelf ook.
@@ -434,23 +442,27 @@ export default function Layout() {
             ) : (
               <Icon name="music" size={22} />
             )}{' '}
-            {brandSettings?.displayName || 'Tutti'}
+            {brandSettings?.displayName || user?.associationName || 'Tutti'}
           </Link>
         </div>
 
         <div className="header-right">
           <SyncStatusIndicator compact inHeader />
-          <button
-            className="header-search-btn"
-            onClick={openSearch}
-            title={t('search.placeholder', 'Zoeken (Cmd+K)')}
-            aria-label={t('search.label', 'Zoeken')}
-          >
-            <Icon name="search" size={18} />
-          </button>
-          <NotificationBell />
-          <RecentItems />
-          <AssociationSwitcher />
+          {!beperkt && (
+            <>
+              <button
+                className="header-search-btn"
+                onClick={openSearch}
+                title={t('search.placeholder', 'Zoeken (Cmd+K)')}
+                aria-label={t('search.label', 'Zoeken')}
+              >
+                <Icon name="search" size={18} />
+              </button>
+              <NotificationBell />
+              <RecentItems />
+              <AssociationSwitcher />
+            </>
+          )}
           <DarkModeToggle />
           <Link
             to="/profile"
@@ -470,125 +482,127 @@ export default function Layout() {
 
       <div className="app-body">
         {/* Desktop sidebar navigation */}
-        <aside
-          className={`app-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}
-          aria-label={t('accessibility.mainNavigation')}
-        >
-          <nav className="sidebar-main-nav">
-            {visibleGroups.map((group) => {
-              const active = isGroupActive(group);
-              const isSingleItem = group.items.length === 1;
-              const visibleItems = group.items.filter(isItemVisible);
+        {!beperkt && (
+          <aside
+            className={`app-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}
+            aria-label={t('accessibility.mainNavigation')}
+          >
+            <nav className="sidebar-main-nav">
+              {visibleGroups.map((group) => {
+                const active = isGroupActive(group);
+                const isSingleItem = group.items.length === 1;
+                const visibleItems = group.items.filter(isItemVisible);
 
-              if (isSingleItem) {
-                // Single-item groups render as direct links
-                return (
-                  <NavLink
-                    key={group.titleKey}
-                    to={visibleItems[0].path}
-                    end={visibleItems[0].path === '/'}
-                    className={({ isActive }) => `sidebar-direct-link ${isActive ? 'active' : ''}`}
-                    title={sidebarCollapsed ? t(group.titleKey) : undefined}
-                  >
-                    <span className="sidebar-item-icon" aria-hidden="true">
-                      <Icon name={group.icon} size={20} />
-                    </span>
-                    <span className="sidebar-item-label">{t(group.titleKey)}</span>
-                  </NavLink>
-                );
-              }
-
-              // Multi-item groups render as collapsible sections
-              return (
-                <div key={group.titleKey} className={`sidebar-group ${active ? 'active' : ''}`}>
-                  <NavLink
-                    to={visibleItems[0].path}
-                    className={`sidebar-group-header ${active ? 'active' : ''}`}
-                    title={sidebarCollapsed ? t(group.titleKey) : undefined}
-                  >
-                    <span className="sidebar-item-icon" aria-hidden="true">
-                      <Icon name={group.icon} size={20} />
-                    </span>
-                    <span className="sidebar-item-label">{t(group.titleKey)}</span>
-                    {visibleItems.length > 1 && (
-                      <span className="sidebar-group-arrow" aria-hidden="true">
-                        <Icon name={active ? 'chevronDown' : 'chevronRight'} size={14} />
+                if (isSingleItem) {
+                  // Single-item groups render as direct links
+                  return (
+                    <NavLink
+                      key={group.titleKey}
+                      to={visibleItems[0].path}
+                      end={visibleItems[0].path === '/'}
+                      className={({ isActive }) => `sidebar-direct-link ${isActive ? 'active' : ''}`}
+                      title={sidebarCollapsed ? t(group.titleKey) : undefined}
+                    >
+                      <span className="sidebar-item-icon" aria-hidden="true">
+                        <Icon name={group.icon} size={20} />
                       </span>
-                    )}
-                  </NavLink>
-                  {active && !sidebarCollapsed && (
-                    <ul className="sidebar-group-items">
-                      {visibleItems.map((item) => (
-                        <li key={item.path}>
-                          <NavLink
-                            to={item.path}
-                            className={({ isActive }) => `sidebar-sub-link ${isActive ? 'active' : ''}`}
-                          >
-                            {t(item.labelKey)}
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
+                      <span className="sidebar-item-label">{t(group.titleKey)}</span>
+                    </NavLink>
+                  );
+                }
 
-          {/* Sidebar footer with secondary links */}
-          <div className="sidebar-footer">
-            <NavLink
-              to="/user-guide"
-              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
-              title={sidebarCollapsed ? t('nav.userGuide') : undefined}
-            >
-              <span className="sidebar-item-icon" aria-hidden="true">
-                <Icon name="book" size={18} />
-              </span>
-              <span className="sidebar-item-label">{t('nav.userGuide')}</span>
-            </NavLink>
-            <NavLink
-              to="/profile"
-              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
-              title={sidebarCollapsed ? t('nav.profile') : undefined}
-            >
-              <span className="sidebar-item-icon" aria-hidden="true">
-                <Icon name="user" size={18} />
-              </span>
-              <span className="sidebar-item-label">{t('nav.profile')}</span>
-            </NavLink>
-            <NavLink
-              to="/privacy-settings"
-              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
-              title={sidebarCollapsed ? t('nav.privacySettings') : undefined}
-            >
-              <span className="sidebar-item-icon" aria-hidden="true">
-                <Icon name="shield" size={18} />
-              </span>
-              <span className="sidebar-item-label">{t('nav.privacySettings')}</span>
-            </NavLink>
-            <NavLink
-              to="/data-export"
-              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
-              title={sidebarCollapsed ? t('nav.dataExport') : undefined}
-            >
-              <span className="sidebar-item-icon" aria-hidden="true">
-                <Icon name="download" size={18} />
-              </span>
-              <span className="sidebar-item-label">{t('nav.dataExport')}</span>
-            </NavLink>
-            <button
-              className="sidebar-direct-link sidebar-footer-link"
-              onClick={handleRestartOnboarding}
-              title={sidebarCollapsed ? t('onboarding.menuItem') : undefined}
-            >
-              <span className="sidebar-item-icon" aria-hidden="true">
-                <Icon name="graduationCap" size={18} />
-              </span>
-              <span className="sidebar-item-label">{t('onboarding.menuItem')}</span>
-            </button>
-          </div>
-        </aside>
+                // Multi-item groups render as collapsible sections
+                return (
+                  <div key={group.titleKey} className={`sidebar-group ${active ? 'active' : ''}`}>
+                    <NavLink
+                      to={visibleItems[0].path}
+                      className={`sidebar-group-header ${active ? 'active' : ''}`}
+                      title={sidebarCollapsed ? t(group.titleKey) : undefined}
+                    >
+                      <span className="sidebar-item-icon" aria-hidden="true">
+                        <Icon name={group.icon} size={20} />
+                      </span>
+                      <span className="sidebar-item-label">{t(group.titleKey)}</span>
+                      {visibleItems.length > 1 && (
+                        <span className="sidebar-group-arrow" aria-hidden="true">
+                          <Icon name={active ? 'chevronDown' : 'chevronRight'} size={14} />
+                        </span>
+                      )}
+                    </NavLink>
+                    {active && !sidebarCollapsed && (
+                      <ul className="sidebar-group-items">
+                        {visibleItems.map((item) => (
+                          <li key={item.path}>
+                            <NavLink
+                              to={item.path}
+                              className={({ isActive }) => `sidebar-sub-link ${isActive ? 'active' : ''}`}
+                            >
+                              {t(item.labelKey)}
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+
+            {/* Sidebar footer with secondary links */}
+            <div className="sidebar-footer">
+              <NavLink
+                to="/user-guide"
+                className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+                title={sidebarCollapsed ? t('nav.userGuide') : undefined}
+              >
+                <span className="sidebar-item-icon" aria-hidden="true">
+                  <Icon name="book" size={18} />
+                </span>
+                <span className="sidebar-item-label">{t('nav.userGuide')}</span>
+              </NavLink>
+              <NavLink
+                to="/profile"
+                className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+                title={sidebarCollapsed ? t('nav.profile') : undefined}
+              >
+                <span className="sidebar-item-icon" aria-hidden="true">
+                  <Icon name="user" size={18} />
+                </span>
+                <span className="sidebar-item-label">{t('nav.profile')}</span>
+              </NavLink>
+              <NavLink
+                to="/privacy-settings"
+                className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+                title={sidebarCollapsed ? t('nav.privacySettings') : undefined}
+              >
+                <span className="sidebar-item-icon" aria-hidden="true">
+                  <Icon name="shield" size={18} />
+                </span>
+                <span className="sidebar-item-label">{t('nav.privacySettings')}</span>
+              </NavLink>
+              <NavLink
+                to="/data-export"
+                className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+                title={sidebarCollapsed ? t('nav.dataExport') : undefined}
+              >
+                <span className="sidebar-item-icon" aria-hidden="true">
+                  <Icon name="download" size={18} />
+                </span>
+                <span className="sidebar-item-label">{t('nav.dataExport')}</span>
+              </NavLink>
+              <button
+                className="sidebar-direct-link sidebar-footer-link"
+                onClick={handleRestartOnboarding}
+                title={sidebarCollapsed ? t('onboarding.menuItem') : undefined}
+              >
+                <span className="sidebar-item-icon" aria-hidden="true">
+                  <Icon name="graduationCap" size={18} />
+                </span>
+                <span className="sidebar-item-label">{t('onboarding.menuItem')}</span>
+              </button>
+            </div>
+          </aside>
+        )}
 
         {/* Main content area */}
         <main id="main-content" className="main-content">
@@ -612,32 +626,34 @@ export default function Layout() {
       </div>
 
       {/* Mobile bottom tab bar */}
-      <nav className="mobile-bottom-tabs" aria-label={t('nav.mobileNavigation', 'Navigatie')}>
-        {mobileBottomTabs.map((tab) => (
-          <NavLink
-            key={tab.path}
-            to={tab.path}
-            end={tab.exact}
-            className={`bottom-tab ${isTabActive(tab) ? 'active' : ''}`}
+      {!beperkt && (
+        <nav className="mobile-bottom-tabs" aria-label={t('nav.mobileNavigation', 'Navigatie')}>
+          {mobileBottomTabs.map((tab) => (
+            <NavLink
+              key={tab.path}
+              to={tab.path}
+              end={tab.exact}
+              className={`bottom-tab ${isTabActive(tab) ? 'active' : ''}`}
+            >
+              <span className="bottom-tab-icon" aria-hidden="true">
+                <Icon name={tab.icon} size={22} />
+              </span>
+              <span className="bottom-tab-label">{t(tab.labelKey)}</span>
+            </NavLink>
+          ))}
+          <button
+            className={`bottom-tab ${mobileMenuOpen ? 'active' : ''} ${isMoreActive ? 'active' : ''}`}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={t('nav.more', 'Meer')}
+            aria-expanded={mobileMenuOpen}
           >
             <span className="bottom-tab-icon" aria-hidden="true">
-              <Icon name={tab.icon} size={22} />
+              <Icon name="menu" size={22} />
             </span>
-            <span className="bottom-tab-label">{t(tab.labelKey)}</span>
-          </NavLink>
-        ))}
-        <button
-          className={`bottom-tab ${mobileMenuOpen ? 'active' : ''} ${isMoreActive ? 'active' : ''}`}
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label={t('nav.more', 'Meer')}
-          aria-expanded={mobileMenuOpen}
-        >
-          <span className="bottom-tab-icon" aria-hidden="true">
-            <Icon name="menu" size={22} />
-          </span>
-          <span className="bottom-tab-label">{t('nav.more', 'Meer')}</span>
-        </button>
-      </nav>
+            <span className="bottom-tab-label">{t('nav.more', 'Meer')}</span>
+          </button>
+        </nav>
+      )}
 
       {/* Mobile full menu overlay */}
       {mobileMenuOpen && (
@@ -765,13 +781,17 @@ export default function Layout() {
         </a>
       </footer>
 
-      <SectionErrorBoundary sectionName="Quick Actions" compact>
-        <QuickActionsMenu onOpenSearch={openSearch} />
-      </SectionErrorBoundary>
+      {!beperkt && (
+        <>
+          <SectionErrorBoundary sectionName="Quick Actions" compact>
+            <QuickActionsMenu onOpenSearch={openSearch} />
+          </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="Global Search" compact>
-        <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
-      </SectionErrorBoundary>
+          <SectionErrorBoundary sectionName="Global Search" compact>
+            <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
+          </SectionErrorBoundary>
+        </>
+      )}
 
       <SectionErrorBoundary sectionName="Keyboard Shortcuts" compact>
         <KeyboardShortcutsHelp />

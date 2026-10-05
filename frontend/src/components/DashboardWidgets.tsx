@@ -14,6 +14,10 @@ import {
 import { getTaskSummary, type TaskPriority } from '../api/tasks';
 import { Icon, type IconName } from './Icon';
 import type { Rehearsal } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { useModules } from '../context/ModulesContext';
+import { isPathVisible } from '../utils/modules';
+import { ROLES } from '../utils/constants';
 
 interface WidgetContainerProps {
   widget: DashboardWidget;
@@ -166,11 +170,29 @@ export function DashboardEditToggle({
  *
  * De getallen komen nu van waar ze echt staan. Het aantal stukken vraagt één
  * rij op met pageSize 1; het gaat om de telling ernaast, niet om de rij zelf.
+ *
+ * Niet elke teller is er voor iedereen. /activity/stats is voor beheer en
+ * muziekcommissie (routes/activity.ts), en /practice/stats bestaat alleen als
+ * de module oefenen aan staat. Een lid kreeg bij elke dashboardlading een 403
+ * en een vereniging zonder die module een 404, met een tegel die altijd nul
+ * bleef. Wie de bron niet mag of heeft, krijgt de tegel niet.
  */
 function StatsWidget() {
   const { t } = useTranslation();
-  const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: () => getActivityStats() });
-  const { data: oefening } = useQuery({ queryKey: ['dashboard-practice'], queryFn: () => getPracticeStats() });
+  const { user } = useAuth();
+  const { isEnabled } = useModules();
+  const toonDownloads = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
+  const toonOefenen = isEnabled('practice');
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => getActivityStats(),
+    enabled: toonDownloads,
+  });
+  const { data: oefening } = useQuery({
+    queryKey: ['dashboard-practice'],
+    queryFn: () => getPracticeStats(),
+    enabled: toonOefenen,
+  });
   const { data: stukken } = useQuery({
     queryKey: ['dashboard-piece-count'],
     queryFn: () => getMusicPiecesPaginated({ page: 1, pageSize: 1 }),
@@ -183,15 +205,19 @@ function StatsWidget() {
           <div className="stat-value">{stukken?.total ?? 0}</div>
           <div className="stat-label">{t('dashboard.totalPieces')}</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">{oefening?.totalMinutes ?? 0}</div>
-          <div className="stat-label">{t('dashboard.practiceMinutes')}</div>
-        </div>
-        <div className="stat-card">
-          {/* De periode is standaard 30 dagen, wat bij het label "deze maand" past. */}
-          <div className="stat-value">{stats?.totals?.total_downloads ?? 0}</div>
-          <div className="stat-label">{t('dashboard.downloadsThisMonth')}</div>
-        </div>
+        {toonOefenen && (
+          <div className="stat-card">
+            <div className="stat-value">{oefening?.totalMinutes ?? 0}</div>
+            <div className="stat-label">{t('dashboard.practiceMinutes')}</div>
+          </div>
+        )}
+        {toonDownloads && (
+          <div className="stat-card">
+            {/* De periode is standaard 30 dagen, wat bij het label "deze maand" past. */}
+            <div className="stat-value">{stats?.totals?.total_downloads ?? 0}</div>
+            <div className="stat-label">{t('dashboard.downloadsThisMonth')}</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -501,13 +527,16 @@ export function RecentActivityWidget() {
 // Quick Actions Widget
 export function QuickActionsWidget() {
   const { t } = useTranslation();
+  const { enabled } = useModules();
 
+  // De meldkamer hoort bij een module; staat die uit, dan wees de knop naar
+  // een pagina die meteen terugstuurde naar het dashboard.
   const actions: { to: string; icon: IconName; label: string }[] = [
-    { to: '/my-music', icon: 'music', label: t('nav.myMusic') },
-    { to: '/rehearsals', icon: 'calendar', label: t('nav.rehearsals') },
-    { to: '/tools', icon: 'wrench', label: t('nav.tools') },
-    { to: '/issues', icon: 'warning', label: t('nav.issues') },
-  ];
+    { to: '/my-music', icon: 'music' as IconName, label: t('nav.myMusic') },
+    { to: '/rehearsals', icon: 'calendar' as IconName, label: t('nav.rehearsals') },
+    { to: '/tools', icon: 'wrench' as IconName, label: t('nav.tools') },
+    { to: '/issues', icon: 'warning' as IconName, label: t('nav.issues') },
+  ].filter((actie) => isPathVisible(actie.to, enabled));
 
   return (
     <div className="widget">

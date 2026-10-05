@@ -271,8 +271,16 @@ export function OnboardingTour({ forceShow, onClose }: OnboardingTourProps) {
   const role = user?.role || 'member';
   const steps = TOUR_STEPS[role] || TOUR_STEPS.member;
 
+  // Wie eerst een eigen wachtwoord moet kiezen of tweestapsverificatie moet
+  // instellen, staat op zijn profiel en kan verder nergens heen. De rondleiding
+  // legde zich daar over het formulier heen; hij komt pas daarna.
+  const eerstIets = !!user?.mustChangePassword || !!user?.tweestapInstellenVerplicht;
+
   useEffect(() => {
-    if (!user) return;
+    if (!user || eerstIets) {
+      setPhase('idle');
+      return;
+    }
 
     if (forceShow) {
       setPhase('welcome');
@@ -284,7 +292,7 @@ export function OnboardingTour({ forceShow, onClose }: OnboardingTourProps) {
     if (!hasCompletedOnboarding(user.id)) {
       setPhase('welcome');
     }
-  }, [user, forceShow]);
+  }, [user, forceShow, eerstIets]);
 
   const handleComplete = useCallback(() => {
     if (user) markOnboardingComplete(user.id);
