@@ -159,6 +159,7 @@
     "inventory": "Inventory",
     "operations": "Operations",
     "content": "Content",
+    "association": "Association",
     "admin": "Admin"
   },
   "modules": {
@@ -2913,6 +2914,16 @@
         "concert": "This discount code is not valid for this concert.",
         "kaartsoort": "This discount code is not valid for the selected tickets."
       }
+    },
+    "testbetaling": {
+      "banner": "Test environment - no real payment",
+      "titel": "Test payment",
+      "bestelling": "Order",
+      "simuleer": "Simulate payment (successful)",
+      "bevestiging": "The order is marked as paid and the tickets have been created.",
+      "geannuleerd": "The payment has been cancelled.",
+      "mislukt": "Completing the payment failed. Refresh the page and try again.",
+      "alleenBeheerder": "No payment provider has been set up yet, so this order cannot actually be paid. In a test environment an administrator of the association completes the payment here; ask the association to confirm your payment."
     }
   },
   "offlineScanner": {

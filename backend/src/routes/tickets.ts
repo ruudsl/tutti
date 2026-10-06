@@ -3753,6 +3753,8 @@ router.get(
   }),
 );
 
+const nepbetalingSchema = z.object({ action: z.enum(['pay', 'cancel']) });
+
 /**
  * Mock payment endpoint for development only
  */
@@ -3767,7 +3769,19 @@ router.post(
     }
 
     const { id: orderId } = req.params;
-    const { action } = req.body; // 'pay' or 'cancel'
+    const { action } = nepbetalingSchema.parse(req.body);
+
+    // Alleen een bestelling van de eigen vereniging; ook in ontwikkeling.
+    const bestelling = db
+      .prepare(
+        `SELECT o.id FROM ticket_orders o
+         JOIN concerts c ON o.concert_id = c.id
+         WHERE o.id = ? AND c.association_id = ?`,
+      )
+      .get(orderId, req.user!.associationId);
+    if (!bestelling) {
+      throw new ApiError(404, 'Bestelling niet gevonden');
+    }
 
     if (action === 'pay') {
       await processPaymentUpdate(orderId, 'paid');

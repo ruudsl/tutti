@@ -40,7 +40,7 @@ Is de installatie voor één vereniging, hernoem _Harmonie_ dan onder
    alleen de vereniging aangemaakt: geen orkest, geen gebruikers.
 2. **Wisselen** naar de nieuwe vereniging met de verenigingskiezer in de kop.
    Een superbeheerder mag dat bij elke vereniging.
-3. **De eerste beheerder aanmaken:** **Beheer → Leden** (`/users`) → nieuwe
+3. **De eerste beheerder aanmaken:** **Vereniging → Leden** (`/users`) → nieuwe
    gebruiker met rol _Beheerder_. Het lid komt in de vereniging waarin je nu
    staat. Je kiest een tijdelijk wachtwoord; bij de eerste keer inloggen moet
    hij een eigen kiezen. Als e-mail werkt, krijgt hij een welkomstmail met de
@@ -80,7 +80,7 @@ zolang e-mail niet is ingesteld, staat er bovenaan een waarschuwing.
 | 5   | Modules kiezen                                          | **Modules** (`/modules`)                      |
 | 6   | Orkesten aanmaken                                       | **Orkesten** (`/orchestras`)                  |
 | 7   | Genres en instrumenten nalopen                          | **Genres**, **Instrumenten**                  |
-| 8   | Bewaartermijnen vaststellen                             | **Beheer → AVG-beheer → Bewaring**            |
+| 8   | Bewaartermijnen vaststellen                             | **Vereniging → AVG-beheer → Bewaring**        |
 | 9   | Gegevens importeren                                     | **Importeren** (`/importeren`), zie §4        |
 | 10  | Leden toegang geven                                     | zie §3                                        |
 
@@ -112,8 +112,8 @@ Toelichting bij een paar stappen:
 
 Er zijn drie manieren. Kies per groep wat past.
 
-**Eén voor één, met een tijdelijk wachtwoord** - **Beheer → Leden** (`/users`)
-of **Beheer → Ledenbeheer** (`/onboarding`). De beheerder kiest of krijgt een tijdelijk
+**Eén voor één, met een tijdelijk wachtwoord** - **Vereniging → Leden** (`/users`)
+of **Vereniging → Ledenbeheer** (`/onboarding`). De beheerder kiest of krijgt een tijdelijk
 wachtwoord en geeft het zelf door; bij de eerste keer inloggen kiest het lid
 een eigen. _Ledenbeheer_ maakt het wachtwoord zelf aan, toont het één keer en
 kan ook een Microsoft 365-account aanmaken als die koppeling is ingesteld.
@@ -129,7 +129,7 @@ vereniging tegelijk. Let op:
   voorbeeldtekst staat hieronder.
 - De rol komt uit de kolom _Rol_; zonder rol wordt het _lid_.
 
-**Uitnodigen per link** - **Beheer → Uitnodigingen** (`/uitnodigingen`). Voor
+**Uitnodigen per link** - **Vereniging → Uitnodigingen** (`/uitnodigingen`). Voor
 wie **al een account in Tutti heeft**, bijvoorbeeld bij een andere vereniging
 op dezelfde installatie. De uitgenodigde krijgt een mail met een link (als
 e-mail is ingesteld); de link staat ook op het scherm, om zelf door te geven.

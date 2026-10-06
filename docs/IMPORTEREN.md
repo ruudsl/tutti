@@ -2,7 +2,7 @@
 
 Een vereniging die overstapt, heeft haar leden, haar muziekbibliotheek, haar
 instrumenten, uniformen, apparatuur, concertkleding en contacten meestal in
-Excel. Onder **Beheer → Importeren** lees je die in.
+Excel. Onder **Vereniging → Importeren** lees je die in.
 
 | Soort                 | Wie                              | Module            |
 | --------------------- | -------------------------------- | ----------------- |

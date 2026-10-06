@@ -300,7 +300,7 @@ Dit hangt af van je configuratie. Wij raden aan:
 
 ### Hoe voeg ik een nieuw orkest toe?
 
-1. Ga naar Beheer > Orkesten
+1. Ga naar Vereniging > Orkesten
 2. Klik op "Nieuw orkest"
 3. Vul de naam en standaard repetitiedagen in
 4. Voeg leden toe aan het orkest

@@ -6,13 +6,23 @@ All notable changes to this application are documented here.
 
 ### Added
 
+- **Accept or decline from the rehearsal list and the dashboard.** Every upcoming rehearsal now has two buttons, _Accept_ and _Decline_; the choice shows right away. Before, a member had to open the rehearsal to decline.
+- **Getting-started checklist for a new admin.** The dashboard lists what still needs doing: set up email, your own two-step verification, choose modules, orchestras, members, rehearsals and retention periods, each with a link. As long as email is not set up there is also a warning: without email, invitations, password resets and tickets do not arrive.
+- **Plain file names when uploading sheet music.** "Bolero - Trompet 1.pdf" and "Bolero - Klarinet in Bb 2.pdf" are now read as title, instrument, tuning and part number, just like the underscore format. Without a dash it works when the last words are an instrument the association knows. A title like "Pirates of the Caribbean - Medley" stays intact.
+- **The Board role can be assigned** in Members and is recognised by the member import (_Bestuur_, _Board_, _Vorstand_). The role existed, but until now a board member had to be entered as admin or as a regular member.
 - **Importing concert attire.** **Import** now also offers _Concert attire_: outfits with description, colour and pieces from a spreadsheet, for admins and the music committee. A colour can be a colour code or a plain colour name (_navy_, _burgundy_, also in Dutch and German). Outfits that already exist are skipped or, if you choose, updated. Part of the Inventory module.
 - **Download association data.** An association's admin can download a ZIP from the dashboard with all data and files of their own association: a JSON file per part, plus sheet music, recordings and attachments. Passwords and other secrets are not included, and nothing from another association ever is. It cannot be restored; that remains the backup of the whole installation, with the super admin.
 - **Discount codes for ticket sales.** Under **Discount codes**, admins and the music committee create codes: a percentage or a fixed amount, optionally with a maximum, a limit per buyer, an end date and a single concert. The buyer enters the code when ordering and sees the discount in the summary right away; the discount comes off the tickets, not off the service fee. The maximum holds even when two people order at the same time, and an expired or refunded order releases the code again. If nothing is left to pay, the order is completed straight away. Checking a code is limited to twenty attempts per minute.
 - **Require two-step verification.** Under **Settings → Two-step verification** the admin chooses: nobody (as before), admins and board, or everyone. Anyone who is required to have it and does not yet, lands on their profile after logging in to set it up first; until then the API only answers what is needed for that, and turning it off is refused while it is required. Only an admin who has it turned on can require it. Off by default.
-- **Inviting by link works end to end.** The invitee receives an e-mail with the link (nl, en, de), the link is also shown on screen to copy, and `/invite/…` is a page where you accept the invitation - also if you still need to log in. Admins and board members find invitations under **Admin → Invitations**; before, they were only on a page for super admins, no e-mail was sent and the link led nowhere. An invitation is for someone who already has an account.
+- **Inviting by link works end to end.** The invitee receives an e-mail with the link (nl, en, de), the link is also shown on screen to copy, and `/invite/…` is a page where you accept the invitation - also if you still need to log in. Admins and board members find invitations under **Association → Invitations**; before, they were only on a page for super admins, no e-mail was sent and the link led nowhere. An invitation is for someone who already has an account.
 - **Guide for a pilot association** (`docs/PILOT_ONBOARDING.md`, in Dutch): who does what in the first week, how members get access, the order of imports, what to arrange for privacy beforehand, and what is not there yet. With a template for the pilot report (`docs/templates/PILOT_FEEDBACK.md`).
 - **GDPR administration, Associations and Your data are in the menu.** The pages existed but could only be reached by typing the address. Associations is shown to super admins only; Privacy and Your data are now also in the mobile menu.
+
+### Changed
+
+- **The Admin menu is split in two.** _Association_ holds members, onboarding, invitations, orchestras, custom fields, accounting, import and GDPR; _Admin_ the settings, modules, payments, Microsoft link, theme, changelog, audit log and system status. It used to be eighteen items in one list.
+- **Dutch texts without English-style capitals.** Buttons and headings like "Bestelling Plaatsen" are now "Bestelling plaatsen" throughout the Dutch interface, and "Backup" is now "reservekopie".
+- **An earlier unpaid order no longer holds on to a discount code.** If a buyer abandoned payment and ordered again with the same code, they were told they had already used it. A new order with the code now lets the old unpaid one expire. If the old payment is still in progress, the message says so.
 
 ### Fixed
 
@@ -31,6 +41,8 @@ All notable changes to this application are documented here.
 - **The backup card on the dashboard** is now shown to super admins only. A backup covers the whole installation; an association admin saw the card and then an error.
 - **The feedback link** at the bottom of every page pointed to the repository's old name.
 - **The emergency script for the admin password** (`backend/scripts/reset-admin-password.js`) no longer sets `admin123` when called without an argument, but a random password it shows once. It refuses a password that is too short, can reset another account, and the user must change the password at the next login. `docs/SELF_HOSTING.md` now explains how to use it with Docker; the old instructions assumed `sqlite3` in the image, which it does not contain.
+- **The plus button in the bottom right** covered the last button or table row of a page; there is now room below the content. On a tablet (641-768 pixels wide) it sat on the tab bar.
+- **The test payment without a payment provider** sent a buyer to the login screen without explanation. It now says that no payment provider is set up yet and that the association has to confirm the payment. An admin can only complete orders of their own association there, and an unknown action no longer cancels the order.
 
 ## [1.19.0] - 2026-09-28
 

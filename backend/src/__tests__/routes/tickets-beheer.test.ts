@@ -697,6 +697,25 @@ describe('Nepbetalingen', () => {
     expect(bestelstatus(orderId)).toBe('pending');
   });
 
+  it('laat een beheerder geen bestelling van een andere vereniging op betaald zetten', async () => {
+    const elders = andereVereniging();
+    const orderId = maakBestelling(elders.concertId, { status: 'pending', paidAt: false });
+
+    const res = await alsAdmin('post', `/tickets/orders/${orderId}/mock-payment`).send({ action: 'pay' });
+
+    expect(res.status).toBe(404);
+    expect(bestelstatus(orderId)).toBe('pending');
+  });
+
+  it('wijst een onbekende actie af in plaats van de bestelling te annuleren', async () => {
+    const orderId = maakBestelling(concertId, { status: 'pending', paidAt: false });
+
+    const res = await alsAdmin('post', `/tickets/orders/${orderId}/mock-payment`).send({ action: 'betaal' });
+
+    expect(res.status).toBe(400);
+    expect(bestelstatus(orderId)).toBe('pending');
+  });
+
   it('laat een gewoon lid geen bestelling op betaald zetten', async () => {
     const orderId = maakBestelling(concertId, { status: 'pending', paidAt: false });
     const res = await als(memberToken, 'post', `/tickets/orders/${orderId}/mock-payment`).send({ action: 'pay' });

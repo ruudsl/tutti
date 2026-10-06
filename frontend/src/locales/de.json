@@ -159,6 +159,7 @@
     "inventory": "Inventar",
     "operations": "Betrieb",
     "content": "Inhalt",
+    "association": "Verein",
     "admin": "Verwaltung"
   },
   "modules": {
@@ -3558,6 +3559,16 @@
         "concert": "Dieser Rabattcode gilt nicht für dieses Konzert.",
         "kaartsoort": "Dieser Rabattcode gilt nicht für die gewählten Karten."
       }
+    },
+    "testbetaling": {
+      "banner": "Testumgebung - keine echte Zahlung",
+      "titel": "Testzahlung",
+      "bestelling": "Bestellung",
+      "simuleer": "Zahlung simulieren (erfolgreich)",
+      "bevestiging": "Die Bestellung ist als bezahlt markiert und die Tickets wurden erstellt.",
+      "geannuleerd": "Die Zahlung wurde abgebrochen.",
+      "mislukt": "Der Abschluss ist fehlgeschlagen. Laden Sie die Seite neu und versuchen Sie es erneut.",
+      "alleenBeheerder": "Es ist noch kein Zahlungsdienst eingerichtet, daher kann diese Bestellung nicht wirklich bezahlt werden. In einer Testumgebung schließt ein Administrator des Vereins die Zahlung hier ab; bitten Sie den Verein, Ihre Zahlung zu bestätigen."
     }
   },
   "bulk": {

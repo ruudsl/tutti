@@ -4516,8 +4516,9 @@ tr[tabindex]:focus-visible {
   transition: transform 0.2s;
 }
 
-/* Mobile responsive FAB */
-@media (max-width: 640px) {
+/* Mobile responsive FAB - zelfde breekpunt als de tabbalk onderin, anders
+   staat de knop tussen 641 en 768 pixels óp de tabbalk. */
+@media (max-width: 768px) {
   .quick-actions-fab {
     /* Position above mobile bottom tabs (60px + safe area) */
     bottom: calc(60px + env(safe-area-inset-bottom, 0) + 1rem);
