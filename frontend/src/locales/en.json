@@ -1282,7 +1282,7 @@
     "filenameFormatDesc": "The filename is automatically parsed to extract metadata:",
     "examples": "Examples",
     "tip": "Tip",
-    "instrumentTip": "The instrument is automatically recognized via the instrument list and aliases.",
+    "instrumentTip": "The instrument is recognised automatically from the instrument list and aliases. Plain names such as \"Bolero - Trumpet 1.pdf\" or \"Bolero - Clarinet in Bb 2.pdf\" work too.",
     "filesFailed": "file(s) failed",
     "zipBulkDescription": "Upload a ZIP file containing multiple PDFs at once.",
     "filesUploaded": "file(s) successfully uploaded",

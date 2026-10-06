@@ -1300,7 +1300,7 @@
     "filenameFormatDesc": "Der Dateiname wird automatisch geparst, um Metadaten zu extrahieren:",
     "examples": "Beispiele",
     "tip": "Tipp",
-    "instrumentTip": "Das Instrument wird automatisch über die Instrumentenliste und Aliasse erkannt.",
+    "instrumentTip": "Das Instrument wird automatisch über die Instrumentenliste und Aliasse erkannt. Einfache Namen wie \"Bolero - Trompete 1.pdf\" oder \"Bolero - Klarinette in Bb 2.pdf\" funktionieren auch.",
     "filesFailed": "Datei(en) fehlgeschlagen",
     "zipBulkDescription": "Laden Sie eine ZIP-Datei mit mehreren PDFs auf einmal hoch.",
     "filesUploaded": "Datei(en) erfolgreich hochgeladen",
