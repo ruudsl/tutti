@@ -6326,5 +6326,28 @@
     "knop": "Herunterladen (ZIP)",
     "bezig": "Wird zusammengestellt…",
     "gedownload": "Die Daten wurden heruntergeladen."
+  },
+  "startlijst": {
+    "titel": "Erste Schritte",
+    "uitleg": "Was du in der ersten Woche einrichtest. Ein Schritt gilt als erledigt, sobald er eingerichtet ist.",
+    "voortgang": "{{gedaan}} von {{totaal}} erledigt",
+    "regelen": "Einrichten",
+    "verbergen": "Ausblenden",
+    "gedaan": "erledigt",
+    "nogTeDoen": "offen",
+    "stap": {
+      "email": "E-Mail (SMTP) einrichten",
+      "tweestap": "Zwei-Faktor-Authentifizierung für das eigene Konto einschalten",
+      "modules": "Auswählen, welche Bereiche der Verein nutzt",
+      "orkesten": "Ein Orchester anlegen",
+      "leden": "Mitgliedern Zugang geben",
+      "repetities": "Die erste Probe planen",
+      "bewaartermijnen": "Aufbewahrungsfristen festlegen"
+    },
+    "geenMail": {
+      "titel": "E-Mail ist nicht eingerichtet.",
+      "tekst": "Tutti versendet derzeit nichts: keine Willkommens-E-Mail, keinen Link bei \"Passwort vergessen\", keine Erinnerungen.",
+      "instellen": "E-Mail einrichten"
+    }
   }
 }

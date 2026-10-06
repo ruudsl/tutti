@@ -6326,5 +6326,28 @@
     "knop": "Download (ZIP)",
     "bezig": "Bezig met samenstellen…",
     "gedownload": "De gegevens zijn gedownload."
+  },
+  "startlijst": {
+    "titel": "Aan de slag",
+    "uitleg": "Wat je in de eerste week regelt. Een stap gaat vanzelf op gedaan zodra hij geregeld is.",
+    "voortgang": "{{gedaan}} van {{totaal}} gedaan",
+    "regelen": "Regelen",
+    "verbergen": "Verbergen",
+    "gedaan": "gedaan",
+    "nogTeDoen": "nog te doen",
+    "stap": {
+      "email": "E-mail (SMTP) instellen",
+      "tweestap": "Tweestapsverificatie aanzetten voor je eigen account",
+      "modules": "Kiezen welke onderdelen de vereniging gebruikt",
+      "orkesten": "Een orkest aanmaken",
+      "leden": "Leden toegang geven",
+      "repetities": "De eerste repetitie plannen",
+      "bewaartermijnen": "Bewaartermijnen vaststellen"
+    },
+    "geenMail": {
+      "titel": "E-mail is niet ingesteld.",
+      "tekst": "Tutti verstuurt nu niets: geen welkomstmail, geen link bij \"Wachtwoord vergeten\", geen herinneringen.",
+      "instellen": "E-mail instellen"
+    }
   }
 }

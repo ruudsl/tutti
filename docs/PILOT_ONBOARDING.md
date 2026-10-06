@@ -67,7 +67,9 @@ Er is geen zelfregistratie: een vereniging kan zich niet zelf aanmelden.
 
 ## 2. Beheerder: de eerste week
 
-Doe het in deze volgorde. Latere stappen leunen op eerdere.
+Doe het in deze volgorde. Latere stappen leunen op eerdere. Het dashboard van
+de beheerder toont dezelfde stappen als startlijst en vinkt ze vanzelf af;
+zolang e-mail niet is ingesteld, staat er bovenaan een waarschuwing.
 
 | #   | Wat                                                     | Waar                                          |
 | --- | ------------------------------------------------------- | --------------------------------------------- |

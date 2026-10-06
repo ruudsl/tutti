@@ -6326,5 +6326,28 @@
     "knop": "Download (ZIP)",
     "bezig": "Putting it together…",
     "gedownload": "The data has been downloaded."
+  },
+  "startlijst": {
+    "titel": "Getting started",
+    "uitleg": "What to set up in the first week. A step is marked done as soon as it is set up.",
+    "voortgang": "{{gedaan}} of {{totaal}} done",
+    "regelen": "Set up",
+    "verbergen": "Hide",
+    "gedaan": "done",
+    "nogTeDoen": "to do",
+    "stap": {
+      "email": "Set up e-mail (SMTP)",
+      "tweestap": "Turn on two-step verification for your own account",
+      "modules": "Choose which parts the association uses",
+      "orkesten": "Create an orchestra",
+      "leden": "Give members access",
+      "repetities": "Schedule the first rehearsal",
+      "bewaartermijnen": "Set retention periods"
+    },
+    "geenMail": {
+      "titel": "E-mail is not set up.",
+      "tekst": "Tutti sends nothing right now: no welcome e-mail, no \"Forgot password\" link, no reminders.",
+      "instellen": "Set up e-mail"
+    }
   }
 }

@@ -20,6 +20,7 @@ import { opslagGebruik, opslagLimiet } from '../services/abonnementLimieten';
 import { validate } from '../middleware/validate';
 import { z } from 'zod';
 import { TWEESTAP_STANDEN, tweestapStand } from '../services/tweestapVerplicht';
+import { startlijst } from '../services/startlijst';
 
 const router = Router();
 
@@ -182,6 +183,22 @@ router.get(
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json({ stand: tweestapStand(req.user!.associationId), zelfAan: heeftZelfTweestap(req.user!.id) });
+  }),
+);
+
+/**
+ * GET /settings/startlijst - wat de beheerder van een nieuwe vereniging nog
+ * moet doen, per stap gedaan of niet (services/startlijst.ts).
+ */
+router.get(
+  '/startlijst',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user!.associationId) {
+      throw new ApiError(400, 'Geen vereniging gekoppeld aan dit account.');
+    }
+    res.json({ stappen: startlijst(req.user!.associationId, req.user!.id) });
   }),
 );
 
