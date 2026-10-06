@@ -27,6 +27,9 @@ export interface BestandsnaamGegevens {
 /** Stemmingen die als los woord in een partijnaam staan: "Bb Klarinet", "Hoorn in F". */
 const STEMMING = /^(bb|eb|ab|bes|es|as)$/i;
 const STEMMING_NA_IN = /^(bb|eb|ab|bes|es|as|f|c|d|g|a|e)$/i;
+/** Langer is geen bestandsnaam meer (de grens van vrijwel elk bestandssysteem). */
+const MAX_LENGTE = 255;
+
 const STREEPJES = new Set(['-', '–', '—']);
 const isWit = (teken: string | undefined) => teken !== undefined && /\s/.test(teken);
 
@@ -38,6 +41,7 @@ const isWit = (teken: string | undefined) => teken !== undefined && /\s/.test(te
  */
 function splitsOpStreepje(naam: string): string[] {
   const delen: string[] = [];
+  if (naam.length > MAX_LENGTE) return [naam];
   let begin = 0;
   for (let i = 0; i < naam.length; i++) {
     if (STREEPJES.has(naam[i]) && isWit(naam[i - 1]) && isWit(naam[i + 1])) {
@@ -53,12 +57,15 @@ export function leesBestandsnaam(
   bestandsnaam: string,
   kentInstrument?: (naam: string) => boolean,
 ): BestandsnaamGegevens {
-  const naam = bestandsnaam.replace(/\.pdf$/i, '').trim();
+  // De naam komt van de gebruiker; wat geen tekst is of langer dan een
+  // bestandsnaam kan zijn, wordt niet verder gelezen dan nodig.
+  const tekst = typeof bestandsnaam === 'string' ? bestandsnaam.slice(0, MAX_LENGTE) : '';
+  const naam = tekst.replace(/\.pdf$/i, '').trim();
 
   if (naam.includes('_')) {
     const delen = naam.split('_');
     return {
-      title: delen[0] || bestandsnaam,
+      title: delen[0] || tekst,
       arranger: delen[1] || null,
       instrument: delen[2] || null,
       tuning: delen[3] || null,
@@ -68,7 +75,7 @@ export function leesBestandsnaam(
   }
 
   const leeg = {
-    title: naam || bestandsnaam,
+    title: naam || tekst,
     arranger: null,
     instrument: null,
     tuning: null,

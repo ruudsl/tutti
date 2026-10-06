@@ -100,4 +100,14 @@ describe('lange namen', () => {
     expect(leesBestandsnaam(naam, kent).instrument).toBeNull();
     expect(performance.now() - start).toBeLessThan(500);
   });
+
+  it('leest niet verder dan de lengte van een bestandsnaam', () => {
+    const titel = 'Bolero'.padEnd(300, 'x');
+    expect(leesBestandsnaam(`${titel} - Trompet 1.pdf`, kent)).toMatchObject({ instrument: null });
+    expect(leesBestandsnaam(`${titel} - Trompet 1.pdf`, kent).title).toHaveLength(255);
+  });
+
+  it('geeft een lege titel terug voor iets dat geen tekst is', () => {
+    expect(leesBestandsnaam(['a', 'b'] as unknown as string).title).toBe('');
+  });
 });
