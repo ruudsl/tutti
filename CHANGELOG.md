@@ -15,6 +15,7 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
 ### Gerepareerd
 
+- **Nodemailer bijgewerkt naar versie 10.** Versie 9 had bekende beveiligingsproblemen, waaronder een gedeelde DNS-cache die de TLS-servernaam tussen SMTP-verbindingen kon hergebruiken. Dat raakt een installatie waarin elke vereniging een eigen mailserver heeft. Ook zijn een paar adresverwerkingen opgelost die op een kwaadwillig adres heel traag werden. Er verandert niets aan de instellingen; Node.js 20 of nieuwer is nodig, en Tutti vraagt al 24.
 - **Kaartfacturen** van twee verenigingen op dezelfde dag kregen hetzelfde nummer, en de tweede gaf een databasefout in plaats van een factuur. Het nummer is nu uniek per vereniging. Dit sliep nog: kaartfacturen worden nog niet automatisch gemaakt.
 - **Genres en instrumenten:** een gewone beheerder kreeg bij een standaarditem de knoppen bewerken en verwijderen, die de server daarna weigerde. Die knoppen zijn weer alleen voor de superbeheerder.
 - **De reservekopiekaart op het dashboard** staat alleen nog bij de superbeheerder. Een reservekopie omvat de hele installatie; een verenigingsbeheerder kreeg de kaart te zien en daarna een foutmelding.
