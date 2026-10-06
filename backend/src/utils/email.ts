@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import logger from './logger';
 import db from '../database/connection';
 import { getPasswordResetEmail } from '../templates/emails';
@@ -26,7 +26,7 @@ interface SmtpRij {
 }
 
 interface SmtpKeuze {
-  transporter: nodemailer.Transporter;
+  transporter: Transporter;
   from: string;
   bron: 'vereniging' | 'installatie';
 }

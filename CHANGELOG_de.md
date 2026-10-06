@@ -15,6 +15,7 @@ Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
 ### Behoben
 
+- **Nodemailer auf Version 10 aktualisiert.** Version 9 hatte bekannte Sicherheitsprobleme, darunter einen gemeinsamen DNS-Cache, der den TLS-Servernamen über SMTP-Verbindungen hinweg wiederverwenden konnte. Das betrifft eine Installation, in der jeder Verein einen eigenen Mailserver hat. Außerdem wurden einige Adressparser behoben, die bei einer bösartigen Adresse sehr langsam wurden. An den Einstellungen ändert sich nichts; Node.js 20 oder neuer ist nötig, Tutti verlangt bereits 24.
 - **Ticketrechnungen** zweier Vereine am selben Tag erhielten dieselbe Nummer, und die zweite scheiterte mit einem Datenbankfehler statt einer Rechnung. Die Nummer ist jetzt pro Verein eindeutig. Das schlief noch: Ticketrechnungen werden noch nicht automatisch erstellt.
 - **Genres und Instrumente:** Ein gewöhnlicher Administrator bekam bei einem Standardeintrag die Schaltflächen Bearbeiten und Löschen, die der Server danach ablehnte. Diese Schaltflächen sind wieder nur für Super-Admins.
 - **Die Sicherungskarte auf dem Dashboard** erscheint nur noch bei Super-Admins. Eine Sicherung umfasst die ganze Installation; ein Vereinsadministrator sah die Karte und danach eine Fehlermeldung.

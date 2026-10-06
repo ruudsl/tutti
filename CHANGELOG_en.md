@@ -15,6 +15,7 @@ All notable changes to this application are documented here.
 
 ### Fixed
 
+- **Nodemailer updated to version 10.** Version 9 had known security issues, including a shared DNS cache that could reuse the TLS server name across SMTP connections. That affects an installation where each association has its own mail server. A few address parsers that became very slow on a malicious address have also been fixed. No settings change; Node.js 20 or newer is required, and Tutti already requires 24.
 - **Ticket invoices** from two associations on the same day got the same number, and the second one failed with a database error instead of an invoice. The number is now unique per association. This was dormant: ticket invoices are not yet created automatically.
 - **Genres and instruments:** an ordinary admin got edit and delete buttons on standard items, which the server then refused. Those buttons are for super admins only again.
 - **The backup card on the dashboard** is now shown to super admins only. A backup covers the whole installation; an association admin saw the card and then an error.
