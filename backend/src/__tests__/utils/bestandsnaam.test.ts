@@ -91,3 +91,13 @@ describe('wat niet opgeknipt wordt', () => {
     expect(leesBestandsnaam('Bolero Trompet 1.pdf')).toMatchObject({ title: 'Bolero Trompet 1', instrument: null });
   });
 });
+
+describe('lange namen', () => {
+  it('leest een naam met heel veel spaties in lineaire tijd', () => {
+    // Een reguliere expressie als /\s+-\s+/ deed hier kwadratisch over.
+    const naam = 'a' + ' '.repeat(50_000) + 'b.pdf';
+    const start = performance.now();
+    expect(leesBestandsnaam(naam, kent).instrument).toBeNull();
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+});

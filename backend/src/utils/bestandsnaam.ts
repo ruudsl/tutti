@@ -27,7 +27,27 @@ export interface BestandsnaamGegevens {
 /** Stemmingen die als los woord in een partijnaam staan: "Bb Klarinet", "Hoorn in F". */
 const STEMMING = /^(bb|eb|ab|bes|es|as)$/i;
 const STEMMING_NA_IN = /^(bb|eb|ab|bes|es|as|f|c|d|g|a|e)$/i;
-const STREEPJE = /\s+[-–—]\s+/;
+const STREEPJES = new Set(['-', '–', '—']);
+const isWit = (teken: string | undefined) => teken !== undefined && /\s/.test(teken);
+
+/**
+ * Splitst op een streepje met witruimte aan beide kanten: "Bolero - Trompet 1".
+ * Met de hand in plaats van met `split(/\s+-\s+/)`: die reguliere expressie
+ * kost kwadratische tijd op een naam met veel spaties achter elkaar, en de
+ * naam komt van de gebruiker.
+ */
+function splitsOpStreepje(naam: string): string[] {
+  const delen: string[] = [];
+  let begin = 0;
+  for (let i = 0; i < naam.length; i++) {
+    if (STREEPJES.has(naam[i]) && isWit(naam[i - 1]) && isWit(naam[i + 1])) {
+      delen.push(naam.slice(begin, i).trim());
+      begin = i + 1;
+    }
+  }
+  delen.push(naam.slice(begin).trim());
+  return delen;
+}
 
 export function leesBestandsnaam(
   bestandsnaam: string,
@@ -58,7 +78,7 @@ export function leesBestandsnaam(
 
   let titel: string;
   let partij: string;
-  const delen = naam.split(STREEPJE);
+  const delen = splitsOpStreepje(naam);
   if (delen.length >= 2) {
     titel = delen.slice(0, -1).join(' - ').trim();
     partij = delen[delen.length - 1].trim();
