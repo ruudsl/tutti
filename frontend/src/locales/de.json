@@ -3552,6 +3552,7 @@
         "verlopen": "Dieser Rabattcode ist abgelaufen.",
         "op": "Dieser Rabattcode ist aufgebraucht.",
         "koper": "Sie haben diesen Rabattcode bereits so oft verwendet wie erlaubt.",
+        "openstaand": "Du hast noch eine offene Zahlung mit diesem Rabattcode. Schließe sie zuerst ab oder versuche es in einer halben Stunde erneut.",
         "minimum": "Ihre Bestellung ist für diesen Rabattcode zu klein.",
         "concert": "Dieser Rabattcode gilt nicht für dieses Konzert.",
         "kaartsoort": "Dieser Rabattcode gilt nicht für die gewählten Karten."

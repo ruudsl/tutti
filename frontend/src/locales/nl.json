@@ -2748,6 +2748,7 @@
         "verlopen": "Deze kortingscode is verlopen.",
         "op": "Deze kortingscode is op.",
         "koper": "Je hebt deze kortingscode al zo vaak gebruikt als mag.",
+        "openstaand": "Je hebt nog een betaling met deze kortingscode openstaan. Rond die eerst af, of probeer het over een half uur opnieuw.",
         "minimum": "Je bestelling is te klein voor deze kortingscode.",
         "concert": "Deze kortingscode geldt niet voor dit concert.",
         "kaartsoort": "Deze kortingscode geldt niet voor de gekozen kaarten."

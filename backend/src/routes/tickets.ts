@@ -23,6 +23,7 @@ import {
   berekenKorting,
   geefKortingscodeVrij,
   kaartsoortenVanCode,
+  onbetaaldeBestellingenVanKoper,
   reserveerKortingscode,
   telKortingscodeAlsGebruikt,
   zetKortingscodeTerug,
@@ -454,6 +455,21 @@ router.post(
         throw new ApiError(400, captchaResult.error || 'CAPTCHA verification failed');
       }
       captchaVerified = true;
+    }
+
+    // Een eerdere bestelling van deze koper met deze code voor dit concert,
+    // afgebroken voor het betalen, vervalt nu - met zijn kaarten en zijn
+    // reservering van de code (services/kortingscodes.ts). Pas hier, na alle
+    // controles: wordt de nieuwe bestelling geweigerd, dan blijft de oude staan.
+    if (kortingscode) {
+      for (const eerdere of onbetaaldeBestellingenVanKoper(
+        concert.association_id,
+        discountCode!,
+        buyerEmail,
+        concertId,
+      )) {
+        await processPaymentUpdate(eerdere, 'expired');
+      }
     }
 
     // Create order with transaction

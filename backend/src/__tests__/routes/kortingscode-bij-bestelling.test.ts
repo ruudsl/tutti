@@ -199,11 +199,55 @@ describe('kortingscode bij een bestelling', () => {
   it('laat een koper de code niet vaker gebruiken dan toegestaan, ongeacht hoofdletters', async () => {
     maakCode({ max_uses_per_user: 1 });
 
-    expect((await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' })).status).toBe(201);
+    const eerste = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+    expect(eerste.status).toBe(201);
+    await request(app).post('/api/tickets/webhooks/payment').send({ orderId: eerste.body.orderId });
     const tweede = await bestel({ code: 'LENTE10', email: 'Kees@Voorbeeld.nl' });
 
     expect(tweede.status).toBe(400);
     expect(tweede.body.code).toBe('KORTINGSCODE_KOPER');
+  });
+
+  it('laat een afgebroken bestelling zonder betaling vervallen als dezelfde koper opnieuw bestelt', async () => {
+    // Bij het doorlopen van de kaartverkoop: een koper brak af voor het
+    // betalen en probeerde het opnieuw. Zijn eerste bestelling hield de code
+    // een half uur vast en hij kreeg "al zo vaak gebruikt".
+    const codeId = maakCode({ max_uses_per_user: 1 });
+    const eerste = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+
+    const tweede = await bestel({ code: 'LENTE10', email: 'Kees@Voorbeeld.nl' });
+
+    expect(tweede.status, JSON.stringify(tweede.body)).toBe(201);
+    expect(tweede.body.discount).toBe(4);
+    expect(bestelling(eerste.body.orderId).status).toBe('expired');
+    expect(gebruik(codeId)).toBe(1);
+    // De kaarten van de eerste bestelling zijn weer vrij: alleen de tweede telt.
+    expect((db.prepare('SELECT sold FROM ticket_types WHERE id = ?').get(kaartsoortId) as { sold: number }).sold).toBe(
+      2,
+    );
+  });
+
+  it('houdt de code vast als er al een betaling loopt, met een eigen reden', async () => {
+    // Die betaling kan nog binnenkomen; de bestelling laten vervallen zou de
+    // koper dan zonder kaarten laten.
+    const codeId = maakCode({ max_uses_per_user: 1 });
+    const eerste = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+    db.prepare("UPDATE ticket_orders SET payment_id = 'tr_loopt' WHERE id = ?").run(eerste.body.orderId);
+
+    const tweede = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+
+    expect(tweede.status).toBe(400);
+    expect(tweede.body.code).toBe('KORTINGSCODE_OPENSTAAND');
+    expect(bestelling(eerste.body.orderId).status).toBe('pending');
+    expect(gebruik(codeId)).toBe(1);
+  });
+
+  it('laat de bestelling van een andere koper staan', async () => {
+    maakCode({ max_uses_per_user: 1, max_uses: null });
+    const eerste = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+
+    expect((await bestel({ code: 'LENTE10', email: 'anna@voorbeeld.nl' })).status).toBe(201);
+    expect(bestelling(eerste.body.orderId).status).toBe('pending');
   });
 
   it('geeft de code vrij als de bestelling verloopt', async () => {

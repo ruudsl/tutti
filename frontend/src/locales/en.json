@@ -2907,6 +2907,7 @@
         "verlopen": "This discount code has expired.",
         "op": "This discount code has been used up.",
         "koper": "You have already used this discount code as often as allowed.",
+        "openstaand": "You still have an unfinished payment with this discount code. Complete it first, or try again in half an hour.",
         "minimum": "Your order is too small for this discount code.",
         "concert": "This discount code is not valid for this concert.",
         "kaartsoort": "This discount code is not valid for the selected tickets."
