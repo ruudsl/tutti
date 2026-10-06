@@ -30,6 +30,19 @@ export const getUsers = async (filters?: UsersFilters): Promise<User[]> => {
 };
 
 // Paginated version for new components
+/** Een lid zoals de opstelling hem nodig heeft: naam, instrumenten en orkesten. */
+export type BezettingsLid = Pick<User, 'id' | 'firstName' | 'lastName' | 'instruments' | 'orchestras'>;
+
+/**
+ * Alle leden met hun instrumenten en orkesten, voor opstelling, bezetting,
+ * buurvoorkeuren en het podium van een concert. Mag ook voor muziekcommissie
+ * en dirigent; getUsers is alleen voor de beheerder.
+ */
+export const getBezettingsLeden = async (): Promise<BezettingsLid[]> => {
+  const { data } = await api.get('/users/bezetting');
+  return data;
+};
+
 export const getUsersPaginated = async (filters?: UsersFilters): Promise<PaginatedResponse<User>> => {
   // `...filters` stond hier ACHTER page en pageSize en overschreef die weer met
   // de onbewerkte invoer. De begrenzing op MAX_PAGE_SIZE deed daardoor niets:

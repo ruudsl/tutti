@@ -240,7 +240,7 @@ Bij het beheren van meerdere verenigingen (multi-association):
 
 Een gebruikersrol kan alleen worden gewijzigd door een beheerder:
 
-1. Ga naar **Beheer > Leden**
+1. Ga naar **Vereniging > Leden**
 2. Zoek de gebruiker
 3. Klik op bewerken
 4. Selecteer de nieuwe rol

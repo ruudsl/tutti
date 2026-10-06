@@ -376,6 +376,8 @@ export interface Rehearsal {
   piece_count: number;
   accepted_count: number;
   declined_count: number;
+  /** De eigen aan- of afmelding van wie de lijst opvraagt; null als die nog niet gereageerd heeft. */
+  my_status?: 'accepted' | 'declined' | null;
 }
 
 /**

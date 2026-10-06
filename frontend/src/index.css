@@ -877,6 +877,23 @@ body {
 }
 
 /* Language Switcher */
+
+/*
+ * De taalkeuze op het inlogscherm en de wachtwoordschermen. Hij stond
+ * absoluut gepositioneerd rechtsboven in de kaart en viel zo over de naam van
+ * de vereniging en over de kop ("E-mail verzonden"). Nu staat hij in de
+ * stroom, op een eigen regel boven de kop.
+ */
+.login-taalkeuze {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.75rem -0.75rem 0.25rem 0;
+}
+
+.login-taalkeuze .language-switcher-compact {
+  margin-right: 0;
+}
+
 .language-switcher-compact {
   display: flex;
   gap: 0.25rem;
@@ -4499,8 +4516,9 @@ tr[tabindex]:focus-visible {
   transition: transform 0.2s;
 }
 
-/* Mobile responsive FAB */
-@media (max-width: 640px) {
+/* Mobile responsive FAB - zelfde breekpunt als de tabbalk onderin, anders
+   staat de knop tussen 641 en 768 pixels óp de tabbalk. */
+@media (max-width: 768px) {
   .quick-actions-fab {
     /* Position above mobile bottom tabs (60px + safe area) */
     bottom: calc(60px + env(safe-area-inset-bottom, 0) + 1rem);

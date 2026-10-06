@@ -1,8 +1,8 @@
 # Importeren uit een spreadsheet
 
 Een vereniging die overstapt, heeft haar leden, haar muziekbibliotheek, haar
-instrumenten, uniformen, apparatuur en contacten meestal in Excel. Onder **Beheer → Importeren**
-lees je die in.
+instrumenten, uniformen, apparatuur, concertkleding en contacten meestal in
+Excel. Onder **Vereniging → Importeren** lees je die in.
 
 | Soort                 | Wie                              | Module            |
 | --------------------- | -------------------------------- | ----------------- |
@@ -12,6 +12,7 @@ lees je die in.
 | Contacten             | beheerder, muziekcommissie       | Externe contacten |
 | Uniformen             | beheerder, uniformcommissie      | Inventaris        |
 | Apparatuur            | beheerder, instrumentencommissie | Inventaris        |
+| Concertkleding        | beheerder, muziekcommissie       | Inventaris        |
 
 De muziekcommissie vindt het importeren onder **Bibliotheek**, de
 instrumentencommissie onder **Inventaris**. Staat een module uit, dan is die
@@ -63,6 +64,8 @@ wat naar wat gaat; een regel waarin niets verschilt blijft `bestaat`.
     apparatuur. Verandert het laatste onderhoud of het interval, dan wordt het
     volgende onderhoud opnieuw uitgerekend.
   - _Contacten:_ alle velden behalve de categorieën.
+  - _Concertkleding:_ omschrijving, kleur en onderdelen. Of een tenue het
+    standaardtenue is niet: dat kies je op de pagina Concertkleding.
   - _Uniformen_ kunnen niet bijgewerkt worden: ze hebben geen sleutel.
 
 ## Het bestand
@@ -99,8 +102,8 @@ Alleen de beheerder mag leden importeren.
 - **Tussenvoegsel:** komt voor de achternaam (`de` + `Vries` wordt `de Vries`).
 - **Rol:** zonder rol wordt iemand lid. De namen uit het scherm worden herkend
   in drie talen (`Dirigent`, `Muziekcommissie`, `Music Committee`,
-  `Materialausschuss`), en ook de technische naam (`conductor`). Een onbekende
-  rol is een fout, geen gok.
+  `Materialausschuss`, `Bestuur`, `Vorstand`), en ook de technische naam
+  (`conductor`, `board`). Een onbekende rol is een fout, geen gok.
 - **Instrumenten:** worden gezocht op naam en op de andere namen van een
   instrument. Een onbekend instrument is een waarschuwing.
 - **Orkesten:** moeten al bestaan in de vereniging. Een onbekend orkest is een
@@ -259,9 +262,35 @@ instrument is. Instrumenten hebben hun eigen soort hierboven.
 - **Uitleenbaar:** _ja_ of _nee_; zonder waarde _ja_.
 - **Categorieën** moeten al bestaan.
 
+## Concertkleding
+
+De tenues die de vereniging bij een concert voorschrijft, zoals op de pagina
+**Concertkleding**. Welk tenue bij welk concert hoort, kies je daarna op die
+pagina; dat kan nog niet uit een spreadsheet.
+
+| Veld         | Herkende kolomnamen (een greep)                  | Verplicht |
+| ------------ | ------------------------------------------------ | --------- |
+| Naam         | Naam, Tenue, Kleding, Name, Outfit, Kleidung     | ja        |
+| Omschrijving | Omschrijving, Beschrijving, Description          | nee       |
+| Kleur        | Kleur, Kleurcode, Color, Farbe                   | nee       |
+| Onderdelen   | Onderdelen, Kledingstukken, Items, Pieces, Teile | nee       |
+| Standaard    | Standaard, Standaardtenue, Default, Standard     | nee       |
+
+- **Een tenue bestaat al** als de vereniging er een heeft met dezelfde naam,
+  ongeacht hoofdletters.
+- **Kleur:** een kleurcode (`#1b2a49`, `1b2a49` of `#fff`) of een gangbare
+  kleurnaam in het Nederlands, Engels of Duits (_zwart_, _donkerblauw_,
+  _bordeaux_, _goud_, …). Een andere kleur gaat niet verloren: die komt
+  achter de omschrijving, als _Kleur: …_.
+- **Onderdelen:** gescheiden door komma's of schuine strepen, zoals
+  `Uniformjas, broek of rok, das`.
+- **Standaard:** _ja_ of _nee_. Er is één standaardtenue per vereniging; vraagt
+  het bestand er meer, dan wordt het de eerste. Een bestaand tenue wordt door
+  de import geen standaardtenue.
+
 ## Wat (nog) niet kan
 
-- Concertkleding importeren.
+- Concertkleding aan concerten koppelen.
 - Iets leegmaken of weghalen vanuit een spreadsheet, en genres, categorieën,
   instrumenten of orkesten van bestaande rijen bijwerken.
 - Onbekende orkesten, instrumenten of genres laten aanmaken.

@@ -234,10 +234,17 @@ export function bepaalWijzigingen(
 }
 
 /** De tabellen die een import kan bijwerken; de kolomnamen komen uit de importeurs zelf, nooit uit het bestand. */
-export type BijwerkbareTabel = 'users' | 'music_titles' | 'instrument_assets' | 'contacts' | 'equipment_items';
+export type BijwerkbareTabel =
+  'users' | 'music_titles' | 'instrument_assets' | 'contacts' | 'equipment_items' | 'outfits';
 
 /** users heeft geen updated_at. */
-const MET_UPDATED_AT = new Set<BijwerkbareTabel>(['music_titles', 'instrument_assets', 'contacts', 'equipment_items']);
+const MET_UPDATED_AT = new Set<BijwerkbareTabel>([
+  'music_titles',
+  'instrument_assets',
+  'contacts',
+  'equipment_items',
+  'outfits',
+]);
 
 /**
  * Voer de wijzigingen uit, per rij binnen de vereniging. Hoort binnen de

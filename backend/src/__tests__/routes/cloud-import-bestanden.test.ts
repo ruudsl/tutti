@@ -203,6 +203,18 @@ describe('een bestand uit de cloud binnenhalen', () => {
       expect(stukken()[0].instrument_id).toBe(trompet.id);
     });
 
+    it('leest ook een gewone naam als "Bolero - Trompet 1.pdf" en koppelt het instrument', async () => {
+      // Alleen de vorm met liggende streepjes werd gelezen; zo'n stuk kreeg
+      // geen instrument en verscheen bij geen lid in Mijn Muziek.
+      const trompet = createTestInstrument({ name: 'Trompet' });
+      await onedrive(beheerderToken, eenBestand('Bolero - Trompet 1.pdf'));
+
+      const [stuk] = stukken();
+      expect(stuk.title).toBe('Bolero');
+      expect(stuk.instrument_id).toBe(trompet.id);
+      expect(stuk.group_number).toBe('1');
+    });
+
     it('herkent een instrument ook via een alias', async () => {
       const trompet = createTestInstrument({ name: 'Trompet' });
       db.prepare('INSERT INTO instrument_aliases (id, instrument_id, alias) VALUES (?, ?, ?)').run(

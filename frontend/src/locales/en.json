@@ -159,6 +159,7 @@
     "inventory": "Inventory",
     "operations": "Operations",
     "content": "Content",
+    "association": "Association",
     "admin": "Admin"
   },
   "modules": {
@@ -290,6 +291,7 @@
   },
   "roles": {
     "admin": "Administrator",
+    "board": "Board",
     "music_committee": "Music Committee",
     "equipment_committee": "Equipment Committee",
     "uniforms_committee": "Uniforms Committee",
@@ -1282,7 +1284,7 @@
     "filenameFormatDesc": "The filename is automatically parsed to extract metadata:",
     "examples": "Examples",
     "tip": "Tip",
-    "instrumentTip": "The instrument is automatically recognized via the instrument list and aliases.",
+    "instrumentTip": "The instrument is recognised automatically from the instrument list and aliases. Plain names such as \"Bolero - Trumpet 1.pdf\" or \"Bolero - Clarinet in Bb 2.pdf\" work too.",
     "filesFailed": "file(s) failed",
     "zipBulkDescription": "Upload a ZIP file containing multiple PDFs at once.",
     "filesUploaded": "file(s) successfully uploaded",
@@ -2907,10 +2909,21 @@
         "verlopen": "This discount code has expired.",
         "op": "This discount code has been used up.",
         "koper": "You have already used this discount code as often as allowed.",
+        "openstaand": "You still have an unfinished payment with this discount code. Complete it first, or try again in half an hour.",
         "minimum": "Your order is too small for this discount code.",
         "concert": "This discount code is not valid for this concert.",
         "kaartsoort": "This discount code is not valid for the selected tickets."
       }
+    },
+    "testbetaling": {
+      "banner": "Test environment - no real payment",
+      "titel": "Test payment",
+      "bestelling": "Order",
+      "simuleer": "Simulate payment (successful)",
+      "bevestiging": "The order is marked as paid and the tickets have been created.",
+      "geannuleerd": "The payment has been cancelled.",
+      "mislukt": "Completing the payment failed. Refresh the page and try again.",
+      "alleenBeheerder": "No payment provider has been set up yet, so this order cannot actually be paid. In a test environment an administrator of the association completes the payment here; ask the association to confirm your payment."
     }
   },
   "offlineScanner": {
@@ -6118,7 +6131,8 @@
       "instrumenten": "Instruments owned",
       "contacten": "Contacts",
       "uniformen": "Uniforms",
-      "apparatuur": "Equipment"
+      "apparatuur": "Equipment",
+      "kleding": "Concert attire"
     },
     "uitleg": {
       "leden": "Read members from a CSV file. You first see what happens to each row; nothing changes until you click import. Members who already exist are skipped.",
@@ -6126,7 +6140,8 @@
       "instrumenten": "Read the association's instruments from a CSV file. You first see what happens to each row; nothing changes until you click import. An instrument with the same serial number, or without a serial number and with the same name, is skipped.",
       "contacten": "Read contacts from a CSV file: suppliers, venues, sponsors. You first see what happens to each row; nothing changes until you click import. A contact with the same name is skipped.",
       "uniformen": "Read uniform items from a CSV file, with a quantity per row or with the email address of the member who wears it. You first see what happens to each row; nothing changes until you click import. Items have no number: if there are already as many of the same type, size, colour and wearer, the row is skipped. Importing the same file twice therefore duplicates nothing.",
-      "apparatuur": "Read equipment from a CSV file: sound, lighting, music stands, a trailer. You first see what happens to each row; nothing changes until you click import. Equipment with the same inventory number, serial number or (without those two) the same name is skipped. An item without an inventory number is given one."
+      "apparatuur": "Read equipment from a CSV file: sound, lighting, music stands, a trailer. You first see what happens to each row; nothing changes until you click import. Equipment with the same inventory number, serial number or (without those two) the same name is skipped. An item without an inventory number is given one.",
+      "kleding": "Import the outfits for concerts from a CSV file, with colour and pieces. You first see per row what will happen; nothing changes until you click import. An outfit with the same name is skipped. A colour can be a colour code (#1b2a49) or a colour name; an unknown colour is added to the description."
     },
     "kiesBestand": "Choose a CSV file",
     "sjabloon": "Download example file",
@@ -6189,7 +6204,10 @@
       "inventarisnummer": "Inventory number",
       "uniformStatus": "Status",
       "apparatuurStatus": "Status",
-      "apparatuurSoort": "Type"
+      "apparatuurSoort": "Type",
+      "omschrijving": "Description",
+      "onderdelen": "Pieces",
+      "standaard": "Default"
     },
     "instrumentStatus": {
       "available": "Available",
@@ -6260,7 +6278,10 @@
       "iban": "IBAN",
       "website": "Website",
       "kvk": "Chamber of Commerce number",
-      "btw": "VAT number"
+      "btw": "VAT number",
+      "omschrijving": "Description",
+      "kleur": "Colour",
+      "onderdelen": "Pieces"
     }
   },
   "catalogus": {
@@ -6318,5 +6339,28 @@
     "knop": "Download (ZIP)",
     "bezig": "Putting it together…",
     "gedownload": "The data has been downloaded."
+  },
+  "startlijst": {
+    "titel": "Getting started",
+    "uitleg": "What to set up in the first week. A step is marked done as soon as it is set up.",
+    "voortgang": "{{gedaan}} of {{totaal}} done",
+    "regelen": "Set up",
+    "verbergen": "Hide",
+    "gedaan": "done",
+    "nogTeDoen": "to do",
+    "stap": {
+      "email": "Set up e-mail (SMTP)",
+      "tweestap": "Turn on two-step verification for your own account",
+      "modules": "Choose which parts the association uses",
+      "orkesten": "Create an orchestra",
+      "leden": "Give members access",
+      "repetities": "Schedule the first rehearsal",
+      "bewaartermijnen": "Set retention periods"
+    },
+    "geenMail": {
+      "titel": "E-mail is not set up.",
+      "tekst": "Tutti sends nothing right now: no welcome e-mail, no \"Forgot password\" link, no reminders.",
+      "instellen": "Set up e-mail"
+    }
   }
 }

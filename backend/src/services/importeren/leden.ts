@@ -42,7 +42,8 @@ const LEDENVELDEN: Record<string, Veld> = {
   priveEmail: { namen: ['Privé-e-mail', 'Prive e-mail', 'Persoonlijke e-mail', 'Private email', 'Private E-Mail'] },
 };
 
-type Rol = 'admin' | 'music_committee' | 'equipment_committee' | 'uniforms_committee' | 'conductor' | 'member';
+type Rol =
+  'admin' | 'board' | 'music_committee' | 'equipment_committee' | 'uniforms_committee' | 'conductor' | 'member';
 
 /**
  * Rollen zoals een vereniging ze in een spreadsheet zet: de technische naam en
@@ -54,6 +55,7 @@ const ROLNAMEN: Record<string, Rol> = Object.fromEntries(
       ['member', ['member', 'lid', 'leden', 'mitglied', 'muzikant', 'musician', 'musiker']],
       ['conductor', ['conductor', 'dirigent', 'dirigentin']],
       ['admin', ['admin', 'beheerder', 'administrator', 'verwalter']],
+      ['board', ['board', 'bestuur', 'bestuurslid', 'board member', 'vorstand', 'vorstandsmitglied']],
       ['music_committee', ['music_committee', 'muziekcommissie', 'music committee', 'musikkommission', 'notenwart']],
       [
         'equipment_committee',

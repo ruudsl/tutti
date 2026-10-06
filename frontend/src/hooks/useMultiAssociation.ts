@@ -36,10 +36,11 @@ import {
 // SUPER ADMIN
 // ===========================================
 
-export function useIsSuperAdmin() {
+export function useIsSuperAdmin({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['isSuperAdmin'],
     queryFn: checkIsSuperAdmin,
+    enabled,
   });
 }
 

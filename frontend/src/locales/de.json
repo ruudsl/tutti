@@ -159,6 +159,7 @@
     "inventory": "Inventar",
     "operations": "Betrieb",
     "content": "Inhalt",
+    "association": "Verein",
     "admin": "Verwaltung"
   },
   "modules": {
@@ -290,6 +291,7 @@
   },
   "roles": {
     "admin": "Administrator",
+    "board": "Vorstand",
     "music_committee": "Musikkommission",
     "conductor": "Dirigent",
     "member": "Mitglied",
@@ -1300,7 +1302,7 @@
     "filenameFormatDesc": "Der Dateiname wird automatisch geparst, um Metadaten zu extrahieren:",
     "examples": "Beispiele",
     "tip": "Tipp",
-    "instrumentTip": "Das Instrument wird automatisch über die Instrumentenliste und Aliasse erkannt.",
+    "instrumentTip": "Das Instrument wird automatisch über die Instrumentenliste und Aliasse erkannt. Einfache Namen wie \"Bolero - Trompete 1.pdf\" oder \"Bolero - Klarinette in Bb 2.pdf\" funktionieren auch.",
     "filesFailed": "Datei(en) fehlgeschlagen",
     "zipBulkDescription": "Laden Sie eine ZIP-Datei mit mehreren PDFs auf einmal hoch.",
     "filesUploaded": "Datei(en) erfolgreich hochgeladen",
@@ -3552,10 +3554,21 @@
         "verlopen": "Dieser Rabattcode ist abgelaufen.",
         "op": "Dieser Rabattcode ist aufgebraucht.",
         "koper": "Sie haben diesen Rabattcode bereits so oft verwendet wie erlaubt.",
+        "openstaand": "Du hast noch eine offene Zahlung mit diesem Rabattcode. Schließe sie zuerst ab oder versuche es in einer halben Stunde erneut.",
         "minimum": "Ihre Bestellung ist für diesen Rabattcode zu klein.",
         "concert": "Dieser Rabattcode gilt nicht für dieses Konzert.",
         "kaartsoort": "Dieser Rabattcode gilt nicht für die gewählten Karten."
       }
+    },
+    "testbetaling": {
+      "banner": "Testumgebung - keine echte Zahlung",
+      "titel": "Testzahlung",
+      "bestelling": "Bestellung",
+      "simuleer": "Zahlung simulieren (erfolgreich)",
+      "bevestiging": "Die Bestellung ist als bezahlt markiert und die Tickets wurden erstellt.",
+      "geannuleerd": "Die Zahlung wurde abgebrochen.",
+      "mislukt": "Der Abschluss ist fehlgeschlagen. Laden Sie die Seite neu und versuchen Sie es erneut.",
+      "alleenBeheerder": "Es ist noch kein Zahlungsdienst eingerichtet, daher kann diese Bestellung nicht wirklich bezahlt werden. In einer Testumgebung schließt ein Administrator des Vereins die Zahlung hier ab; bitten Sie den Verein, Ihre Zahlung zu bestätigen."
     }
   },
   "bulk": {
@@ -6118,7 +6131,8 @@
       "instrumenten": "Instrumente im Besitz",
       "contacten": "Kontakte",
       "uniformen": "Uniformen",
-      "apparatuur": "Ausrüstung"
+      "apparatuur": "Ausrüstung",
+      "kleding": "Konzertkleidung"
     },
     "uitleg": {
       "leden": "Mitglieder aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Bereits vorhandene Mitglieder werden übersprungen.",
@@ -6126,7 +6140,8 @@
       "instrumenten": "Die Instrumente des Vereins aus einer CSV-Datei einlesen. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Ein Instrument mit derselben Seriennummer oder ohne Seriennummer mit demselben Namen wird übersprungen.",
       "contacten": "Kontakte aus einer CSV-Datei einlesen: Lieferanten, Säle, Sponsoren. Sie sehen zuerst, was mit jeder Zeile geschieht; nichts ändert sich, bis Sie auf Importieren klicken. Ein Kontakt mit demselben Namen wird übersprungen.",
       "uniformen": "Uniformteile aus einer CSV-Datei einlesen, mit einer Anzahl pro Zeile oder mit der E-Mail-Adresse des Mitglieds, das es trägt. Sie sehen zuerst pro Zeile, was passiert; nichts ändert sich, bis Sie auf Importieren klicken. Teile haben keine Nummer: Gibt es bereits gleich viele derselben Art, Größe, Farbe und desselben Trägers, wird die Zeile übersprungen. Dieselbe Datei zweimal einzulesen verdoppelt also nichts.",
-      "apparatuur": "Ausrüstung aus einer CSV-Datei einlesen: Ton, Licht, Notenständer, ein Anhänger. Sie sehen zuerst pro Zeile, was passiert; nichts ändert sich, bis Sie auf Importieren klicken. Ausrüstung mit derselben Inventarnummer, Seriennummer oder (ohne diese beiden) demselben Namen wird übersprungen. Ein Stück ohne Inventarnummer bekommt eine."
+      "apparatuur": "Ausrüstung aus einer CSV-Datei einlesen: Ton, Licht, Notenständer, ein Anhänger. Sie sehen zuerst pro Zeile, was passiert; nichts ändert sich, bis Sie auf Importieren klicken. Ausrüstung mit derselben Inventarnummer, Seriennummer oder (ohne diese beiden) demselben Namen wird übersprungen. Ein Stück ohne Inventarnummer bekommt eine.",
+      "kleding": "Lies die Konzertkleidung aus einer CSV-Datei ein, mit Farbe und Teilen. Du siehst zuerst pro Zeile, was passiert; es ändert sich nichts, bis du auf Importieren klickst. Kleidung mit demselben Namen wird übersprungen. Eine Farbe kann ein Farbcode (#1b2a49) oder ein Farbname sein; eine unbekannte Farbe kommt in die Beschreibung."
     },
     "kiesBestand": "CSV-Datei auswählen",
     "sjabloon": "Beispieldatei herunterladen",
@@ -6189,7 +6204,10 @@
       "inventarisnummer": "Inventarnummer",
       "uniformStatus": "Status",
       "apparatuurStatus": "Status",
-      "apparatuurSoort": "Art"
+      "apparatuurSoort": "Art",
+      "omschrijving": "Beschreibung",
+      "onderdelen": "Teile",
+      "standaard": "Standard"
     },
     "instrumentStatus": {
       "available": "Verfügbar",
@@ -6260,7 +6278,10 @@
       "iban": "IBAN",
       "website": "Webseite",
       "kvk": "Handelsregisternummer",
-      "btw": "USt-IdNr."
+      "btw": "USt-IdNr.",
+      "omschrijving": "Beschreibung",
+      "kleur": "Farbe",
+      "onderdelen": "Teile"
     }
   },
   "catalogus": {
@@ -6318,5 +6339,28 @@
     "knop": "Herunterladen (ZIP)",
     "bezig": "Wird zusammengestellt…",
     "gedownload": "Die Daten wurden heruntergeladen."
+  },
+  "startlijst": {
+    "titel": "Erste Schritte",
+    "uitleg": "Was du in der ersten Woche einrichtest. Ein Schritt gilt als erledigt, sobald er eingerichtet ist.",
+    "voortgang": "{{gedaan}} von {{totaal}} erledigt",
+    "regelen": "Einrichten",
+    "verbergen": "Ausblenden",
+    "gedaan": "erledigt",
+    "nogTeDoen": "offen",
+    "stap": {
+      "email": "E-Mail (SMTP) einrichten",
+      "tweestap": "Zwei-Faktor-Authentifizierung für das eigene Konto einschalten",
+      "modules": "Auswählen, welche Bereiche der Verein nutzt",
+      "orkesten": "Ein Orchester anlegen",
+      "leden": "Mitgliedern Zugang geben",
+      "repetities": "Die erste Probe planen",
+      "bewaartermijnen": "Aufbewahrungsfristen festlegen"
+    },
+    "geenMail": {
+      "titel": "E-Mail ist nicht eingerichtet.",
+      "tekst": "Tutti versendet derzeit nichts: keine Willkommens-E-Mail, keinen Link bei \"Passwort vergessen\", keine Erinnerungen.",
+      "instellen": "E-Mail einrichten"
+    }
   }
 }

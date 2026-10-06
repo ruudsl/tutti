@@ -114,7 +114,7 @@ const TOEWIJZINGEN = [
 
 vi.mock('../../api', () => ({
   getOrchestras: vi.fn(async () => ORKESTEN),
-  getUsers: vi.fn(async () => LEDEN),
+  getBezettingsLeden: vi.fn(async () => LEDEN),
   getSeatingSections: vi.fn(async () => SECTIES),
   getSeatingAssignments: vi.fn(async () => TOEWIJZINGEN),
 }));

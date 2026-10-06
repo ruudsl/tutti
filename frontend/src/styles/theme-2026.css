@@ -127,9 +127,11 @@ h3,
 }
 
 /* ---------- Main content: wider on large screens ---------- */
+/* Onderaan ruimte voor de plusknop rechtsonder (56px, 1,5rem van de rand),
+   zodat de laatste knop of tabelregel van een pagina er niet onder valt. */
 .main-content {
   max-width: 1320px;
-  padding: 1.5rem 2rem 3rem;
+  padding: 1.5rem 2rem calc(56px + 2.5rem);
 }
 
 /* ---------- Cards: soft elevation + hover lift ---------- */
@@ -319,9 +321,9 @@ h3,
     background: var(--gradient-brand);
   }
 
-  /* Content clearance for floating dock */
+  /* Ruimte voor het zwevende dock en de plusknop (52px) daarboven */
   .main-content {
-    padding: 1rem 1rem calc(64px + 1.5rem + env(safe-area-inset-bottom, 0));
+    padding: 1rem 1rem calc(64px + 52px + 2.5rem + env(safe-area-inset-bottom, 0));
   }
 
   .app-footer {
@@ -344,7 +346,7 @@ h3,
 /* ---------- Tablet (769–1024): comfortable density ---------- */
 @media (min-width: 769px) and (max-width: 1024px) {
   .main-content {
-    padding: 1.25rem 1.25rem 2.5rem;
+    padding: 1.25rem 1.25rem calc(56px + 2.5rem);
   }
 
   .app-sidebar {

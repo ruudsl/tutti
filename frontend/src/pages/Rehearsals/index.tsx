@@ -39,7 +39,6 @@ import type { Rehearsal, RehearsalDetail, SpondGroup, RehearsalSeat } from '../.
 import { ROLES } from '../../utils/constants';
 import { SkeletonTable } from '../../components/Skeleton';
 import { AddToCalendarButton } from '../../components/CalendarSync';
-import { CustomFieldFormSection, CustomFieldRenderer } from '../../components/CustomFields';
 import {
   EMPTY_REHEARSAL_FORM,
   MANAGER_ROLES,
@@ -62,6 +61,7 @@ import { SpondCard } from './SpondCard';
 import { RehearsalList } from './RehearsalList';
 import { PiecesCard } from './PiecesCard';
 import { MyAttendanceCard } from './MyAttendanceCard';
+import { ExtraVeldenKaart } from './ExtraVeldenKaart';
 import { AttendanceListCard } from './AttendanceListCard';
 import { SeatingCard } from './SeatingCard';
 
@@ -711,19 +711,7 @@ export default function Rehearsals() {
           />
         )}
 
-        {/* Custom Fields Section */}
-        <div className="card mt-3">
-          <div className="card-header">
-            <h2 className="card-title">{t('customFields.additionalFields')}</h2>
-          </div>
-          <div className="card-body">
-            {isManager ? (
-              <CustomFieldFormSection entityType="rehearsal" entityId={selectedRehearsal.id} autoSave={true} />
-            ) : (
-              <CustomFieldRenderer entityType="rehearsal" entityId={selectedRehearsal.id} layout="horizontal" />
-            )}
-          </div>
-        </div>
+        <ExtraVeldenKaart rehearsalId={selectedRehearsal.id} isManager={!!isManager} />
       </div>
     );
   }

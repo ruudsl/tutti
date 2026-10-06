@@ -79,12 +79,29 @@ export function isUniekheidsfout(err: unknown): boolean {
   return /UNIQUE constraint failed/i.test(bericht);
 }
 
+/**
+ * Een fout die de aanvrager maakte en waar de route al een antwoord op heeft:
+ * een verkeerd wachtwoord, een ongeldige kortingscode, een formulier dat niet
+ * klopt. Die stonden met stacktrace en aanvraag als `error` in het logboek,
+ * tussen de echte storingen - een verkeerd getypt wachtwoord zag er daar uit
+ * als een crash. Een databasefout die toevallig als 4xx eindigt (UNIQUE,
+ * FOREIGN KEY) hoort hier niet bij: die wijst op een gat in een route.
+ */
+function isFoutVanAanvrager(err: Error | ApiError): boolean {
+  if (err instanceof ApiError) return err.statusCode < 500;
+  return err instanceof FileValidationError || err.name === 'ZodError';
+}
+
 export function errorHandler(err: Error | ApiError, req: Request, res: Response, next: NextFunction): void {
-  // Log the error with full details for debugging
-  logger.error(`[${req.method} ${veiligPad(req.path)}] ${err.name}: ${err.message}`, {
-    stack: err.stack,
-    body: req.body && Object.keys(req.body).length > 0 ? maskeerGeheimen(req.body) : undefined,
-  });
+  if (isFoutVanAanvrager(err)) {
+    logger.warn(`[${req.method} ${veiligPad(req.path)}] ${err.name}: ${err.message}`);
+  } else {
+    // Log the error with full details for debugging
+    logger.error(`[${req.method} ${veiligPad(req.path)}] ${err.name}: ${err.message}`, {
+      stack: err.stack,
+      body: req.body && Object.keys(req.body).length > 0 ? maskeerGeheimen(req.body) : undefined,
+    });
+  }
 
   // Handle known API errors
   if (err instanceof ApiError) {

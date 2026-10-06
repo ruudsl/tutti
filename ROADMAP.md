@@ -128,8 +128,8 @@ pull request achterblijven.
     gebruikt en wordt vrijgegeven bij annuleren, verlopen of mislukken; zo
     houden het maximum en de grens per koper stand bij gelijktijdige
     bestellingen. Een bestelling zonder te betalen bedrag is meteen betaald.
-    Nog niet: een terugbetaling geeft de code niet vrij, en de (nog niet
-    aangesloten) kaartfacturen tonen de korting niet als aparte regel
+    Een terugbetaling geeft de code weer vrij, en een kaartfactuur toont de
+    korting als eigen regel (03-10-2026)
 11. ~~Kaartfacturen van twee verenigingen op één dag krijgen hetzelfde nummer.~~
     **Opgelost op 02-10-2026.** Het nummer is nu uniek per vereniging, zoals bij
     `invoices` en `transactions`: migratie
@@ -512,7 +512,7 @@ Gestructureerde pilot deployments:
 ### Deliverables
 
 - [ ] 2-3 live deployments
-- [x] Import tooling voor spreadsheets/legacy data — _leden, muziekbibliotheek, instrumenten in bezit, contacten, uniformen en apparatuur uit CSV, met eerst een voorbeeld per regel; bestaande gegevens bijwerken met oud → nieuw per veld, 24-09-2026; zie `docs/IMPORTEREN.md`. Nog niet: concertkleding_
+- [x] Import tooling voor spreadsheets/legacy data — _leden, muziekbibliotheek, instrumenten in bezit, contacten, uniformen, apparatuur en concertkleding (03-10-2026) uit CSV, met eerst een voorbeeld per regel; bestaande gegevens bijwerken met oud → nieuw per veld, 24-09-2026; zie `docs/IMPORTEREN.md`_
 - [x] Onboarding handleiding — _`docs/PILOT_ONBOARDING.md`, 02-10-2026: wie wat doet in de eerste week, hoe leden toegang krijgen, de importvolgorde, privacy vooraf, en eerlijk wat er nog niet is. Nagelopen tegen de code; onderweg gerepareerd: AVG-beheer, Verenigingen en Jouw gegevens stonden in geen menu, en de reservekopiekaart stond bij elke beheerder terwijl alleen de superbeheerder er een mag maken_
 - [ ] Feedback rapport per pilot — _sjabloon klaar: `docs/templates/PILOT_FEEDBACK.md`; de verslagen zelf volgen per pilot_
 - [ ] Publieke case studies

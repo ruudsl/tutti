@@ -23,8 +23,10 @@ import {
   berekenKorting,
   geefKortingscodeVrij,
   kaartsoortenVanCode,
+  onbetaaldeBestellingenVanKoper,
   reserveerKortingscode,
   telKortingscodeAlsGebruikt,
+  zetKortingscodeTerug,
   type KortingscodeRij,
 } from '../services/kortingscodes';
 import { getSalesPredictionSummary } from '../services/salesPredictions';
@@ -453,6 +455,21 @@ router.post(
         throw new ApiError(400, captchaResult.error || 'CAPTCHA verification failed');
       }
       captchaVerified = true;
+    }
+
+    // Een eerdere bestelling van deze koper met deze code voor dit concert,
+    // afgebroken voor het betalen, vervalt nu - met zijn kaarten en zijn
+    // reservering van de code (services/kortingscodes.ts). Pas hier, na alle
+    // controles: wordt de nieuwe bestelling geweigerd, dan blijft de oude staan.
+    if (kortingscode) {
+      for (const eerdere of onbetaaldeBestellingenVanKoper(
+        concert.association_id,
+        discountCode!,
+        buyerEmail,
+        concertId,
+      )) {
+        await processPaymentUpdate(eerdere, 'expired');
+      }
     }
 
     // Create order with transaction
@@ -2229,11 +2246,13 @@ router.get(
       .prepare(
         `
         SELECT
+            -- SUM over nul rijen is NULL; de tellers toonden dan niets in
+            -- plaats van 0.
             COUNT(*) as total_orders,
-            SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END) as paid_orders,
-            SUM(CASE WHEN o.status = 'paid' THEN o.total ELSE 0 END) as total_revenue,
-            SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
-            SUM(CASE WHEN o.status = 'refunded' THEN 1 ELSE 0 END) as refunded_orders
+            COALESCE(SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END), 0) as paid_orders,
+            COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total ELSE 0 END), 0) as total_revenue,
+            COALESCE(SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END), 0) as pending_orders,
+            COALESCE(SUM(CASE WHEN o.status = 'refunded' THEN 1 ELSE 0 END), 0) as refunded_orders
         FROM ticket_orders o
         JOIN concerts c ON o.concert_id = c.id
         WHERE ${whereClause}
@@ -3451,6 +3470,9 @@ router.post(
           releaseTickets(ticket.ticket_type_id, 1);
         }
       }
+
+      // Een terugbetaalde bestelling telt niet meer voor de kortingscode.
+      zetKortingscodeTerug(orderId);
     });
 
     updateRefund();
@@ -3731,6 +3753,8 @@ router.get(
   }),
 );
 
+const nepbetalingSchema = z.object({ action: z.enum(['pay', 'cancel']) });
+
 /**
  * Mock payment endpoint for development only
  */
@@ -3745,7 +3769,19 @@ router.post(
     }
 
     const { id: orderId } = req.params;
-    const { action } = req.body; // 'pay' or 'cancel'
+    const { action } = nepbetalingSchema.parse(req.body);
+
+    // Alleen een bestelling van de eigen vereniging; ook in ontwikkeling.
+    const bestelling = db
+      .prepare(
+        `SELECT o.id FROM ticket_orders o
+         JOIN concerts c ON o.concert_id = c.id
+         WHERE o.id = ? AND c.association_id = ?`,
+      )
+      .get(orderId, req.user!.associationId);
+    if (!bestelling) {
+      throw new ApiError(404, 'Bestelling niet gevonden');
+    }
 
     if (action === 'pay') {
       await processPaymentUpdate(orderId, 'paid');

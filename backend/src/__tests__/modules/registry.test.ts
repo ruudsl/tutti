@@ -19,7 +19,8 @@ const indexSource = fs.readFileSync(path.join(__dirname, '../../index.ts'), 'utf
 /** De paden uit MODULE_BY_PATH in de frontend, met hun modulesleutel. */
 function frontendPaths(): Map<string, string> {
   const block = frontendMap.slice(frontendMap.indexOf('MODULE_BY_PATH'), frontendMap.indexOf('export function'));
-  return new Map([...block.matchAll(/'(\/[a-z-]+)':\s*'([a-z-]+)'/g)].map((m) => [m[1], m[2]]));
+  // Ook paden van meer dan één deel, zoals /tickets/transfer.
+  return new Map([...block.matchAll(/'(\/[a-z/-]+)':\s*'([a-z-]+)'/g)].map((m) => [m[1], m[2]]));
 }
 
 describe('moduleregistry', () => {

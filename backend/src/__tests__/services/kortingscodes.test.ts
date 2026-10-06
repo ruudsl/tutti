@@ -179,12 +179,28 @@ describe('beoordeelKortingscode', () => {
     expect(beoordeel({ bedrag: 100, bedragGeldig: 40 })).toMatchObject({ korting: 20 });
   });
 
-  it('telt het gebruik per koper, met betaalde en lopende bestellingen', () => {
+  it('telt het gebruik per koper, met betaalde bestellingen', () => {
     const id = maakKortingscode({ max_uses_per_user: 1 });
-    reserveerKortingscode(code(id), maakBestelling('kees@test.nl'), 'kees@test.nl', 10);
+    reserveerKortingscode(code(id), maakBestelling('kees@test.nl', 'paid'), 'kees@test.nl', 10);
 
     expect(beoordeel({ koperEmail: 'KEES@test.nl' })).toMatchObject({ geldig: false, reden: 'koper' });
     expect(beoordeel({ koperEmail: 'anna@test.nl' }).geldig).toBe(true);
+  });
+
+  it('telt een lopende bestelling met gestarte betaling mee, met als reden een openstaande betaling', () => {
+    const id = maakKortingscode({ max_uses_per_user: 1 });
+    const bestelling = maakBestelling('kees@test.nl');
+    testDb.prepare("UPDATE ticket_orders SET payment_id = 'tr_loopt' WHERE id = ?").run(bestelling);
+    reserveerKortingscode(code(id), bestelling, 'kees@test.nl', 10);
+
+    expect(beoordeel({ koperEmail: 'kees@test.nl' })).toMatchObject({ geldig: false, reden: 'openstaand' });
+  });
+
+  it('telt een afgebroken bestelling voor hetzelfde concert niet mee: die vervalt bij opnieuw bestellen', () => {
+    const id = maakKortingscode({ max_uses_per_user: 1 });
+    reserveerKortingscode(code(id), maakBestelling('kees@test.nl'), 'kees@test.nl', 10);
+
+    expect(beoordeel({ koperEmail: 'kees@test.nl' }).geldig).toBe(true);
   });
 });
 

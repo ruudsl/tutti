@@ -110,6 +110,13 @@ vi.mock('../../components/CustomFields', () => ({
   CustomFieldRenderer: () => <div data-testid="eigen-velden-weergave" />,
 }));
 
+// De kaart "Extra velden" staat er alleen als de vereniging velden voor
+// repetities heeft (pages/Rehearsals/ExtraVeldenKaart.tsx). Standaard één veld.
+const extraVelden = vi.hoisted(() => ({ meta: { opmerking: { label: 'Opmerking', editable: true } } as object }));
+vi.mock('../../api/custom-fields', () => ({
+  getFieldValues: vi.fn(async () => ({ values: {}, meta: extraVelden.meta })),
+}));
+
 vi.mock('../../utils/toast', () => ({ showSuccess: vi.fn(), showError: vi.fn() }));
 
 // jsdom kent `window.matchMedia` niet, en ResponsiveTable vraagt er via
@@ -457,7 +464,22 @@ describe('repetitiepagina - lijst en detailscherm', () => {
     await gebruikerActie.click(screen.getByText('rehearsals.days.1 5-1-2099'));
 
     await waitFor(() => expect(screen.getByText('seating.rehearsalSeating')).toBeInTheDocument());
-    expect(screen.getByTestId('eigen-velden-formulier')).toBeInTheDocument();
+    expect(await screen.findByTestId('eigen-velden-formulier')).toBeInTheDocument();
+  });
+
+  it('laat de kaart met eigen velden weg als de vereniging die voor repetities niet heeft', async () => {
+    // Hij stond er altijd: een kop "Extra velden" boven een leeg vlak.
+    extraVelden.meta = {};
+    const gebruikerActie = userEvent.setup();
+    render(<Rehearsals />, { wrapper: wikkel });
+    await wachtOpPagina();
+
+    await gebruikerActie.click(screen.getByText('rehearsals.days.1 5-1-2099'));
+
+    await waitFor(() => expect(screen.getByText('seating.rehearsalSeating')).toBeInTheDocument());
+    expect(screen.queryByText('customFields.additionalFields')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('eigen-velden-formulier')).not.toBeInTheDocument();
+    extraVelden.meta = { opmerking: { label: 'Opmerking', editable: true } };
   });
 
   it('keert vanuit het detailscherm terug naar de lijst', async () => {
