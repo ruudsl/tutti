@@ -536,14 +536,17 @@ router.get(
             o.name as orchestra_name,
             (SELECT COUNT(*) FROM rehearsal_pieces rp WHERE rp.rehearsal_id = r.id) as piece_count,
             (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'accepted') as accepted_count,
-            (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'declined') as declined_count
+            (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'declined') as declined_count,
+            -- De eigen aan- of afmelding, zodat een lid dat vanuit de lijst
+            -- kan doen in plaats van eerst de repetitie te moeten openen.
+            (SELECT ra.status FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.user_id = ?) as my_status
         FROM rehearsals r
         LEFT JOIN users u ON r.created_by = u.id
         LEFT JOIN orchestras o ON r.orchestra_id = o.id
         WHERE r.association_id = ?
         AND r.date >= date('now')
     `;
-    const params: any[] = [req.user!.associationId];
+    const params: any[] = [req.user!.id, req.user!.associationId];
 
     // Filter by user's orchestras for non-managers
     if (!isManager) {
@@ -584,13 +587,16 @@ router.get(
             o.name as orchestra_name,
             (SELECT COUNT(*) FROM rehearsal_pieces rp WHERE rp.rehearsal_id = r.id) as piece_count,
             (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'accepted') as accepted_count,
-            (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'declined') as declined_count
+            (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'declined') as declined_count,
+            -- De eigen aan- of afmelding, zodat een lid dat vanuit de lijst
+            -- kan doen in plaats van eerst de repetitie te moeten openen.
+            (SELECT ra.status FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.user_id = ?) as my_status
         FROM rehearsals r
         LEFT JOIN users u ON r.created_by = u.id
         LEFT JOIN orchestras o ON r.orchestra_id = o.id
         WHERE r.association_id = ?
     `;
-    const params: any[] = [req.user!.associationId];
+    const params: any[] = [req.user!.id, req.user!.associationId];
 
     // Filter by user's orchestras for non-managers
     if (!isManager) {

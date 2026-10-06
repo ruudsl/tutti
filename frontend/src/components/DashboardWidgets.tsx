@@ -13,6 +13,7 @@ import {
 } from '../api';
 import { getTaskSummary, type TaskPriority } from '../api/tasks';
 import { Icon, type IconName } from './Icon';
+import { MijnAanmelding } from './MijnAanmelding';
 import type { Rehearsal } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useModules } from '../context/ModulesContext';
@@ -483,6 +484,9 @@ export function UpcomingRehearsalsWidget() {
                     </span>
                   )}
                   {rehearsal.location && <span className="rehearsal-location">{rehearsal.location}</span>}
+                  {rehearsal.type !== 'cancelled' && (
+                    <MijnAanmelding rehearsalId={rehearsal.id} status={rehearsal.my_status} />
+                  )}
                 </div>
               </li>
             ))}
