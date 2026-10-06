@@ -102,8 +102,8 @@ Alleen de beheerder mag leden importeren.
 - **Tussenvoegsel:** komt voor de achternaam (`de` + `Vries` wordt `de Vries`).
 - **Rol:** zonder rol wordt iemand lid. De namen uit het scherm worden herkend
   in drie talen (`Dirigent`, `Muziekcommissie`, `Music Committee`,
-  `Materialausschuss`), en ook de technische naam (`conductor`). Een onbekende
-  rol is een fout, geen gok.
+  `Materialausschuss`, `Bestuur`, `Vorstand`), en ook de technische naam
+  (`conductor`, `board`). Een onbekende rol is een fout, geen gok.
 - **Instrumenten:** worden gezocht op naam en op de andere namen van een
   instrument. Een onbekend instrument is een waarschuwing.
 - **Orkesten:** moeten al bestaan in de vereniging. Een onbekend orkest is een

@@ -290,6 +290,7 @@
   },
   "roles": {
     "admin": "Administrator",
+    "board": "Vorstand",
     "music_committee": "Musikkommission",
     "conductor": "Dirigent",
     "member": "Mitglied",

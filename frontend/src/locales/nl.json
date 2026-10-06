@@ -290,6 +290,7 @@
   },
   "roles": {
     "admin": "Beheerder",
+    "board": "Bestuur",
     "music_committee": "Muziekcommissie",
     "equipment_committee": "Instrumentencommissie",
     "uniforms_committee": "Uniformencommissie",

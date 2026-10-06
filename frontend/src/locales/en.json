@@ -290,6 +290,7 @@
   },
   "roles": {
     "admin": "Administrator",
+    "board": "Board",
     "music_committee": "Music Committee",
     "equipment_committee": "Equipment Committee",
     "uniforms_committee": "Uniforms Committee",

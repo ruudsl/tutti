@@ -53,7 +53,7 @@ export const createUserSchema = z.object({
   firstName: z.string().min(1, 'Voornaam is verplicht.').max(MAX_LENGTHS.SHORT_TEXT),
   lastName: z.string().min(1, 'Achternaam is verplicht.').max(MAX_LENGTHS.SHORT_TEXT),
   role: z
-    .enum(['admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor', 'member'])
+    .enum(['admin', 'board', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor', 'member'])
     .optional()
     .default('member'),
   instrumentIds: z.array(z.string().uuid()).max(MAX_ARRAY_SIZES.SMALL, 'Te veel instrumenten geselecteerd.').optional(),
@@ -66,7 +66,7 @@ export const updateUserSchema = z.object({
   firstName: z.string().min(1, 'Voornaam is verplicht.').max(MAX_LENGTHS.SHORT_TEXT).optional(),
   lastName: z.string().min(1, 'Achternaam is verplicht.').max(MAX_LENGTHS.SHORT_TEXT).optional(),
   role: z
-    .enum(['admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor', 'member'])
+    .enum(['admin', 'board', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor', 'member'])
     .optional(),
   instrumentIds: z.array(z.string().uuid()).max(MAX_ARRAY_SIZES.SMALL, 'Te veel instrumenten geselecteerd.').optional(),
   orchestraIds: z.array(z.string().uuid()).max(MAX_ARRAY_SIZES.SMALL, 'Te veel orkesten geselecteerd.').optional(),
