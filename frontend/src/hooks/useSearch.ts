@@ -1,58 +1,27 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import axios from 'axios';
 import { useDebounce } from './useDebounce';
+import {
+  bewaarZoekopdracht,
+  getRecenteZoekopdrachten,
+  getZoeksuggesties,
+  verwijderZoekopdracht,
+  wisZoekopdrachten,
+  zoeken,
+  type RecenteZoekopdracht,
+  type Zoekfilters,
+  type Zoekresultaat,
+} from '../api/zoeken';
 
-export interface SearchResult {
-  id: string;
-  type: 'music' | 'member' | 'orchestra' | 'list' | 'rehearsal' | 'settings';
-  title: string;
-  subtitle?: string;
-  path: string;
-  icon: string;
-  metadata?: Record<string, unknown>;
-}
+// De typen staan bij de api-functies; hier onder de namen die de aanroepers al gebruiken.
+export type SearchResult = Zoekresultaat;
+export type RecentSearch = RecenteZoekopdracht;
+export type SearchFilters = Zoekfilters;
 
-export interface RecentSearch {
-  id: string;
-  query: string;
-  timestamp: string;
-}
-
-export interface SearchFilters {
-  type?: string;
-  orchestraId?: string;
-}
-
-interface SearchResponse {
-  results: SearchResult[];
-  total: number;
-  query: string;
-}
-
-interface SuggestionsResponse {
-  suggestions: string[];
-}
-
-interface RecentSearchesResponse {
-  searches: RecentSearch[];
-}
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem('token');
-  const headers = {
-    ...options.headers,
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-
-  const response = await fetch(url, { ...options, headers });
-
-  if (!response.ok) {
-    throw new Error(`Search request failed: ${response.statusText}`);
-  }
-
-  return response;
+function foutmelding(err: unknown): string {
+  // Dezelfde tekst als toen de hook zelf `fetch` deed: de status van de server.
+  if (axios.isAxiosError(err) && err.response) return `Search request failed: ${err.response.statusText}`;
+  return err instanceof Error ? err.message : 'Search failed';
 }
 
 /**
@@ -162,21 +131,14 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
     setError(null);
 
     try {
-      const params = new URLSearchParams({ q: searchQuery });
-      if (searchFilters.type) params.append('type', searchFilters.type);
-      if (searchFilters.orchestraId) params.append('orchestraId', searchFilters.orchestraId);
-
-      const response = await fetchWithAuth(`${API_BASE}/search?${params.toString()}`, {
-        signal: abortControllerRef.current.signal,
-      });
-      const data: SearchResponse = await response.json();
+      const data = await zoeken(searchQuery, searchFilters, abortControllerRef.current.signal);
       setResults(data.results);
       setSelectedIndex(-1);
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (axios.isCancel(err) || (err instanceof Error && err.name === 'AbortError')) {
         return; // Ignore aborted requests
       }
-      setError(err instanceof Error ? err.message : 'Search failed');
+      setError(foutmelding(err));
       setResults([]);
     } finally {
       setIsLoading(false);
@@ -191,9 +153,7 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
     }
 
     try {
-      const response = await fetchWithAuth(`${API_BASE}/search/suggestions?q=${encodeURIComponent(searchQuery)}`);
-      const data: SuggestionsResponse = await response.json();
-      setSuggestions(data.suggestions);
+      setSuggestions(await getZoeksuggesties(searchQuery));
     } catch {
       setSuggestions([]);
     }
@@ -202,9 +162,7 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
   // Fetch recent searches
   const fetchRecentSearches = useCallback(async () => {
     try {
-      const response = await fetchWithAuth(`${API_BASE}/search/recent`);
-      const data: RecentSearchesResponse = await response.json();
-      setRecentSearches(data.searches);
+      setRecentSearches(await getRecenteZoekopdrachten());
     } catch {
       setRecentSearches([]);
     }
@@ -216,10 +174,7 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
       if (!searchQuery || searchQuery.trim().length < 2) return;
 
       try {
-        await fetchWithAuth(`${API_BASE}/search/recent`, {
-          method: 'POST',
-          body: JSON.stringify({ query: searchQuery }),
-        });
+        await bewaarZoekopdracht(searchQuery);
         fetchRecentSearches();
       } catch {
         // Ignore errors when saving recent search
@@ -231,9 +186,7 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
   // Delete a recent search
   const deleteRecentSearch = useCallback(async (id: string) => {
     try {
-      await fetchWithAuth(`${API_BASE}/search/recent/${id}`, {
-        method: 'DELETE',
-      });
+      await verwijderZoekopdracht(id);
       setRecentSearches((prev) => prev.filter((s) => s.id !== id));
     } catch {
       // Ignore errors
@@ -243,9 +196,7 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
   // Clear all recent searches
   const clearRecentSearches = useCallback(async () => {
     try {
-      await fetchWithAuth(`${API_BASE}/search/recent`, {
-        method: 'DELETE',
-      });
+      await wisZoekopdrachten();
       setRecentSearches([]);
     } catch {
       // Ignore errors
