@@ -59,6 +59,7 @@ vi.mock('../../components/MfaSettings', () => ({ default: () => <div data-testid
 vi.mock('../../components/OpslagGebruik', () => ({ default: () => <div data-testid="opslag" /> }));
 vi.mock('../../components/BackupSettings', () => ({ default: () => <div data-testid="reservekopie" /> }));
 vi.mock('../../components/VerenigingsExport', () => ({ default: () => <div data-testid="verenigingsexport" /> }));
+vi.mock('../../components/Startlijst', () => ({ default: () => <div data-testid="startlijst" /> }));
 
 beforeEach(() => {
   stand.rol = 'admin';
@@ -86,9 +87,17 @@ describe('dashboard - reservekopie', () => {
     expect(screen.getByTestId('reservekopie')).toBeInTheDocument();
   });
 
+  it('toont de beheerder de startlijst', () => {
+    render(<Dashboard />);
+
+    expect(screen.getByTestId('startlijst')).toBeInTheDocument();
+  });
+
   it('toont een gewoon lid geen beheerblok', () => {
     stand.rol = 'member';
     render(<Dashboard />);
+
+    expect(screen.queryByTestId('startlijst')).not.toBeInTheDocument();
 
     expect(screen.queryByTestId('opslag')).not.toBeInTheDocument();
     expect(screen.queryByTestId('reservekopie')).not.toBeInTheDocument();

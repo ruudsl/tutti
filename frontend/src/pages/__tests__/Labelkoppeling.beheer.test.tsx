@@ -126,7 +126,7 @@ function zetApiKlaar(): void {
   vi.mocked(api.getConcerts).mockResolvedValue({ data: [], total: 0, page: 1, limit: 50 });
   vi.mocked(api.getConcertTypes).mockResolvedValue({ concertTypes: [], mediaTypes: [] });
   vi.mocked(api.getConcertYears).mockResolvedValue([]);
-  vi.mocked(api.getUsers).mockResolvedValue([]);
+  vi.mocked(api.getBezettingsLeden).mockResolvedValue([]);
   vi.mocked(api.getMusicTitles).mockResolvedValue([]);
   vi.mocked(api.getOrchestras).mockResolvedValue([{ id: 'ork-1', name: 'Harmonie' }] as never);
   vi.mocked(api.getMyAvailability).mockResolvedValue([] as never);
@@ -208,7 +208,9 @@ describe('concertpagina - groepskop boven de ledenlijst', () => {
       media: [],
       attendance: [],
     } as never);
-    vi.mocked(api.getUsers).mockResolvedValue([{ id: 'geb-1', firstName: 'Anna', lastName: 'de Groot' }] as never);
+    vi.mocked(api.getBezettingsLeden).mockResolvedValue([
+      { id: 'geb-1', firstName: 'Anna', lastName: 'de Groot' },
+    ] as never);
 
     const gebruiker = toon(<Concerts />);
 

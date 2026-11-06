@@ -147,6 +147,7 @@ export * from './notifications';
 
 // External services
 export * from './external-search';
+export * from './zoeken';
 export * from './streaming';
 
 // Other

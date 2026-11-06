@@ -74,7 +74,9 @@ export function ModulesProvider({ children }: { children: ReactNode }) {
   const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user) {
+    // Zolang het lid eerst een eigen wachtwoord of tweestapsverificatie moet
+    // regelen, weigert de server dit verzoek (403). Daarna wel.
+    if (!user || user.mustChangePassword || user.tweestapInstellenVerplicht) {
       return;
     }
 

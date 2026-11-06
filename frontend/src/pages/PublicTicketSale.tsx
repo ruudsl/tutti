@@ -145,7 +145,12 @@ const styles = `
 
   .concert-date {
     font-size: 1.1rem;
-    text-transform: capitalize;
+  }
+
+  /* Alleen de eerste letter: capitalize maakte er in het Nederlands
+     "Zaterdag 21 November 2026" van. */
+  .concert-date::first-letter {
+    text-transform: uppercase;
   }
 
   .concert-location {

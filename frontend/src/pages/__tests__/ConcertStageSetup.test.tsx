@@ -146,7 +146,7 @@ function zetApiKlaar(): void {
   vi.mocked(api.getStageLayout).mockResolvedValue(indeling());
   vi.mocked(api.getConcertStage).mockResolvedValue(GEEN_PODIUM);
   vi.mocked(api.getPrintableSeatCards).mockResolvedValue(KAARTJES);
-  vi.mocked(api.getUsers).mockResolvedValue(LEDEN);
+  vi.mocked(api.getBezettingsLeden).mockResolvedValue(LEDEN);
   vi.mocked(api.saveConcertStage).mockResolvedValue({ message: 'ok' });
 }
 

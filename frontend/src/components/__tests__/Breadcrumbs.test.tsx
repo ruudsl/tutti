@@ -97,7 +97,7 @@ describe('broodkruimels: welk pad geeft welke kruimels', () => {
     ['/rehearsals', ['Dashboard', 'Repetities']],
     ['/music-pieces', ['Dashboard', 'Muziekstukken']],
     ['/users', ['Dashboard', 'Leden']],
-    ['/my-music', ['Dashboard', 'Mijn Muziek']],
+    ['/my-music', ['Dashboard', 'Mijn muziek']],
   ])('vertaalt %s naar %s', (pad, verwacht) => {
     toon(pad);
 

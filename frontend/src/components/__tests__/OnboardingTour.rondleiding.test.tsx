@@ -19,7 +19,14 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
 const { aanmelding, router } = vi.hoisted(() => ({
-  aanmelding: { user: null as { id: string; role: string } | null },
+  aanmelding: {
+    user: null as {
+      id: string;
+      role: string;
+      mustChangePassword?: boolean;
+      tweestapInstellenVerplicht?: boolean;
+    } | null,
+  },
   router: { navigeer: vi.fn() },
 }));
 
@@ -93,6 +100,38 @@ describe('wanneer de rondleiding verschijnt', () => {
     toon();
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('blijft weg zolang het lid eerst een eigen wachtwoord moet kiezen', () => {
+    // Het lid staat dan op zijn profiel; de rondleiding lag over het
+    // wachtwoordformulier heen en ving elke klik af.
+    aanmelding.user = { id: 'lid-1', role: 'member', mustChangePassword: true };
+
+    toon();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('blijft weg zolang het lid eerst tweestapsverificatie moet instellen', () => {
+    aanmelding.user = { id: 'lid-1', role: 'member', tweestapInstellenVerplicht: true };
+
+    toon({ forceShow: true });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('verschijnt zodra het eigen wachtwoord gekozen is', () => {
+    aanmelding.user = { id: 'lid-1', role: 'member', mustChangePassword: true };
+    const { rerender } = toon();
+
+    aanmelding.user = { id: 'lid-1', role: 'member', mustChangePassword: false };
+    rerender(
+      <MemoryRouter>
+        <OnboardingTour />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('blijft weg zolang er niemand is aangemeld', () => {

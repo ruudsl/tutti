@@ -13,7 +13,7 @@
  *     als "voorkeur van een ander orkest" zou lezen.
  *   - Krijgt het formulier alleen leden van het gekozen orkest te zien? Zie
  *     'alleen leden van het gekozen orkest'. Een lid van een andere vereniging
- *     zit wel in het antwoord van getUsers (die lijst is niet per orkest),
+ *     zit wel in het antwoord van getBezettingsLeden (die lijst is niet per orkest),
  *     maar hoort hier niet kiesbaar te zijn.
  *
  * Beide zijn *wachten* en geen bewijs: de pagina doet dit vandaag al goed. Ze
@@ -105,7 +105,7 @@ beforeEach(() => {
   bevestigAntwoord = true;
   ingelogdeGebruiker = { id: 'geb-0', role: 'admin' };
   vi.mocked(api.getOrchestras).mockResolvedValue([HARMONIE, FANFARE] as never);
-  vi.mocked(api.getUsers).mockResolvedValue([
+  vi.mocked(api.getBezettingsLeden).mockResolvedValue([
     gebruiker('u1', 'Anna', 'Aalders', [HARMONIE]),
     gebruiker('u2', 'Bram', 'Bakker', [HARMONIE]),
     gebruiker('u3', 'Chris', 'Claassen', [FANFARE]),
@@ -168,7 +168,7 @@ describe('buurvoorkeuren - de grens van het orkest', () => {
     toon();
 
     await waitFor(() => expect(api.getSeatingNeighbors).toHaveBeenCalled());
-    expect(api.getUsers).not.toHaveBeenCalled();
+    expect(api.getBezettingsLeden).not.toHaveBeenCalled();
   });
 });
 
@@ -223,7 +223,7 @@ describe('buurvoorkeuren - de lijst', () => {
   });
 
   it('houdt de toevoegknop uit als het orkest minder dan twee leden heeft', async () => {
-    vi.mocked(api.getUsers).mockResolvedValue([gebruiker('u1', 'Anna', 'Aalders', [HARMONIE])] as never);
+    vi.mocked(api.getBezettingsLeden).mockResolvedValue([gebruiker('u1', 'Anna', 'Aalders', [HARMONIE])] as never);
     toon();
 
     await waitFor(() => {

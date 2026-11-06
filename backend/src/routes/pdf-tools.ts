@@ -12,6 +12,7 @@ import { eisBruikbaar, zoekInstrument } from '../services/catalogus';
 import { FileValidationError } from '../utils/errors';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { leesBestandsnaam } from '../utils/bestandsnaam';
 
 const router = Router();
 
@@ -22,28 +23,6 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads
 // Ensure upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-// Parse filename to extract metadata
-// Format: Titel_arrangeur_instrument_stemming_groepnummer_muzieksleutel
-function parseFilename(filename: string): {
-  title: string;
-  arranger: string | null;
-  instrument: string | null;
-  tuning: string | null;
-  groupNumber: string | null;
-  clef: string | null;
-} {
-  const nameWithoutExt = filename.replace(/\.pdf$/i, '');
-  const parts = nameWithoutExt.split('_');
-  return {
-    title: parts[0] || filename,
-    arranger: parts[1] || null,
-    instrument: parts[2] || null,
-    tuning: parts[3] || null,
-    groupNumber: parts[4] || null,
-    clef: parts[5] || null,
-  };
 }
 
 // Configure multer for PDF uploads
@@ -598,7 +577,7 @@ router.post(
       pieceGroupNumber = groupNumber || null;
       pieceClef = clef || null;
     } else {
-      const parsed = parseFilename(filename);
+      const parsed = leesBestandsnaam(filename, (naam) => !!zoekInstrument(naam, req.user!.associationId));
       pieceTitle = parsed.title;
       pieceArranger = parsed.arranger;
       pieceInstrumentId = parsed.instrument ? zoekInstrument(parsed.instrument, req.user!.associationId) : null;

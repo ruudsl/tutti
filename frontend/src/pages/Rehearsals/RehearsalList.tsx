@@ -8,6 +8,7 @@ import { Tooltip } from '../../components/Tooltip';
 import type { Holiday } from '../../api';
 import type { Rehearsal } from '../../types';
 import { formatDate, getTypeStyle } from './hulpfuncties';
+import { MijnAanmelding } from '../../components/MijnAanmelding';
 
 export function RehearsalList({
   upcoming,
@@ -75,6 +76,15 @@ export function RehearsalList({
                 );
               },
               priority: 1,
+              showInCard: true,
+            },
+            {
+              // Aan- en afmelden zonder de repetitie eerst te openen.
+              id: 'mijn-aanmelding',
+              header: t('rehearsals.attendance.myAttendance'),
+              accessor: (r) =>
+                r.type === 'cancelled' ? '-' : <MijnAanmelding rehearsalId={r.id} status={r.my_status} />,
+              priority: 2,
               showInCard: true,
             },
             {

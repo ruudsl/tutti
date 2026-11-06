@@ -161,7 +161,7 @@ function zetApiKlaar(): void {
     mostPlayedPieces: [],
   });
   vi.mocked(api.getConcert).mockResolvedValue(CONCERT_DETAIL);
-  vi.mocked(api.getUsers).mockResolvedValue(LEDEN);
+  vi.mocked(api.getBezettingsLeden).mockResolvedValue(LEDEN);
   vi.mocked(api.getMusicTitles).mockResolvedValue([{ id: 'mt1', title: 'Carmina Burana', arranger: 'Orff' }] as never);
   vi.mocked(api.getConcertTickets).mockResolvedValue({
     concert: {

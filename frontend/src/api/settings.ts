@@ -37,6 +37,14 @@ export const updateSettings = async (settings: { displayName?: string }): Promis
 /** Wie tweestapsverificatie moet hebben: niemand, beheerders en bestuur, of iedereen. */
 export type TweestapStand = 'uit' | 'beheer' | 'iedereen';
 
+/** Een stap van de startlijst voor de beheerder (backend/src/services/startlijst.ts). */
+export type StartStap = 'email' | 'tweestap' | 'modules' | 'orkesten' | 'leden' | 'repetities' | 'bewaartermijnen';
+
+export const getStartlijst = async (): Promise<{ stappen: { sleutel: StartStap; gedaan: boolean }[] }> => {
+  const { data } = await api.get('/settings/startlijst');
+  return data;
+};
+
 /** De stand van de vereniging, en of de vragende beheerder het zelf aan heeft. */
 export const getTweestapStand = async (): Promise<{ stand: TweestapStand; zelfAan: boolean }> => {
   const { data } = await api.get('/settings/tweestap');

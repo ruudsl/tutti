@@ -3,15 +3,23 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { mockPayment } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function MockPayment() {
   const { t } = useTranslation();
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<'success' | 'cancelled' | null>(null);
+  const [mislukt, setMislukt] = useState(false);
   useDocumentTitle('tickets.stepPayment');
+
+  // Zonder betaaldienst (ontwikkeling) komt een koper hier terecht. Afronden
+  // mag alleen een beheerder; een koper die op de knop drukte werd zonder
+  // uitleg naar het inlogscherm gestuurd.
+  const magAfronden = user?.role === 'admin';
 
   const payMutation = useMutation({
     mutationFn: (action: 'pay' | 'cancel') => mockPayment(orderId!, action),
@@ -21,15 +29,18 @@ export default function MockPayment() {
     },
     onError: () => {
       setProcessing(false);
+      setMislukt(true);
     },
   });
 
   const handlePay = () => {
+    setMislukt(false);
     setProcessing(true);
     payMutation.mutate('pay');
   };
 
   const handleCancel = () => {
+    setMislukt(false);
     setProcessing(true);
     payMutation.mutate('cancel');
   };
@@ -41,7 +52,7 @@ export default function MockPayment() {
           <div className="result-card success">
             <div className="icon">&#10003;</div>
             <h2>{t('tickets.paymentSuccess')}</h2>
-            <p>{t('tickets.confirmationSent', { email: 'je e-mailadres' })}</p>
+            <p>{t('tickets.testbetaling.bevestiging')}</p>
             <button className="btn btn-primary" onClick={() => navigate('/my-tickets')}>
               {t('tickets.myTickets')}
             </button>
@@ -59,7 +70,7 @@ export default function MockPayment() {
           <div className="result-card cancelled">
             <div className="icon">&#10005;</div>
             <h2>{t('common.cancel')}</h2>
-            <p>De betaling is geannuleerd.</p>
+            <p>{t('tickets.testbetaling.geannuleerd')}</p>
             <button className="btn btn-outline" onClick={() => navigate('/')}>
               {t('common.back')}
             </button>
@@ -74,25 +85,38 @@ export default function MockPayment() {
     <div className="mock-payment-page">
       <div className="mock-payment-container">
         <div className="payment-card">
-          <div className="dev-banner">DEVELOPMENT MODE - Mock Payment</div>
+          <div className="dev-banner">{t('tickets.testbetaling.banner')}</div>
 
-          <h2>{t('tickets.selectPaymentMethod')}</h2>
+          <h2>{t('tickets.testbetaling.titel')}</h2>
 
           <div className="order-info">
             <p>
-              <strong>Order ID:</strong> {orderId}
+              <strong>{t('tickets.testbetaling.bestelling')}:</strong> {orderId}
             </p>
           </div>
 
-          <div className="payment-options">
-            <button className="btn btn-primary btn-large" onClick={handlePay} disabled={processing}>
-              {processing ? t('common.loading') : 'Betaling Simuleren (Succes)'}
-            </button>
+          {magAfronden ? (
+            <>
+              {mislukt && (
+                <p className="mock-payment-melding" role="alert">
+                  {t('tickets.testbetaling.mislukt')}
+                </p>
+              )}
+              <div className="payment-options">
+                <button className="btn btn-primary btn-large" onClick={handlePay} disabled={processing}>
+                  {processing ? t('common.loading') : t('tickets.testbetaling.simuleer')}
+                </button>
 
-            <button className="btn btn-outline" onClick={handleCancel} disabled={processing}>
-              {t('common.cancel')}
-            </button>
-          </div>
+                <button className="btn btn-outline" onClick={handleCancel} disabled={processing}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="mock-payment-melding" role="status">
+              {t('tickets.testbetaling.alleenBeheerder')}
+            </p>
+          )}
         </div>
       </div>
       <style>{styles}</style>
@@ -144,6 +168,14 @@ const styles = `
     border-radius: 8px;
     margin-bottom: 1.5rem;
     font-size: 0.875rem;
+  }
+
+  .mock-payment-melding {
+    background: #fff3e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
   }
 
   .order-info p {

@@ -36,6 +36,19 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
 }));
 
+// Standaard een beheerder met alle modules aan: die ziet elk vak en elke teller.
+const stand = vi.hoisted(() => ({ rol: 'admin', modules: ['practice', 'issues'] as string[] }));
+vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: stand.rol } }) }));
+vi.mock('../../context/ModulesContext', () => ({
+  useModules: () => ({
+    enabled: stand.modules,
+    loading: false,
+    loaded: true,
+    isEnabled: (sleutel: string) => stand.modules.includes(sleutel),
+    refresh: vi.fn(),
+  }),
+}));
+
 vi.mock('../Icon', () => ({
   Icon: ({ name }: { name: string }) => <span data-testid={`icon-${name}`} />,
 }));
@@ -72,6 +85,8 @@ function toonVak(type: WidgetType, extra: Partial<DashboardWidget> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  stand.rol = 'admin';
+  stand.modules = ['practice', 'issues'];
   vi.mocked(api.getActivityStats).mockResolvedValue({ totals: { total_downloads: 0 } } as never);
   vi.mocked(api.getPracticeStats).mockResolvedValue({ totalMinutes: 0, weekMinutes: 0 } as never);
   vi.mocked(api.getMusicPiecesPaginated).mockResolvedValue({ data: [], total: 0, page: 1, limit: 1 } as never);
@@ -107,6 +122,37 @@ describe('dashboardvakken - de tellers', () => {
     toonVak('stats');
 
     await waitFor(() => expect(screen.getAllByText('0')).toHaveLength(3));
+  });
+});
+
+describe('dashboardvakken - tellers die niet voor iedereen zijn', () => {
+  it('vraagt een lid geen downloadstatistiek op en toont die tegel niet', async () => {
+    // /activity/stats is voor beheer en muziekcommissie; een lid kreeg bij
+    // elke dashboardlading een 403 en een tegel die altijd nul bleef.
+    stand.rol = 'member';
+    vi.mocked(api.getMusicPiecesPaginated).mockResolvedValue({ data: [], total: 12, page: 1, limit: 1 } as never);
+    toonVak('stats');
+
+    expect(await screen.findByText('12')).toBeInTheDocument();
+    expect(screen.queryByText('dashboard.downloadsThisMonth')).not.toBeInTheDocument();
+    expect(api.getActivityStats).not.toHaveBeenCalled();
+  });
+
+  it('vraagt geen oefenminuten op als de module oefenen uit staat', async () => {
+    stand.modules = [];
+    toonVak('stats');
+
+    await screen.findByText('dashboard.totalPieces');
+    expect(screen.queryByText('dashboard.practiceMinutes')).not.toBeInTheDocument();
+    expect(api.getPracticeStats).not.toHaveBeenCalled();
+  });
+
+  it('laat de snelkoppeling naar de meldkamer weg als die module uit staat', () => {
+    stand.modules = [];
+    toonVak('quick-actions');
+
+    expect(screen.queryByRole('link', { name: /nav.issues/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /nav.myMusic/ })).toBeInTheDocument();
   });
 });
 

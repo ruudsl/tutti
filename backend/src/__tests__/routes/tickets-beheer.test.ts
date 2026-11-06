@@ -140,6 +140,20 @@ function andereVereniging() {
 }
 
 describe('Verkoopoverzicht', () => {
+  it('telt nul, niet niets, als er nog geen bestellingen zijn', async () => {
+    // SUM over nul rijen is NULL; de tellers op de pagina Ticketverkoop
+    // bleven dan leeg.
+    const res = await alsAdmin('get', '/tickets/sales');
+
+    expect(res.body.summary).toEqual({
+      totalOrders: 0,
+      paidOrders: 0,
+      totalRevenue: 0,
+      pendingOrders: 0,
+      refundedOrders: 0,
+    });
+  });
+
   it('toont alleen bestellingen van de eigen vereniging', async () => {
     maakBestelling();
     const elders = andereVereniging();
@@ -680,6 +694,25 @@ describe('Nepbetalingen', () => {
     const res = await alsAdmin('post', `/tickets/orders/${orderId}/mock-payment`).send({ action: 'pay' });
 
     expect(res.status).toBe(403);
+    expect(bestelstatus(orderId)).toBe('pending');
+  });
+
+  it('laat een beheerder geen bestelling van een andere vereniging op betaald zetten', async () => {
+    const elders = andereVereniging();
+    const orderId = maakBestelling(elders.concertId, { status: 'pending', paidAt: false });
+
+    const res = await alsAdmin('post', `/tickets/orders/${orderId}/mock-payment`).send({ action: 'pay' });
+
+    expect(res.status).toBe(404);
+    expect(bestelstatus(orderId)).toBe('pending');
+  });
+
+  it('wijst een onbekende actie af in plaats van de bestelling te annuleren', async () => {
+    const orderId = maakBestelling(concertId, { status: 'pending', paidAt: false });
+
+    const res = await alsAdmin('post', `/tickets/orders/${orderId}/mock-payment`).send({ action: 'betaal' });
+
+    expect(res.status).toBe(400);
     expect(bestelstatus(orderId)).toBe('pending');
   });
 

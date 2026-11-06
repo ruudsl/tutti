@@ -21,7 +21,6 @@ import {
   useExportConcertProgram,
   useExportBumaStemra,
 } from '../../hooks/useConcerts';
-import { useUsers } from '../../hooks/useUsers';
 import { Icon } from '../../components/Icon';
 import { useMusicTitles } from '../../hooks/useMusicTitles';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -39,6 +38,7 @@ import {
   updateTicketType,
   deleteTicketType,
   getAttendancePrediction,
+  getBezettingsLeden,
 } from '../../api';
 import type { AttendancePrediction } from '../../api/concerts';
 import { showSuccess, showError } from '../../utils/toast';
@@ -155,7 +155,9 @@ export default function Concerts() {
     refetch: haalStatistiekenOpnieuw,
   } = useConcertStatistics();
   const { data: concertDetail } = useConcert(viewingConcert || '');
-  const { data: users = [] } = useUsers();
+  // Voor het toevoegen van leden aan de bezetting. GET /users is alleen voor de
+  // beheerder; de muziekcommissie, die dit ook mag, kreeg een lege lijst.
+  const { data: users = [] } = useQuery({ queryKey: ['bezettingsleden'], queryFn: getBezettingsLeden });
   const { data: musicTitles = [] } = useMusicTitles();
   // De stukgeschiedenis hangt aan een invoerveld. Zonder ontdubbeling vuurt
   // elke toetsaanslag een eigen verzoek af - "Bolero" intypen kostte er zes.

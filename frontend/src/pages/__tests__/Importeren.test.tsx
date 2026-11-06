@@ -192,23 +192,63 @@ describe('de importpagina', () => {
       'importeren.soorten.contacten',
       'importeren.soorten.uniformen',
       'importeren.soorten.apparatuur',
+      'importeren.soorten.kleding',
     ]);
   });
 
-  it('biedt instrumenten, contacten, uniformen en apparatuur niet aan als hun module uit staat', () => {
+  it('biedt instrumenten, contacten, uniformen, apparatuur en concertkleding niet aan als hun module uit staat', () => {
     gebruiker.modules = [];
     toon();
     expect(soorten()).toEqual(['importeren.soorten.leden', 'importeren.soorten.muziektitels']);
   });
 
-  it('laat de muziekcommissie de muziekbibliotheek en contacten importeren, geen leden', async () => {
+  it('laat de muziekcommissie de muziekbibliotheek, contacten en concertkleding importeren, geen leden', async () => {
     gebruiker.rol = 'music_committee';
     vi.mocked(api.bekijkImport).mockResolvedValue({ ...VOORBEELD, regels: [] });
     toon();
 
-    expect(soorten()).toEqual(['importeren.soorten.muziektitels', 'importeren.soorten.contacten']);
+    expect(soorten()).toEqual([
+      'importeren.soorten.muziektitels',
+      'importeren.soorten.contacten',
+      'importeren.soorten.kleding',
+    ]);
     await kiesBestand('Titel\nBolero\n');
     expect(api.bekijkImport).toHaveBeenCalledWith('muziektitels', 'Titel\nBolero\n', { bijwerken: false });
+  });
+
+  it('toont bij concertkleding de kleur, de onderdelen en of het tenue standaard wordt', async () => {
+    vi.mocked(api.bekijkImport).mockResolvedValue({
+      kolommen: { naam: 'Naam' },
+      genegeerd: [],
+      regels: [
+        {
+          rij: 2,
+          status: 'nieuw',
+          gegevens: {
+            naam: 'Concerttenue',
+            omschrijving: null,
+            kleur: '#1b2a49',
+            onderdelen: ['Jas', 'das'],
+            standaard: true,
+          },
+          fouten: [],
+          waarschuwingen: [],
+        },
+      ],
+      tellingen: { nieuw: 1, bestaat: 0, bijwerken: 0, fout: 0 },
+    });
+    toon();
+
+    await userEvent.click(screen.getByRole('button', { name: 'importeren.soorten.kleding' }));
+    await kiesBestand('Naam;Kleur\nConcerttenue;donkerblauw\n');
+
+    expect(api.bekijkImport).toHaveBeenCalledWith('kleding', 'Naam;Kleur\nConcerttenue;donkerblauw\n', {
+      bijwerken: false,
+    });
+    const regel = (await screen.findByText('Concerttenue')).closest('tr')!;
+    expect(within(regel).getByText('#1b2a49')).toBeInTheDocument();
+    expect(within(regel).getByText('Jas, das')).toBeInTheDocument();
+    expect(within(regel).getByText('common.yes')).toBeInTheDocument();
   });
 
   it('laat de uniformcommissie alleen uniformen importeren, met drager en het deel dat nieuw is', async () => {

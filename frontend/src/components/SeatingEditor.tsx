@@ -1,12 +1,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAriaLive } from './AriaLiveRegion';
-import type { SeatingSection, SeatingAssignment, User } from '../types';
+import type { SeatingSection, SeatingAssignment } from '../types';
+import type { BezettingsLid } from '../api';
 
 interface Props {
   sections: SeatingSection[];
   assignments: SeatingAssignment[];
-  users: User[];
+  users: BezettingsLid[];
   orchestraId: string;
   onSave: (assignments: { userId: string; sectionId: string; positionInSection: number }[]) => Promise<void>;
 }

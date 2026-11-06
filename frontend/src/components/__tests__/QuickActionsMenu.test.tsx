@@ -124,7 +124,7 @@ describe('snelmenu: de acties horen bij de pagina', () => {
   it('biedt op het dashboard de eerste stappen aan', async () => {
     await open('/');
 
-    expect(acties()).toEqual(['Zoeken', 'Nieuwe lijst', 'Uploaden', 'Repetities bekijken', 'Mijn Muziek']);
+    expect(acties()).toEqual(['Zoeken', 'Nieuwe lijst', 'Uploaden', 'Repetities bekijken', 'Mijn muziek']);
   });
 
   it('biedt op mijn muziek de acties van die pagina aan', async () => {
@@ -156,7 +156,7 @@ describe('snelmenu: de acties horen bij de pagina', () => {
   it('valt op een pagina zonder eigen acties terug op de vaste bestemmingen', async () => {
     await open('/statistics');
 
-    expect(acties()).toEqual(['Zoeken', 'Dashboard', 'Mijn Muziek', 'Lijsten', 'Repetities']);
+    expect(acties()).toEqual(['Zoeken', 'Dashboard', 'Mijn muziek', 'Lijsten', 'Repetities']);
   });
 });
 
@@ -165,7 +165,7 @@ describe('snelmenu: alleen wat je mag', () => {
     aanmelding.user = { role: ROLES.MEMBER };
     await open('/');
 
-    expect(acties()).toEqual(['Zoeken', 'Repetities bekijken', 'Mijn Muziek']);
+    expect(acties()).toEqual(['Zoeken', 'Repetities bekijken', 'Mijn muziek']);
   });
 
   it('toont ze wel aan de muziekcommissie', async () => {
@@ -193,7 +193,7 @@ describe('snelmenu: alleen wat je mag', () => {
     aanmelding.user = null;
     await open('/');
 
-    expect(acties()).toEqual(['Zoeken', 'Repetities bekijken', 'Mijn Muziek']);
+    expect(acties()).toEqual(['Zoeken', 'Repetities bekijken', 'Mijn muziek']);
   });
 });
 
@@ -293,7 +293,7 @@ describe('snelmenu: bediening met het toetsenbord', () => {
 
     await gebruiker.keyboard('{ArrowUp}');
 
-    expect(screen.getByRole('menuitem', { name: /Mijn Muziek/ })).toHaveClass('selected');
+    expect(screen.getByRole('menuitem', { name: /Mijn muziek/ })).toHaveClass('selected');
   });
 
   it('rolt aan het eind van de lijst weer naar de eerste actie', async () => {

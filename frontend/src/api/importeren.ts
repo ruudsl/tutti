@@ -1,15 +1,16 @@
 import api from './client';
 
 /**
- * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en
- * apparatuur inlezen uit een spreadsheet (WP11); zie backend/src/routes/importeren.ts en
+ * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen,
+ * apparatuur en concertkleding inlezen uit een spreadsheet (WP11); zie backend/src/routes/importeren.ts en
  * docs/IMPORTEREN.md.
  *
  * Per soort een voorbeeld dat niets verandert, en de import zelf. De server
  * beoordeelt het bestand bij het importeren opnieuw.
  */
 
-export type ImportSoort = 'leden' | 'muziektitels' | 'instrumenten' | 'contacten' | 'uniformen' | 'apparatuur';
+export type ImportSoort =
+  'leden' | 'muziektitels' | 'instrumenten' | 'contacten' | 'uniformen' | 'apparatuur' | 'kleding';
 
 export type RegelStatus = 'nieuw' | 'bestaat' | 'bijwerken' | 'fout';
 
@@ -118,6 +119,15 @@ export interface ApparatuurGegevens {
   opmerkingen: string | null;
 }
 
+export interface KledingGegevens {
+  naam: string;
+  omschrijving: string | null;
+  /** Als kleurcode (#1b2a49). */
+  kleur: string | null;
+  onderdelen: string[];
+  standaard: boolean;
+}
+
 export interface Beoordeling<T> {
   rij: number;
   status: RegelStatus;
@@ -152,6 +162,7 @@ export type GegevensVan<S extends ImportSoort> = {
   contacten: ContactGegevens;
   uniformen: UniformGegevens;
   apparatuur: ApparatuurGegevens;
+  kleding: KledingGegevens;
 }[S];
 
 export const bekijkImport = async <S extends ImportSoort>(

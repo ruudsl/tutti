@@ -5,6 +5,7 @@ import MfaSettings from '../components/MfaSettings';
 import BackupSettings from '../components/BackupSettings';
 import OpslagGebruik from '../components/OpslagGebruik';
 import VerenigingsExport from '../components/VerenigingsExport';
+import Startlijst from '../components/Startlijst';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { useDashboardWidgets } from '../hooks/useDashboardWidgets';
@@ -46,6 +47,8 @@ export default function Dashboard() {
         />
       </div>
 
+      {user?.role === ROLES.ADMIN && <Startlijst />}
+
       <div className="widgets-grid">
         {(isEditMode ? allWidgets : widgets).map((widget, index) => (
           <WidgetContainer
@@ -67,7 +70,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3" id="accountbeveiliging">
         <h2 className="mb-2">{t('dashboard.accountSecurity')}</h2>
         <MfaSettings />
       </div>

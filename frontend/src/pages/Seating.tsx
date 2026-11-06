@@ -15,7 +15,7 @@ import {
   deleteSeatingAssignment,
   bulkUpdateSeatingAssignments,
   getSeatingChart,
-  getUsers,
+  getBezettingsLeden,
   getInstruments,
   createSeatingSection,
   updateSeatingSection,
@@ -49,8 +49,8 @@ export default function Seating() {
   });
 
   const { data: users = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => getUsers(),
+    queryKey: ['bezettingsleden'],
+    queryFn: getBezettingsLeden,
     enabled: !!isManager,
     staleTime: 5 * 60 * 1000,
   });

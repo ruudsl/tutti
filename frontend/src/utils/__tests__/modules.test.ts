@@ -114,6 +114,12 @@ describe('isLocationHidden', () => {
     expect(isLocationHidden('/seating-plan-archief', NONE)).toBe(false);
   });
 
+  it('verbergt het overdragen van kaartjes als de kaartverkoop uit staat', () => {
+    // De pagina laadde wel, en elke aanroep eronder gaf een 404.
+    expect(isLocationHidden('/tickets/transfer', NONE)).toBe(true);
+    expect(isLocationHidden('/tickets/transfer', ALL)).toBe(false);
+  });
+
   it('laat gewone paginas met rust', () => {
     expect(isLocationHidden('/rehearsals/2026-09-15', NONE)).toBe(false);
     expect(isLocationHidden('/', NONE)).toBe(false);

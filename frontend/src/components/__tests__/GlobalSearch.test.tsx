@@ -1,7 +1,8 @@
 /**
  * Het zoekvenster: wat de gebruiker intypt, ziet en aanklikt.
  *
- * De echte `useSearch` draait mee; alleen `fetch` is afgevangen. Dat is hier
+ * De echte `useSearch` draait mee; alleen de adapter onder de gedeelde
+ * api-client is afgevangen (api/__tests__/fetchAlsAdapter.ts). Dat is hier
  * bewust, want de interessante vragen gaan juist over wat er over de lijn gaat
  * (welk pad, welke parameters, welk token) en over wat er met het antwoord
  * gebeurt. Een nagemaakte hook zou precies die twee dingen wegnemen.
@@ -27,6 +28,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { useState } from 'react';
 import { GlobalSearch, useGlobalSearch } from '../GlobalSearch';
 import type { SearchResult } from '../../hooks/useSearch';
+import { installeerFetchAdapter, type NepVerzoekOpties } from '../../api/__tests__/fetchAlsAdapter';
 
 const navigeer = vi.fn();
 
@@ -44,7 +46,8 @@ vi.mock('react-i18next', () => ({
 }));
 
 /** Alle verzoeken die de component deed, in volgorde. */
-let verzoeken: { url: string; opties: RequestInit }[] = [];
+let verzoeken: { url: string; opties: NepVerzoekOpties }[] = [];
+let herstel: () => void;
 
 /** Wat de server op /search teruggeeft. Per test in te stellen. */
 let serverResultaten: SearchResult[] = [];
@@ -73,9 +76,8 @@ beforeEach(() => {
   // resultaat in beeld zodra de selectie verspringt.
   Element.prototype.scrollIntoView = vi.fn();
 
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (url: string, opties: RequestInit = {}) => {
+  herstel = installeerFetchAdapter(
+    vi.fn(async (url: string, opties: NepVerzoekOpties) => {
       verzoeken.push({ url, opties });
 
       let lichaam: unknown = {};
@@ -91,13 +93,13 @@ beforeEach(() => {
         ok: true,
         statusText: 'OK',
         json: async () => lichaam,
-      } as Response;
+      };
     }),
   );
 });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
+  herstel();
   localStorage.clear();
 });
 

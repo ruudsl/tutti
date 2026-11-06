@@ -42,7 +42,16 @@ export interface NieuweKortingscode {
 
 /** Waarom een code niet geldig is; de frontend vertaalt dit. */
 export type Kortingsreden =
-  'onbekend' | 'inactief' | 'nog_niet_geldig' | 'verlopen' | 'op' | 'koper' | 'minimum' | 'concert' | 'kaartsoort';
+  | 'onbekend'
+  | 'inactief'
+  | 'nog_niet_geldig'
+  | 'verlopen'
+  | 'op'
+  | 'koper'
+  | 'openstaand'
+  | 'minimum'
+  | 'concert'
+  | 'kaartsoort';
 
 export interface Kortingscontrole {
   valid: boolean;

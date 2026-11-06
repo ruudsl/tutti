@@ -38,7 +38,7 @@ import type { Instrument, Orchestra, SeatingAssignment, SeatingChart, SeatingSec
 
 vi.mock('../../api', () => ({
   getOrchestras: vi.fn(),
-  getUsers: vi.fn(),
+  getBezettingsLeden: vi.fn(),
   getInstruments: vi.fn(),
   getSeatingSections: vi.fn(),
   getSeatingAssignments: vi.fn(),
@@ -177,7 +177,7 @@ const LEGE_KAART: SeatingChart = {
 
 function zetApiKlaar(): void {
   vi.mocked(api.getOrchestras).mockResolvedValue(ORKESTEN);
-  vi.mocked(api.getUsers).mockResolvedValue(LEDEN);
+  vi.mocked(api.getBezettingsLeden).mockResolvedValue(LEDEN);
   vi.mocked(api.getInstruments).mockResolvedValue(INSTRUMENTEN);
   vi.mocked(api.getSeatingSections).mockResolvedValue(SECTIES);
   vi.mocked(api.getSeatingAssignments).mockResolvedValue(TOEWIJZINGEN);
@@ -370,7 +370,7 @@ describe('opstellingspagina - wie welke tabbladen ziet', () => {
     await toonPagina();
     await waitFor(() => expect(api.getSeatingSections).toHaveBeenCalled());
 
-    expect(api.getUsers).not.toHaveBeenCalled();
+    expect(api.getBezettingsLeden).not.toHaveBeenCalled();
     expect(api.getInstruments).not.toHaveBeenCalled();
   });
 
@@ -577,7 +577,7 @@ describe('opstellingspagina - toewijzingen', () => {
   it('laat toevoegen niet toe als er niemand meer over is om toe te wijzen', async () => {
     const gebruiker = userEvent.setup({ delay: null });
     // Alle drie de leden zitten in orch-2, dus voor orch-1 blijft er niemand over.
-    vi.mocked(api.getUsers).mockResolvedValue(
+    vi.mocked(api.getBezettingsLeden).mockResolvedValue(
       LEDEN.map((l) => ({ ...l, orchestras: [{ id: 'orch-2', name: 'Jeugdorkest' }] })),
     );
     await toonPagina();

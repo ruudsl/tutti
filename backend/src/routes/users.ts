@@ -460,6 +460,74 @@ router.get(
   }),
 );
 
+/**
+ * GET /users/bezetting - wie speelt wat, in welk orkest.
+ *
+ * Voor de opstelling, de bezetting, de buurvoorkeuren en het podium van een
+ * concert. Die pagina's zijn er voor muziekcommissie en dirigent, maar haalden
+ * GET /users op, en die is alleen voor de beheerder: de anderen kregen een 403
+ * en zagen geen leden. Dit antwoord bevat alleen wat die pagina's nodig hebben
+ * - naam, instrumenten, orkesten - en geen e-mail, rol of inlogmoment.
+ *
+ * De ledengids (/users/directory) is hier niet bruikbaar: die laat per lid
+ * instrumenten en orkesten weg als het lid dat zo heeft ingesteld, en dan valt
+ * dat lid uit de opstelling van zijn eigen orkest.
+ */
+router.get(
+  '/bezetting',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const leden = db
+      .prepare(
+        `SELECT u.id, u.first_name, u.last_name FROM users u
+         WHERE u.association_id = ? AND u.deleted_at IS NULL
+         ORDER BY u.last_name, u.first_name`,
+      )
+      .all(req.user!.associationId) as { id: string; first_name: string; last_name: string }[];
+
+    const instrumenten = db
+      .prepare(
+        `SELECT ui.user_id, i.id, i.name, i.tuning
+         FROM user_instruments ui
+         JOIN instruments i ON i.id = ui.instrument_id
+         JOIN users u ON u.id = ui.user_id
+         WHERE u.association_id = ? AND u.deleted_at IS NULL`,
+      )
+      .all(req.user!.associationId) as { user_id: string; id: string; name: string; tuning: string | null }[];
+
+    const orkesten = db
+      .prepare(
+        `SELECT uo.user_id, o.id, o.name
+         FROM user_orchestras uo
+         JOIN orchestras o ON o.id = uo.orchestra_id AND o.association_id = ?
+         JOIN users u ON u.id = uo.user_id
+         WHERE u.association_id = ? AND u.deleted_at IS NULL`,
+      )
+      .all(req.user!.associationId, req.user!.associationId) as { user_id: string; id: string; name: string }[];
+
+    const perLid = <T extends { user_id: string }>(rijen: T[]) => {
+      const kaart = new Map<string, Omit<T, 'user_id'>[]>();
+      for (const { user_id, ...rest } of rijen) {
+        kaart.set(user_id, [...(kaart.get(user_id) ?? []), rest]);
+      }
+      return kaart;
+    };
+    const instrumentenPerLid = perLid(instrumenten);
+    const orkestenPerLid = perLid(orkesten);
+
+    res.json(
+      leden.map((lid) => ({
+        id: lid.id,
+        firstName: lid.first_name,
+        lastName: lid.last_name,
+        instruments: instrumentenPerLid.get(lid.id) ?? [],
+        orchestras: orkestenPerLid.get(lid.id) ?? [],
+      })),
+    );
+  }),
+);
+
 // LET OP: deze route moet boven '/:id' blijven staan.
 //
 // Hij stond eronder, helemaal onderaan het bestand. Express matcht op volgorde,

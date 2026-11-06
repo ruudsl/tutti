@@ -1,13 +1,18 @@
 /**
  * Tests voor de zoekhook.
  *
- * De server wordt gemockt op `fetch`-niveau. Waar het hier om gaat: hoeveel
+ * De server wordt gemockt onder de gedeelde api-client (client.ts), op het
+ * niveau van de axios-adapter. De interceptors draaien dus echt: het token
+ * gaat mee, en een 401 meldt de gebruiker af zoals overal in de app. De
+ * adapter roept `fetchMock(url, opties)` aan, zodat een test per adres kan
+ * antwoorden. Waar het hier om gaat: hoeveel
  * verzoeken er de deur uit gaan (een zoekhook die per render opnieuw begint
  * legt de server plat), wanneer er juist niet gezocht wordt, en hoe de
  * toetsenbordnavigatie door de resultaten loopt.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
+import { installeerFetchAdapter, type NepFetch } from '../../api/__tests__/fetchAlsAdapter';
 import { useSearch, useSearchCategoryLabels, type SearchResult } from '../useSearch';
 
 const resultaat = (id: string, type: SearchResult['type'] = 'music'): SearchResult => ({
@@ -19,11 +24,13 @@ const resultaat = (id: string, type: SearchResult['type'] = 'music'): SearchResu
 });
 
 /** Antwoord dat past bij elk van de drie eindpunten die de hook gebruikt. */
-function antwoord(body: unknown) {
-  return { ok: true, statusText: 'OK', json: async () => body };
+function antwoord(body: unknown, status = 200) {
+  return { ok: status < 400, status, statusText: 'OK', json: async () => body };
 }
 
-let fetchMock: ReturnType<typeof vi.fn>;
+let herstel: () => void;
+
+let fetchMock: ReturnType<typeof vi.fn<NepFetch>>;
 
 /** Aanroepen van fetch naar een bepaald eindpunt. */
 function aanroepen(deel: string) {
@@ -32,16 +39,16 @@ function aanroepen(deel: string) {
 
 beforeEach(() => {
   localStorage.clear();
-  fetchMock = vi.fn(async (url: string) => {
+  fetchMock = vi.fn<NepFetch>(async (url) => {
     if (String(url).includes('/search/suggestions')) return antwoord({ suggestions: ['aap', 'noot'] });
     if (String(url).includes('/search/recent')) return antwoord({ searches: [] });
     return antwoord({ results: [], total: 0, query: '' });
   });
-  vi.stubGlobal('fetch', fetchMock);
+  herstel = installeerFetchAdapter(fetchMock);
 });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
+  herstel();
 });
 
 describe('useSearch - verzoeken beperken', () => {
@@ -354,6 +361,22 @@ describe('useSearch - recente zoekopdrachten', () => {
 
     const [, opties] = aanroepen('/search/recent')[0];
     expect((opties as RequestInit).headers).not.toHaveProperty('Authorization');
+  });
+});
+
+describe('useSearch - verlopen sessie', () => {
+  it('meldt de gebruiker af bij een 401, zoals de rest van de app', async () => {
+    // De hook deed eerst een eigen fetch met het token erbij, langs de
+    // interceptor van client.ts. Was de sessie verlopen, dan gaf zoeken
+    // stilletjes niets en bleef het oude token staan.
+    localStorage.setItem('token', 'verlopen');
+    localStorage.setItem('user', '{}');
+    fetchMock.mockImplementation(async () => antwoord({ error: 'Token expired' }, 401));
+
+    renderHook(() => useSearch('mozart'));
+
+    await waitFor(() => expect(localStorage.getItem('token')).toBeNull());
+    expect(localStorage.getItem('user')).toBeNull();
   });
 });
 

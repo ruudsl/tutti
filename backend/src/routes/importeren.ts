@@ -8,12 +8,14 @@ import {
   beoordeelApparatuur,
   beoordeelContacten,
   beoordeelInstrumenten,
+  beoordeelKleding,
   beoordeelLeden,
   beoordeelTitels,
   beoordeelUniformen,
   importeerApparatuur,
   importeerContacten,
   importeerInstrumenten,
+  importeerKleding,
   importeerLeden,
   importeerTitels,
   importeerUniformen,
@@ -22,11 +24,11 @@ import { MAX_TEKENS } from '../utils/csvLezen';
 import { logAuditEvent } from './audit-logs';
 
 /**
- * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en
- * apparatuur inlezen uit een spreadsheet (WP11). Zie docs/IMPORTEREN.md voor
- * de kolommen.
+ * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen,
+ * apparatuur en concertkleding inlezen uit een spreadsheet (WP11). Zie
+ * docs/IMPORTEREN.md voor de kolommen.
  *
- * Instrumenten, uniformen en apparatuur horen bij de module inventaris en
+ * Instrumenten, uniformen, apparatuur en concertkleding horen bij de module inventaris en
  * contacten bij de module contacten. Die guards staan op de mount in index.ts, net als bij de routes
  * van die modules zelf: staat de module uit, dan bestaat de import niet (404).
  *
@@ -239,6 +241,38 @@ router.post(
         'equipment_item',
         uuidv4(),
         `${uitkomst.geimporteerd} stuks apparatuur uit een spreadsheet, ${uitkomst.bijgewerkt} bijgewerkt`,
+        uitkomst.tellingen,
+        req.ip,
+        req.get('user-agent'),
+      );
+    }
+    res.status(uitkomst.geimporteerd > 0 ? 201 : 200).json(uitkomst);
+  }),
+);
+
+// Dezelfde rollen als het aanmaken van een tenue in routes/outfits.ts.
+router.post(
+  '/kleding/voorbeeld',
+  requireRole('admin', 'music_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(beoordeelKleding(req.user!.associationId!, req.body.csv, opties(req)));
+  }),
+);
+
+router.post(
+  '/kleding',
+  requireRole('admin', 'music_committee'),
+  validate(bestandSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const uitkomst = importeerKleding(req.user!.associationId!, req.user!.id, req.body.csv, opties(req));
+    if (uitkomst.geimporteerd > 0 || uitkomst.bijgewerkt > 0) {
+      logAuditEvent(
+        req.user!.id,
+        'import',
+        'outfit',
+        uuidv4(),
+        `${uitkomst.geimporteerd} tenues concertkleding uit een spreadsheet, ${uitkomst.bijgewerkt} bijgewerkt`,
         uitkomst.tellingen,
         req.ip,
         req.get('user-agent'),

@@ -20,6 +20,13 @@
  * lopende bestellingen die nog niet verlopen zijn. Per koper tellen zijn
  * betaalde en lopende bestellingen. Een verlaten winkelmandje houdt een code
  * dus hooguit een half uur vast.
+ *
+ * Bestelt dezelfde koper opnieuw voor hetzelfde concert terwijl een eerdere
+ * bestelling met deze code nog open staat zonder dat er een betaling voor
+ * gestart is (hij brak af voor het betalen), dan vervalt die eerdere
+ * bestelling en gaat de code naar de nieuwe; zie `onbetaaldeBestellingenVanKoper`.
+ * Is er wel een betaling gestart, dan kan die nog binnenkomen en blijft de
+ * code vastgehouden; de reden is dan `openstaand` in plaats van `koper`.
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -44,7 +51,16 @@ export interface KortingscodeRij {
 }
 
 export type Afwijzing =
-  'onbekend' | 'inactief' | 'nog_niet_geldig' | 'verlopen' | 'op' | 'koper' | 'minimum' | 'concert' | 'kaartsoort';
+  | 'onbekend'
+  | 'inactief'
+  | 'nog_niet_geldig'
+  | 'verlopen'
+  | 'op'
+  | 'koper'
+  | 'openstaand'
+  | 'minimum'
+  | 'concert'
+  | 'kaartsoort';
 
 /** De meldingen zoals de API ze altijd gaf; de frontend vertaalt op `reden`. */
 const MELDING: Record<Afwijzing, string> = {
@@ -54,6 +70,7 @@ const MELDING: Record<Afwijzing, string> = {
   verlopen: 'This discount code has expired',
   op: 'This discount code has reached its maximum number of uses',
   koper: 'You have already used this discount code the maximum number of times',
+  openstaand: 'You have an unfinished payment with this discount code; complete it or try again later',
   minimum: 'Minimum order amount not reached for this discount code',
   concert: 'This discount code is not valid for this concert',
   kaartsoort: 'This discount code is not valid for the selected ticket types',
@@ -102,15 +119,65 @@ export function actiefGebruik(codeId: string): number {
   return (db.prepare(`SELECT ${GEBRUIK} AS n`).get(codeId, codeId, new Date().toISOString()) as { n: number }).n;
 }
 
-export function gebruikDoorKoper(codeId: string, email: string): number {
+/**
+ * Hoe vaak deze koper de code gebruikt: betaald, of lopend en niet verlopen.
+ * Met `nieuwConcertId` tellen zijn lopende bestellingen voor dat concert
+ * zonder gestarte betaling niet mee: die vervallen zodra hij opnieuw bestelt.
+ */
+export function gebruikDoorKoper(codeId: string, email: string, nieuwConcertId?: string): number {
   return (
     db
       .prepare(
         `SELECT COUNT(*) AS n FROM discount_code_usage u
-         WHERE u.discount_code_id = ? AND LOWER(u.user_email) = LOWER(?) AND ${ACTIEF}`,
+         WHERE u.discount_code_id = ? AND LOWER(u.user_email) = LOWER(?) AND ${ACTIEF}
+           AND NOT EXISTS (
+             SELECT 1 FROM ticket_orders o
+             WHERE o.id = u.order_id AND o.status = 'pending' AND o.payment_id IS NULL AND o.concert_id = ?
+           )`,
       )
-      .get(codeId, email, new Date().toISOString()) as { n: number }
+      .get(codeId, email, new Date().toISOString(), nieuwConcertId ?? '') as { n: number }
   ).n;
+}
+
+/** Heeft deze koper een lopende betaling (gestart, nog niet afgerond) met deze code? */
+function heeftOpenstaandeBetaling(codeId: string, email: string): boolean {
+  return !!db
+    .prepare(
+      `SELECT 1 FROM discount_code_usage u
+       JOIN ticket_orders o ON o.id = u.order_id
+       WHERE u.discount_code_id = ? AND LOWER(u.user_email) = LOWER(?)
+         AND o.status = 'pending' AND o.payment_id IS NOT NULL AND (o.expires_at IS NULL OR o.expires_at > ?)`,
+    )
+    .get(codeId, email, new Date().toISOString());
+}
+
+/**
+ * De lopende bestellingen van deze koper met deze code voor dit concert,
+ * waarvoor nog geen betaling gestart is. Bestelt hij opnieuw, dan laat de
+ * route die vervallen: hij brak de eerste af voor het betalen, en anders hield
+ * die zijn code een half uur vast.
+ *
+ * Alleen zonder gestarte betaling: een betaling die al loopt kan nog
+ * binnenkomen, en een bestelling laten vervallen waarvoor daarna betaald
+ * wordt, laat de koper zonder kaarten.
+ */
+export function onbetaaldeBestellingenVanKoper(
+  associationId: string,
+  code: string,
+  email: string,
+  concertId: string,
+): string[] {
+  return (
+    db
+      .prepare(
+        `SELECT o.id FROM discount_code_usage u
+         JOIN discount_codes dc ON dc.id = u.discount_code_id
+         JOIN ticket_orders o ON o.id = u.order_id
+         WHERE dc.association_id = ? AND UPPER(dc.code) = UPPER(?) AND LOWER(u.user_email) = LOWER(?)
+           AND o.concert_id = ? AND o.status = 'pending' AND o.payment_id IS NULL`,
+      )
+      .all(associationId, code.trim(), email, concertId) as { id: string }[]
+  ).map((rij) => rij.id);
 }
 
 export interface KortingsVraag {
@@ -142,8 +209,8 @@ export function beoordeelKortingscode(vraag: KortingsVraag): KortingsOordeel {
   if (code.max_uses !== null && actiefGebruik(code.id) >= code.max_uses) return afgewezen('op');
 
   const perKoper = code.max_uses_per_user ?? 0;
-  if (vraag.koperEmail && perKoper > 0 && gebruikDoorKoper(code.id, vraag.koperEmail) >= perKoper) {
-    return afgewezen('koper');
+  if (vraag.koperEmail && perKoper > 0 && gebruikDoorKoper(code.id, vraag.koperEmail, vraag.concertId) >= perKoper) {
+    return afgewezen(heeftOpenstaandeBetaling(code.id, vraag.koperEmail) ? 'openstaand' : 'koper');
   }
 
   if (code.min_order_amount !== null && vraag.bedrag < code.min_order_amount) return afgewezen('minimum');
@@ -216,4 +283,21 @@ export function telKortingscodeAlsGebruikt(orderId: string): void {
 /** De bestelling gaat niet door: de reservering vervalt. */
 export function geefKortingscodeVrij(orderId: string): void {
   db.prepare('DELETE FROM discount_code_usage WHERE order_id = ?').run(orderId);
+}
+
+/**
+ * De betaalde bestelling is terugbetaald: de code telt niet meer als gebruikt
+ * en de koper mag hem opnieuw gebruiken. Code en bedrag blijven op de
+ * bestelling staan, voor de administratie.
+ *
+ * `uses_count` gaat alleen omlaag als er ook een gebruiksrij wegging; zo telt
+ * een tweede aanroep voor dezelfde bestelling niet nog eens af.
+ */
+export function zetKortingscodeTerug(orderId: string): void {
+  const weg = db.prepare('DELETE FROM discount_code_usage WHERE order_id = ?').run(orderId);
+  if (weg.changes === 0) return;
+  db.prepare(
+    `UPDATE discount_codes SET uses_count = MAX(uses_count - 1, 0)
+     WHERE id = (SELECT discount_code_id FROM ticket_orders WHERE id = ?)`,
+  ).run(orderId);
 }

@@ -16,6 +16,7 @@ import {
   type ContactGegevens,
   type ImportSoort,
   type InstrumentGegevens,
+  type KledingGegevens,
   type ImportUitkomst,
   type ImportVoorbeeld,
   type LidGegevens,
@@ -26,16 +27,16 @@ import {
 } from '../api/importeren';
 
 /**
- * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen en
- * apparatuur inlezen uit een spreadsheet (WP11).
+ * Leden, de muziekbibliotheek, instrumenten in bezit, contacten, uniformen,
+ * apparatuur en concertkleding inlezen uit een spreadsheet (WP11).
  *
  * Kies een bestand, bekijk per regel wat er gebeurt, en importeer. Het
  * voorbeeld verandert niets; bij het importeren beoordeelt de server het
  * bestand opnieuw. Met "Bestaande gegevens bijwerken" krijgen rijen die er al
  * zijn wat in het bestand anders is; het voorbeeld toont per veld oud en
  * nieuw. Wie welke soort mag, volgt de routes in
- * backend/src/routes/importeren.ts; instrumenten, contacten, uniformen en
- * apparatuur verschijnen alleen als hun module aan staat.
+ * backend/src/routes/importeren.ts; instrumenten, contacten, uniformen,
+ * apparatuur en concertkleding verschijnen alleen als hun module aan staat.
  */
 
 /** Per soort de rollen die hem mogen importeren, en de module waar hij bij hoort. */
@@ -46,6 +47,7 @@ const SOORTEN: { soort: ImportSoort; rollen: string[]; module?: string }[] = [
   { soort: 'contacten', rollen: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE], module: 'contacts' },
   { soort: 'uniformen', rollen: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE], module: 'inventory' },
   { soort: 'apparatuur', rollen: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE], module: 'inventory' },
+  { soort: 'kleding', rollen: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE], module: 'inventory' },
 ];
 
 /** Een voorbeeldbestand per soort, met de kolomnamen die herkend worden. */
@@ -80,6 +82,11 @@ const SJABLONEN: Record<ImportSoort, string> = {
     'Mengtafel;geluid;;Yamaha;MG12XU;Y-123456;beschikbaar;goed;Repetitielokaal;449,00;15-01-2025;12;nee',
     'Lessenaar 1;meubilair;;K&M;;;;redelijk;Kast 3;;;;ja',
   ].join('\r\n'),
+  kleding: [
+    'Naam;Omschrijving;Kleur;Onderdelen;Standaard',
+    'Concerttenue;Voor alle concerten;Donkerblauw;Uniformjas, broek of rok, das;ja',
+    'Zomertenue;Buitenoptredens;#ffffff;Polo, zwarte broek;nee',
+  ].join('\r\n'),
 };
 
 /** Welke lijst in de rest van de app na een import opnieuw opgehaald moet worden. */
@@ -90,6 +97,7 @@ const TE_VERVERSEN: Record<ImportSoort, string> = {
   contacten: 'contacts',
   uniformen: 'uniforms',
   apparatuur: 'equipment',
+  kleding: 'outfits',
 };
 
 const STATUSKLEUR: Record<RegelStatus, string> = {
@@ -133,7 +141,13 @@ function downloadSjabloon(soort: ImportSoort) {
 }
 
 type Gegevens =
-  LidGegevens | TitelGegevens | InstrumentGegevens | ContactGegevens | UniformGegevens | ApparatuurGegevens;
+  | LidGegevens
+  | TitelGegevens
+  | InstrumentGegevens
+  | ContactGegevens
+  | UniformGegevens
+  | ApparatuurGegevens
+  | KledingGegevens;
 type Voorbeeld = ImportVoorbeeld<Gegevens>;
 
 /** Per soort de kolommen van de voorbeeldtabel: de kop en wat erin staat. */
@@ -195,6 +209,22 @@ const KOLOMMEN: Record<ImportSoort, Kolom[]> = {
       kop: 'apparatuurStatus',
       waarde: (g: ApparatuurGegevens, t) => t(`importeren.apparatuurStatus.${g.status}`),
     },
+  ],
+  kleding: [
+    { kop: 'naam', waarde: (g: KledingGegevens) => g.naam },
+    { kop: 'omschrijving', waarde: (g: KledingGegevens) => g.omschrijving },
+    {
+      kop: 'kleur',
+      waarde: (g: KledingGegevens) =>
+        g.kleur && (
+          <span className="inline-flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full border" style={{ backgroundColor: g.kleur }} aria-hidden="true" />
+            {g.kleur}
+          </span>
+        ),
+    },
+    { kop: 'onderdelen', waarde: (g: KledingGegevens) => g.onderdelen.join(', ') },
+    { kop: 'standaard', waarde: (g: KledingGegevens, t) => (g.standaard ? t('common.yes') : '') },
   ],
 } as Record<ImportSoort, Kolom[]>;
 

@@ -14,6 +14,7 @@ const MODULE_BY_PATH: Record<string, string> = {
   '/accounting': 'accounting',
 
   '/my-tickets': 'ticketing',
+  '/tickets/transfer': 'ticketing',
   '/ticket-sales': 'ticketing',
   '/kortingscodes': 'ticketing',
   '/ticket-scanner': 'ticketing',

@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { getOrchestras, getSeatingSections, getSeatingAssignments, getUsers } from '../api';
-import type { SeatingSection, User } from '../types';
+import { getOrchestras, getSeatingSections, getSeatingAssignments, getBezettingsLeden } from '../api';
+import type { SeatingSection } from '../types';
+import type { BezettingsLid } from '../api';
 import { SkeletonTable } from '../components/Skeleton';
 
 interface SectionOccupancy {
@@ -27,8 +28,8 @@ export default function Occupancy() {
   });
 
   const { data: users = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => getUsers(),
+    queryKey: ['bezettingsleden'],
+    queryFn: getBezettingsLeden,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -62,7 +63,7 @@ export default function Occupancy() {
     const orchestraUsers = users.filter((u) => u.orchestras?.some((o) => o.id === selectedOrchestraId));
 
     // Create a map of instrument ID to users who play that instrument
-    const usersByInstrument = new Map<string, User[]>();
+    const usersByInstrument = new Map<string, BezettingsLid[]>();
     for (const user of orchestraUsers) {
       for (const instr of user.instruments || []) {
         if (!usersByInstrument.has(instr.id)) {

@@ -81,7 +81,7 @@ export const createUserSchema = z.object({
   firstName: nameSchema,
   lastName: nameSchema,
   role: z
-    .enum(['member', 'admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'])
+    .enum(['member', 'admin', 'board', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'])
     .default('member'),
   instrumentIds: z.array(z.string()).default([]),
   orchestraIds: z.array(z.string()).default([]),
@@ -96,7 +96,7 @@ export const updateUserSchema = z.object({
   firstName: nameSchema,
   lastName: nameSchema,
   role: z
-    .enum(['member', 'admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'])
+    .enum(['member', 'admin', 'board', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'])
     .default('member'),
   instrumentIds: z.array(z.string()).default([]),
   orchestraIds: z.array(z.string()).default([]),

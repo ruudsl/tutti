@@ -12,7 +12,7 @@ import {
   useSaveConcertStage,
   usePrintableSeatCards,
 } from '../hooks/useStageLayouts';
-import { getUsers } from '../api';
+import { getBezettingsLeden } from '../api';
 import StageCanvas from '../components/StageCanvas';
 import SeatCardPrinter from '../components/SeatCardPrinter';
 import type { StageAssignment } from '../types';
@@ -32,8 +32,8 @@ export default function ConcertStageSetup() {
   const { data: printData, isLoading: printLoading, refetch: refetchPrint } = usePrintableSeatCards(concertId || '');
 
   const { data: users = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => getUsers(),
+    queryKey: ['bezettingsleden'],
+    queryFn: getBezettingsLeden,
     staleTime: 1000 * 60 * 5,
   });
 

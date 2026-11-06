@@ -37,6 +37,7 @@ import {
   partsToJson,
   isCompressedMusicXML,
 } from '../services/musicxml';
+import { leesBestandsnaam } from '../utils/bestandsnaam';
 
 const router = Router();
 
@@ -165,30 +166,6 @@ const musicxmlUpload = multer({
     }
   },
 });
-
-// Parse filename to extract metadata
-// Format: Titel_arrangeur_instrument_stemming_groepnummer_muzieksleutel
-function parseFilename(filename: string): {
-  title: string;
-  arranger: string | null;
-  instrument: string | null;
-  tuning: string | null;
-  groupNumber: string | null;
-  clef: string | null;
-} {
-  // Remove extension
-  const nameWithoutExt = filename.replace(/\.pdf$/i, '');
-  const parts = nameWithoutExt.split('_');
-
-  return {
-    title: parts[0] || filename,
-    arranger: parts[1] || null,
-    instrument: parts[2] || null,
-    tuning: parts[3] || null,
-    groupNumber: parts[4] || null,
-    clef: parts[5] || null,
-  };
-}
 
 // Instrument op naam of andere naam, uit een vooraf geladen kaart
 // (instrumentenOpNaam uit services/catalogus.ts: alleen wat de vereniging ziet).
@@ -1970,7 +1947,7 @@ router.post(
       const updateStmt = db.prepare('UPDATE music_pieces SET instrument_id = ? WHERE id = ?');
 
       for (const piece of pieces) {
-        const parsed = parseFilename(piece.original_filename);
+        const parsed = leesBestandsnaam(piece.original_filename, (naam) => !!findInstrumentId(naam, instrumentMap));
 
         if (parsed.instrument) {
           const instrumentId = findInstrumentId(parsed.instrument, instrumentMap);
@@ -2154,7 +2131,7 @@ router.post(
     withTransaction(() => {
       for (const file of validFiles) {
         try {
-          const parsed = parseFilename(file.originalname);
+          const parsed = leesBestandsnaam(file.originalname, (naam) => !!findInstrumentId(naam, instrumentMap));
           const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument, instrumentMap) : null;
 
           const pieceId = uuidv4();
@@ -2404,7 +2381,7 @@ router.post(
         withTransaction(() => {
           for (const { originalFilename, newFilename, grootte } of weggeschreven) {
             try {
-              const parsed = parseFilename(originalFilename);
+              const parsed = leesBestandsnaam(originalFilename, (naam) => !!findInstrumentId(naam, instrumentMap));
               const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument, instrumentMap) : null;
               const pieceId = uuidv4();
 

@@ -8,7 +8,7 @@
  *   kaarten, niet over de servicekosten) en bewaart code en bedrag;
  * - een ongeldige code geeft een 400 met de reden in `code`;
  * - de code wordt bij het bestellen gereserveerd en telt bij betalen als
- *   gebruikt; een verlopen bestelling geeft hem weer vrij;
+ *   gebruikt; een verlopen of terugbetaalde bestelling geeft hem weer vrij;
  * - het maximum, ook per koper, houdt stand;
  * - niets te betalen: de bestelling is meteen betaald, zonder betaaldienst.
  */
@@ -41,10 +41,12 @@ app.use(errorHandler);
 let associationId: string;
 let concertId: string;
 let kaartsoortId: string;
+let beheerderToken: string;
 
 beforeEach(() => {
   const omgeving = createTestEnvironment();
   associationId = omgeving.association.id;
+  beheerderToken = omgeving.adminToken;
   db.prepare(
     `INSERT INTO association_modules (id, association_id, module_key, enabled, updated_by)
      VALUES (?, ?, 'ticketing', 1, ?)
@@ -197,11 +199,55 @@ describe('kortingscode bij een bestelling', () => {
   it('laat een koper de code niet vaker gebruiken dan toegestaan, ongeacht hoofdletters', async () => {
     maakCode({ max_uses_per_user: 1 });
 
-    expect((await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' })).status).toBe(201);
+    const eerste = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+    expect(eerste.status).toBe(201);
+    await request(app).post('/api/tickets/webhooks/payment').send({ orderId: eerste.body.orderId });
     const tweede = await bestel({ code: 'LENTE10', email: 'Kees@Voorbeeld.nl' });
 
     expect(tweede.status).toBe(400);
     expect(tweede.body.code).toBe('KORTINGSCODE_KOPER');
+  });
+
+  it('laat een afgebroken bestelling zonder betaling vervallen als dezelfde koper opnieuw bestelt', async () => {
+    // Bij het doorlopen van de kaartverkoop: een koper brak af voor het
+    // betalen en probeerde het opnieuw. Zijn eerste bestelling hield de code
+    // een half uur vast en hij kreeg "al zo vaak gebruikt".
+    const codeId = maakCode({ max_uses_per_user: 1 });
+    const eerste = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+
+    const tweede = await bestel({ code: 'LENTE10', email: 'Kees@Voorbeeld.nl' });
+
+    expect(tweede.status, JSON.stringify(tweede.body)).toBe(201);
+    expect(tweede.body.discount).toBe(4);
+    expect(bestelling(eerste.body.orderId).status).toBe('expired');
+    expect(gebruik(codeId)).toBe(1);
+    // De kaarten van de eerste bestelling zijn weer vrij: alleen de tweede telt.
+    expect((db.prepare('SELECT sold FROM ticket_types WHERE id = ?').get(kaartsoortId) as { sold: number }).sold).toBe(
+      2,
+    );
+  });
+
+  it('houdt de code vast als er al een betaling loopt, met een eigen reden', async () => {
+    // Die betaling kan nog binnenkomen; de bestelling laten vervallen zou de
+    // koper dan zonder kaarten laten.
+    const codeId = maakCode({ max_uses_per_user: 1 });
+    const eerste = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+    db.prepare("UPDATE ticket_orders SET payment_id = 'tr_loopt' WHERE id = ?").run(eerste.body.orderId);
+
+    const tweede = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+
+    expect(tweede.status).toBe(400);
+    expect(tweede.body.code).toBe('KORTINGSCODE_OPENSTAAND');
+    expect(bestelling(eerste.body.orderId).status).toBe('pending');
+    expect(gebruik(codeId)).toBe(1);
+  });
+
+  it('laat de bestelling van een andere koper staan', async () => {
+    maakCode({ max_uses_per_user: 1, max_uses: null });
+    const eerste = await bestel({ code: 'LENTE10', email: 'kees@voorbeeld.nl' });
+
+    expect((await bestel({ code: 'LENTE10', email: 'anna@voorbeeld.nl' })).status).toBe(201);
+    expect(bestelling(eerste.body.orderId).status).toBe('pending');
   });
 
   it('geeft de code vrij als de bestelling verloopt', async () => {
@@ -217,6 +263,32 @@ describe('kortingscode bij een bestelling', () => {
     expect(betalen.status).toBe(400);
     expect(db.prepare('SELECT 1 FROM discount_code_usage WHERE order_id = ?').get(body.orderId)).toBeUndefined();
     expect(gebruik(codeId)).toBe(1);
+  });
+
+  it('geeft de code vrij als de bestelling wordt terugbetaald, één keer', async () => {
+    const codeId = maakCode({ max_uses: 1, max_uses_per_user: 1 });
+    const { body } = await bestel({ code: 'LENTE10', email: 'a@voorbeeld.nl' });
+    await request(app).post('/api/tickets/webhooks/payment').send({ orderId: body.orderId });
+    db.prepare("UPDATE ticket_orders SET payment_id = 'tr_test' WHERE id = ?").run(body.orderId);
+    expect(gebruikt(codeId)).toBe(1);
+
+    const terug = await request(app)
+      .post(`/api/tickets/orders/${body.orderId}/refund`)
+      .set('Authorization', `Bearer ${beheerderToken}`)
+      .send({});
+
+    expect(terug.status, JSON.stringify(terug.body)).toBe(200);
+    expect(gebruikt(codeId)).toBe(0);
+    expect(gebruik(codeId)).toBe(0);
+    // Code en bedrag blijven op de bestelling, voor de administratie.
+    expect(bestelling(body.orderId)).toMatchObject({
+      status: 'refunded',
+      discount_code_id: codeId,
+      discount_amount: 4,
+    });
+
+    // Dezelfde koper mag hem weer gebruiken, en het maximum is weer vrij.
+    expect((await bestel({ code: 'LENTE10', email: 'a@voorbeeld.nl' })).status).toBe(201);
   });
 
   it('rekent bij een code voor één kaartsoort alleen die kaarten mee', async () => {

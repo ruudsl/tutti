@@ -13,6 +13,7 @@ import logger from '../utils/logger';
 import { beschermdeFetch } from '../utils/veerkracht';
 import { logAuditEvent } from './audit-logs';
 import { notifyOrchestra } from './notifications';
+import { leesBestandsnaam } from '../utils/bestandsnaam';
 
 const router = Router();
 
@@ -39,26 +40,6 @@ interface ImportResult {
 interface ImportError {
   filename: string;
   error: string;
-}
-
-function parseFilename(filename: string): {
-  title: string;
-  arranger: string | null;
-  instrument: string | null;
-  tuning: string | null;
-  groupNumber: string | null;
-  clef: string | null;
-} {
-  const nameWithoutExt = filename.replace(/\.pdf$/i, '');
-  const parts = nameWithoutExt.split('_');
-  return {
-    title: parts[0] || filename,
-    arranger: parts[1] || null,
-    instrument: parts[2] || null,
-    tuning: parts[3] || null,
-    groupNumber: parts[4] || null,
-    clef: parts[5] || null,
-  };
 }
 
 function validateCloudDownloadUrl(rawUrl: string): string {
@@ -198,7 +179,7 @@ async function importFiles(
     withTransaction(() => {
       for (const saved of savedFiles) {
         try {
-          const parsed = parseFilename(saved.originalName);
+          const parsed = leesBestandsnaam(saved.originalName, (naam) => instrumenten.has(naam.toLowerCase().trim()));
           const instrumentId = parsed.instrument
             ? (instrumenten.get(parsed.instrument.toLowerCase().trim()) ?? null)
             : null;

@@ -350,6 +350,15 @@ router.post(
       req.get('user-agent'),
     );
 
+    // De naam van de vereniging, voor de kop van de app. Zolang het lid eerst
+    // een eigen wachtwoord moet kiezen, weigert de server de instellingen waar
+    // de app hem anders vandaan haalt; dan stond er "Tutti".
+    const vereniging = user.association_id
+      ? (db
+          .prepare('SELECT COALESCE(display_name, name) AS naam FROM associations WHERE id = ?')
+          .get(user.association_id) as { naam: string } | undefined)
+      : undefined;
+
     res.json({
       token,
       user: {
@@ -359,6 +368,7 @@ router.post(
         lastName: user.last_name,
         role: user.role,
         associationId: user.association_id,
+        associationName: vereniging?.naam,
         mfaEnabled: Boolean(user.mfa_enabled),
         // De frontend stuurt het lid dan eerst naar het wijzigen van zijn
         // wachtwoord; zie users.moet_wachtwoord_wijzigen.
@@ -450,7 +460,7 @@ router.get(
       .prepare(
         `
         SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.association_id,
-               u.mfa_enabled, u.moet_wachtwoord_wijzigen, a.name as association_name
+               u.mfa_enabled, u.moet_wachtwoord_wijzigen, COALESCE(a.display_name, a.name) as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
         WHERE u.id = ?

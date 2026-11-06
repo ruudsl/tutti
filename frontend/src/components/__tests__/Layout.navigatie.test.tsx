@@ -225,6 +225,32 @@ describe('welke menu-onderdelen een rol ziet', () => {
     expect(paden).toEqual(expect.arrayContaining(['/', '/my-music', '/rehearsals', '/members']));
   });
 
+  it('verdeelt het beheer over twee kortere blokken', async () => {
+    // Beheer was één blok van achttien onderdelen. Leden, uitnodigingen en
+    // boekhouding staan nu onder Vereniging; instellingen, thema en
+    // systeemstatus onder Beheer.
+    huidigeRol = ROLES.ADMIN;
+    const gebruiker = userEvent.setup({ delay: null });
+    toon();
+    await gebruiker.click(screen.getByRole('button', { name: 'Meer' }));
+    const paneel = screen.getByRole('dialog', { name: 'Menu' });
+
+    const padenVan = (titel: string) => {
+      const blok = within(paneel).getByText(titel).closest('.mobile-menu-group') as HTMLElement;
+      return within(blok)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href'));
+    };
+
+    const vereniging = padenVan('Vereniging');
+    const beheer = padenVan('Beheer');
+    expect(vereniging).toEqual(expect.arrayContaining(['/users', '/uitnodigingen', '/accounting', '/importeren']));
+    expect(beheer).toEqual(expect.arrayContaining(['/settings', '/modules', '/theme', '/health']));
+    expect(beheer).not.toContain('/users');
+    expect(vereniging.length).toBeLessThanOrEqual(10);
+    expect(beheer.length).toBeLessThanOrEqual(10);
+  });
+
   it('wijst de beheerder de weg naar het AVG-beheer', async () => {
     // De pagina bestond, maar stond in geen enkel menu: bewaartermijnen en
     // verwijderverzoeken waren alleen te vinden door het adres te typen.

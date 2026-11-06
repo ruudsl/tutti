@@ -87,6 +87,15 @@ vi.mock('../../components/CalendarSync', () => ({
   AddToCalendarButton: () => <div data-testid="agendaknop" />,
 }));
 
+// Eén ingevuld veld: een lid ziet de kaart "Extra velden" alleen als er iets
+// in staat (pages/Rehearsals/ExtraVeldenKaart.tsx).
+vi.mock('../../api/custom-fields', () => ({
+  getFieldValues: vi.fn(async () => ({
+    values: { opmerking: 'Zwarte kleding' },
+    meta: { opmerking: { label: 'Opmerking', editable: true } },
+  })),
+}));
+
 vi.mock('../../components/CustomFields', () => ({
   CustomFieldFormSection: () => <div data-testid="eigen-velden-formulier" />,
   CustomFieldRenderer: () => <div data-testid="eigen-velden-weergave" />,
@@ -1020,6 +1029,6 @@ describe('wat een gewoon lid niet kan', () => {
 
     expect(within(kaart('rehearsals.pieces')).queryByRole('button', { name: 'common.edit' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'seating.viewSeating' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('eigen-velden-weergave')).toBeInTheDocument();
+    expect(await screen.findByTestId('eigen-velden-weergave')).toBeInTheDocument();
   });
 });
